@@ -1,75 +1,62 @@
 const express = require('express');
-const nodemailer = require('nodemailer');
-const cors = require('cors'); // Import the cors package
+const sgMail = require('@sendgrid/mail'); // Import SendGrid
+const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// --- CRITICAL FIX ---
-// Enable CORS for all routes. This allows your GitHub Pages
-// site to make requests to your Render server.
 app.use(cors());
-// --------------------
-
-// Middleware to parse JSON bodies
 app.use(express.json());
 
-// Check for required environment variables at startup
-const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_APP_PASSWORD = process.env.GOOGLE_APP_PASSWORD;
+// --- NEW ENVIRONMENT VARIABLE ---
+// We now need the SendGrid API Key.
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+// We also need to know which email you verified with SendGrid.
+const SENDGRID_VERIFIED_SENDER = process.env.SENDGRID_VERIFIED_SENDER;
 
-if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
-    console.error('FATAL ERROR: GMAIL_USER or GOOGLE_APP_PASSWORD environment variables are not set.');
+if (!SENDGRID_API_KEY || !SENDGRID_VERIFIED_SENDER) {
+    console.error('FATAL ERROR: SENDGRID_API_KEY or SENDGRID_VERIFIED_SENDER environment variables are not set.');
     process.exit(1); // Stop the server
 }
 
-// Create a Nodemailer transporter using your Google App Password
-let transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // true for 465, false for other ports
-    auth: {
-        user: GMAIL_USER,
-        pass: GMAIL_APP_PASSWORD,
-    },
-});
-
-// Verify the transporter configuration on startup
-transporter.verify((error, success) => {
-    if (error) {
-        console.error('Nodemailer config error:', error);
-    } else {
-        console.log('Nodemailer is ready to send emails');
-    }
-});
+// Set the API key for SendGrid
+sgMail.setApiKey(SENDGRID_API_KEY);
+console.log('SendGrid mailer is configured.');
 
 // POST endpoint to send emails
 app.post('/send-email', async (req, res) => {
+    console.log('Received /send-email request for:', req.body.to);
     const { to, subject, text } = req.body;
 
     if (!to || !subject || !text) {
+        console.error('Request missing required fields.');
         return res.status(400).json({ error: 'Missing required fields: to, subject, text' });
     }
 
-    const mailOptions = {
-        from: GMAIL_USER,
-        to: to,
+    // --- NEW SENDGRID PAYLOAD ---
+    const msg = {
+        to: to, // The recipient
+        from: SENDGRID_VERIFIED_SENDER, // Your *verified* sender email
         subject: subject,
         text: text,
     };
+    // ----------------------------
 
     try {
-        let info = await transporter.sendMail(mailOptions);
-        console.log('Email sent: ' + info.response);
+        await sgMail.send(msg);
+        console.log('Email sent successfully to:', to);
         res.status(200).json({ message: 'Email sent successfully' });
     } catch (error) {
         console.error('Error sending email:', error);
-        res.status(500).json({ error: 'Failed to send email', details: error.message });
+        if (error.response) {
+            console.error(error.response.body); // Log detailed error from SendGrid
+        }
+        res.status(500).json({ error: 'Failed to send email' });
     }
 });
 
-// Root endpoint for health check (Render uses this)
+// Root endpoint for health check
 app.get('/', (req, res) => {
-    res.status(200).send('Email server is running.');
+    res.status(200).send('SendGrid Email server is running.');
 });
 
 // Start the server
