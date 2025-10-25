@@ -289,7 +289,9 @@
             getAuth,
             signInAnonymously,
             onAuthStateChanged,
-            signInWithCustomToken
+            signInWithCustomToken,
+            initializeAuth, // NEW: Import initializeAuth
+            browserLocalPersistence // NEW: Import persistence
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import {
             getFirestore,
@@ -534,6 +536,9 @@
                 return;
             }
             
+            // FIX: Unsubscribe from the old listener *before* creating a new one
+            if (unsubscribeStudents) unsubscribeStudents();
+
             const classRef = doc(getClassesCol(), classId);
             // Listen to the class document for changes to its `students` array
             unsubscribeStudents = onSnapshot(classRef, async (classDoc) => {
@@ -550,16 +555,22 @@
                 }
                 
                 try {
-                    // We have IDs, now fetch the student documents
-                    // This fixes the race condition where the cache wasn't updated
+                    // FIX: Re-fetch student docs every time the list changes.
+                    // This avoids all race conditions with the allStudentsCache.
                     const studentDocsPromises = [];
-                    // Chunk the array into pieces of 30
+                    // Chunk the array into pieces of 30 (Firestore 'in' query limit)
                     for (let i = 0; i < studentIds.length; i += 30) {
                         const chunk = studentIds.slice(i, i + 30);
+                        if (chunk.length === 0) continue;
                         const q = query(getStudentsCol(), where('__name__', 'in', chunk));
                         studentDocsPromises.push(getDocs(q));
                     }
                     
+                    if (studentDocsPromises.length === 0) {
+                        renderStudentList([]);
+                        return;
+                    }
+
                     const snapshots = await Promise.all(studentDocsPromises);
                     const students = [];
                     snapshots.forEach(snapshot => {
@@ -637,7 +648,7 @@
             const name = document.getElementById('class-name').value;
             const teacher = document.getElementById('teacher-name').value;
             if (!name || !teacher) {
-                submitBtn.disabled = false;
+                submitBtn.disabled = false; // Re-enable if validation fails
                 return;
             }
 
@@ -647,15 +658,16 @@
                     teacher,
                     students: [] // Initialize with an empty array of student IDs
                 });
-                toast('Class added successfully!', 'success');
                 closeModal('add-class-modal');
-                setTimeout(() => document.getElementById('add-class-form').reset(), 100);
+                document.getElementById('add-class-form').reset();
+                toast('Class added successfully!', 'success');
+                // FIX: On success, button stays disabled as modal closes.
             } catch (error) {
                 console.error("Error adding class: ", error);
                 toast('Failed to add class.', 'error');
-            } finally {
-                submitBtn.disabled = false;
+                submitBtn.disabled = false; // FIX: Re-enable *only* on error.
             }
+            // FIX: No 'finally' block
         }
 
         // Delete a class
@@ -689,7 +701,7 @@
 
             const name = document.getElementById('new-student-name').value;
             if (!name || !currentClassId) {
-                submitBtn.disabled = false;
+                submitBtn.disabled = false; // Re-enable if validation fails
                 return;
             }
 
@@ -706,16 +718,16 @@
                     students: arrayUnion(studentRef.id)
                 });
 
-                toast('Student added and enrolled!', 'success');
                 closeModal('add-new-student-modal');
-                setTimeout(() => document.getElementById('add-new-student-form').reset(), 100);
-                // The onSnapshot listener for the class will automatically update the list
+                document.getElementById('add-new-student-form').reset();
+                toast('Student added and enrolled!', 'success');
+                // FIX: On success, button stays disabled as modal closes.
             } catch (error) {
                 console.error("Error adding new student: ", error);
                 toast('Failed to add new student.', 'error');
-            } finally {
-                submitBtn.disabled = false;
+                submitBtn.disabled = false; // FIX: Re-enable *only* on error.
             }
+            // FIX: No 'finally' block
         }
 
         // Add an existing student to the current class
@@ -726,7 +738,7 @@
 
             const studentId = document.getElementById('existing-student-select').value;
             if (!studentId || !currentClassId) {
-                submitBtn.disabled = false;
+                submitBtn.disabled = false; // Re-enable if validation fails
                 return;
             }
 
@@ -737,16 +749,16 @@
                     students: arrayUnion(studentId)
                 });
 
-                toast('Student added to class!', 'success');
                 closeModal('add-existing-student-modal');
-                setTimeout(() => document.getElementById('add-existing-student-form').reset(), 100);
-                // The onSnapshot listener for the class will automatically update the list
+                document.getElementById('add-existing-student-form').reset();
+                toast('Student added to class!', 'success');
+                // FIX: On success, button stays disabled as modal closes.
             } catch (error) {
                 console.error("Error adding existing student to class: ", error);
                 toast('Failed to add student to class.', 'error');
-            } finally {
-                submitBtn.disabled = false;
+                submitBtn.disabled = false; // FIX: Re-enable *only* on error.
             }
+            // FIX: No 'finally' block
         }
 
         // Remove a student from a class (does not delete the student)
@@ -783,7 +795,7 @@
             const email = document.getElementById('contact-email').value;
             const phone = document.getElementById('contact-phone').value;
             if (!name || !email || !currentStudentId) {
-                submitBtn.disabled = false;
+                submitBtn.disabled = false; // Re-enable if validation fails
                 return;
             }
 
@@ -801,17 +813,18 @@
                     parents: arrayUnion(parentRef.id)
                 });
 
-                toast('Contact added!', 'success');
                 closeModal('add-contact-modal');
-                setTimeout(() => document.getElementById('add-contact-form').reset(), 100);
+                document.getElementById('add-contact-form').reset();
+                toast('Contact added!', 'success');
                 // Re-fetch contacts for this student
                 fetchContactsForStudent(currentStudentId);
+                // FIX: On success, button stays disabled as modal closes.
             } catch (error) {
                 console.error("Error adding contact: ", error);
                 toast('Failed to add contact.', 'error');
-            } finally {
-                submitBtn.disabled = false;
+                submitBtn.disabled = false; // FIX: Re-enable *only* on error.
             }
+            // FIX: No 'finally' block
         }
 
         // Delete a contact and remove them from the student
@@ -889,9 +902,9 @@
                 console.error("Error sending email: ", error);
                 toast(`Failed to send email: ${error.message}`, 'error');
                 status.textContent = 'Failed. Try again.';
-            } finally {
-                sendBtn.disabled = false;
+                sendBtn.disabled = false; // Re-enable on failure
             }
+            // Removed finally block
         }
 
         // --- Server Config ---
@@ -1012,7 +1025,12 @@
                 appId = firebaseConfig.appId; // Set the global App ID
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
-                auth = getAuth(app);
+                
+                // FIX: Explicitly initialize auth with local persistence
+                // This ensures the anonymous user is saved between refreshes.
+                auth = initializeAuth(app, {
+                    persistence: browserLocalPersistence
+                });
 
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
@@ -1109,6 +1127,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
