@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>After-School Manager</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Firebase -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            signInWithCustomToken, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            updateDoc, 
+            deleteDoc, 
+            onSnapshot, 
+            collection, 
+            query, 
+            where, 
+            addDoc, 
+            getDocs,
+            setLogLevel,
+            arrayUnion, 
+            arrayRemove
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Global Variables ---
+        let app;
+        let db;
+        let auth;
+        let currentUserId = null;
+        let currentAppId = 'default-app-id';
+
+        let selectedClassId = null;
+        let selectedClassName = '';
+        let selectedStudentId = null;
+        let selectedStudentName = '';
+        
+        // Firestore unsubscribe functions
+        let unsubClasses = null;
+        let unsubStudents = null;
+        let unsubParents = null;
+
+        // --- Firebase Initialization ---
+        async function initializeFirebase() {
+            try {
+                // 1. Set App ID
+                currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                document.getElementById('userIdDisplay').textContent = "Initializing...";
+
+                // 2. Initialize Firebase App
+                if (typeof __firebase_config !== 'undefined') {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    setLogLevel('Debug'); // Enable Firestore logging
+                } else {
+                    console.error("Firebase config not found.");
+                    showMessage("Error: Firebase config missing. App cannot load.", true);
+                    document.getElementById('userIdDisplay').textContent = "Error: Config missing";
+                    return;
+                }
+
+                // 3. Set up Auth Listener
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUserId = user.uid;
+                        document.getElementById('userIdDisplay').textContent = currentUserId;
+                        console.log("User authenticated with UID:", currentUserId);
+                        // User is signed in, fetch their data
+                        loadClasses();
+                    } else {
+                        currentUserId = null;
+                        document.getElementById('userIdDisplay').textContent = "Not logged in";
+                        // Clear all data
+                        clearAllColumns();
+                        console.log("User is signed out.");
+                    }
+                });
+
+                // 4. Sign In
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+            } catch (error) {
+                console.error("Error during Firebase initialization:", error);
+                showMessage(`Initialization failed: ${error.message}`, true);
+                document.getElementById('userIdDisplay').textContent = "Error";
+            }
+        }
+        
+        // --- Utility ---
+        function getCollectionPath(collectionName) {
+            if (!currentUserId) {
+                console.error("User not authenticated, cannot get collection path.");
+                showMessage("You are not logged in. Please refresh.", true);
+                return null;
+            }
+            
+            // Path: /artifacts/{appId}/users/{userId}/{collectionName}
+            return `artifacts/${currentAppId}/users/${currentUserId}/${collectionName}`;
+        }
+        
+        function clearAllColumns() {
+            document.getElementById('classList').innerHTML = '<li><p class="text-gray-500 p-4">Select a class to see students.</p></li>';
+            document.getElementById('studentList').innerHTML = '<li><p class="text-gray-500 p-4">Select a student to see parents.</p></li>';
+            document.getElementById('parentList').innerHTML = '<li><p class="text-gray-500 p-4">No student selected.</p></li>';
+            document.getElementById('classHeader').textContent = 'Classes';
+            document.getElementById('studentHeader').textContent = 'Students';
+            document.getElementById('parentHeader').textContent = 'Parents/Contacts';
+        }
+
+        // --- Data Loading (Read) ---
+        
+        function loadClasses() {
+            const collectionPath = getCollectionPath('classes');
+            if (!collectionPath) return;
+
+            // Unsubscribe from old listener if it exists
+            if (unsubClasses) unsubClasses();
+
+            const q = query(collection(db, collectionPath));
+            unsubClasses = onSnapshot(q, (snapshot) => {
+                const classList = document.getElementById('classList');
+                if (snapshot.empty) {
+                    classList.innerHTML = '<li><p class="text-gray-500 p-4">No classes yet. Add one!</p></li>';
+                    return;
+                }
+                
+                classList.innerHTML = ''; // Clear list
+                let classes = [];
+                snapshot.forEach(doc => {
+                    classes.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Sort classes by name alphabetically
+                classes.sort((a, b) => a.name.localeCompare(b.name));
+
+                classes.forEach(classData => {
+                    const el = createListItemElement(
+                        classData.id, 
+                        classData.name, 
+                        () => selectClass(classData.id, classData.name),
+                        { name: 'deleteItem', arguments: ['classes', classData.id, classData.name] }
+                    );
+                    classList.appendChild(el);
+                });
+                
+                // Re-select the class if it's still in the list
+                if (selectedClassId && classes.some(c => c.id === selectedClassId)) {
+                    document.getElementById(`item-${selectedClassId}`).classList.add('bg-blue-100', 'border-blue-500');
+                } else {
+                    // If selected class was deleted, clear everything
+                    selectedClassId = null;
+                    selectedClassName = '';
+                    clearStudentAndParentLists();
+                }
+
+            }, (error) => {
+                console.error("Error loading classes: ", error);
+                showMessage("Error loading classes.", true);
+            });
+        }
+
+        function loadStudents(classId) {
+            // NEW: Query the top-level 'students' collection
+            const collectionPath = getCollectionPath('students');
+            if (!collectionPath) return;
+
+            if (unsubStudents) unsubStudents();
+            
+            // NEW: Query for students where 'classIds' array contains the selected classId
+            const q = query(collection(db, collectionPath), where("classIds", "array-contains", classId));
+            unsubStudents = onSnapshot(q, (snapshot) => {
+                const studentList = document.getElementById('studentList');
+                if (snapshot.empty) {
+                    studentList.innerHTML = '<li><p class="text-gray-500 p-4">No students in this class.</p></li>';
+                    return;
+                }
+                
+                studentList.innerHTML = ''; // Clear list
+                let students = [];
+                snapshot.forEach(doc => {
+                    students.push({ id: doc.id, ...doc.data() });
+                });
+                
+                students.sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
+
+                students.forEach(student => {
+                    const fullName = `${student.firstName} ${student.lastName}`;
+                    const el = createListItemElement(
+                        student.id, 
+                        fullName, 
+                        () => selectStudent(student.id, fullName),
+                        // NEW: This delete button now calls 'removeStudentFromClass'
+                        { name: 'removeStudentFromClass', arguments: [student.id, fullName] }
+                    );
+                    studentList.appendChild(el);
+                });
+                
+                // Re-select student if still in list
+                if (selectedStudentId && students.some(s => s.id === selectedStudentId)) {
+                    document.getElementById(`item-${selectedStudentId}`).classList.add('bg-blue-100', 'border-blue-500');
+                } else {
+                    selectedStudentId = null;
+                    selectedStudentName = '';
+                    clearParentList();
+                }
+
+            }, (error) => {
+                console.error("Error loading students: ", error);
+                showMessage("Error loading students.", true);
+            });
+        }
+        
+        function loadParents(studentId) {
+            const collectionPath = getCollectionPath(`parents`);
+            if (!collectionPath) return;
+
+            if (unsubParents) unsubParents();
+            
+            // Query for parents associated with this studentId
+            const q = query(collection(db, collectionPath), where("studentId", "==", studentId));
+            unsubParents = onSnapshot(q, (snapshot) => {
+                const parentList = document.getElementById('parentList');
+                if (snapshot.empty) {
+                    parentList.innerHTML = '<li><p class="text-gray-500 p-4">No parents or contacts for this student.</p></li>';
+                    return;
+                }
+                
+                parentList.innerHTML = ''; // Clear list
+                let parents = [];
+                snapshot.forEach(doc => {
+                    parents.push({ id: doc.id, ...doc.data() });
+                });
+                
+                parents.sort((a, b) => a.name.localeCompare(b.name));
+
+                parents.forEach(parent => {
+                    const el = createParentItemElement(
+                        parent.id, 
+                        parent.name,
+                        parent.email,
+                        parent.phone,
+                        { name: 'deleteItem', arguments: ['parents', parent.id, parent.name] }
+                    );
+                    parentList.appendChild(el);
+                });
+            }, (error) => {
+                console.error("Error loading parents: ", error);
+                showMessage("Error loading parents.", true);
+            });
+        }
+
+        // --- UI Element Creation ---
+
+        function createListItemElement(id, name, selectCallback, deleteCallback) {
+            const item = document.createElement('li');
+            item.id = `item-${id}`;
+            item.className = `p-4 border-2 border-transparent rounded-lg cursor-pointer hover:bg-gray-100 group relative`;
+            item.onclick = selectCallback;
+            
+            item.innerHTML = `
+                <span class="text-lg font-medium text-gray-800">${name}</span>
+                <button onclick="event.stopPropagation(); ${deleteCallback.name}('${deleteCallback.arguments[0]}', '${deleteCallback.arguments[1]}', '${deleteCallback.arguments[2]}')" 
+                        class="absolute top-1/2 right-4 -translate-y-1/2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            `;
+            return item;
+        }
+
+        function createParentItemElement(id, name, email, phone, deleteCallback) {
+            const item = document.createElement('div');
+            item.id = `parent-${id}`;
+            item.className = `p-3 border-2 border-transparent rounded-lg group relative bg-gray-50`;
+            
+            item.innerHTML = `
+                <h4 class="font-semibold text-gray-800">${name}</h4>
+                <p class="text-sm text-gray-600">${email}</p>
+                ${phone ? `<p class="text-sm text-gray-600">${phone}</p>` : ''}
+                <div class="mt-2">
+                    <button onclick="openEmailModal('${email}', '${name}')" class="inline-block bg-purple-100 text-purple-700 hover:bg-purple-200 text-xs font-bold py-1 px-3 rounded-full transition duration-150">
+                        Email Contact
+                    </button>
+                </div>
+                <button onclick="event.stopPropagation(); ${deleteCallback.name}('${deleteCallback.arguments[0]}', '${deleteCallback.arguments[1]}', '${deleteCallback.arguments[2]}')" 
+                        class="absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            `;
+            return item;
+        }
+
+        // --- UI Selection Logic ---
+        
+        function selectClass(classId, className) {
+            console.log(`Selected class: ${className} (${classId})`);
+            // Remove selection from old item
+            if (selectedClassId && document.getElementById(`item-${selectedClassId}`)) {
+                document.getElementById(`item-${selectedClassId}`).classList.remove('bg-blue-100', 'border-blue-500');
+            }
+            
+            // Set new selection
+            selectedClassId = classId;
+            selectedClassName = className;
+            
+            // Add selection to new item
+            document.getElementById(`item-${classId}`).classList.add('bg-blue-100', 'border-blue-500');
+            
+            // Update headers
+            document.getElementById('classHeader').textContent = `Class: ${className}`;
+            document.getElementById('studentHeader').textContent = 'Students';
+            document.getElementById('parentHeader').textContent = 'Parents/Contacts';
+            
+            // Reset and load next column
+            clearStudentAndParentLists();
+            loadStudents(classId);
+
+            // Enable Add Student buttons
+            document.getElementById('addStudentBtn').disabled = false;
+            document.getElementById('addExistingStudentBtn').disabled = false;
+        }
+        
+        function selectStudent(studentId, studentName) {
+            console.log(`Selected student: ${studentName} (${studentId})`);
+            // Remove selection from old item
+            if (selectedStudentId && document.getElementById(`item-${selectedStudentId}`)) {
+                document.getElementById(`item-${selectedStudentId}`).classList.remove('bg-blue-100', 'border-blue-500');
+            }
+            
+            // Set new selection
+            selectedStudentId = studentId;
+            selectedStudentName = studentName;
+            
+            // Add selection to new item
+            document.getElementById(`item-${studentId}`).classList.add('bg-blue-100', 'border-blue-500');
+            
+            // Update headers
+            document.getElementById('studentHeader').textContent = `Student: ${studentName}`;
+            document.getElementById('parentHeader').textContent = 'Parents/Contacts';
+            
+            // Reset and load next column
+            clearParentList();
+            loadParents(studentId);
+
+            // Enable Add Parent button
+            document.getElementById('addParentBtn').disabled = false;
+        }
+        
+        function clearStudentAndParentLists() {
+            if (unsubStudents) unsubStudents();
+            selectedStudentId = null;
+            selectedStudentName = '';
+            document.getElementById('studentList').innerHTML = '<li><p class="text-gray-500 p-4">Loading students...</p></li>';
+            clearParentList();
+            
+            // Disable Add Student buttons
+            const addStudentBtn = document.getElementById('addStudentBtn');
+            if (addStudentBtn) addStudentBtn.disabled = true;
+            const addExistingStudentBtn = document.getElementById('addExistingStudentBtn');
+            if (addExistingStudentBtn) addExistingStudentBtn.disabled = true;
+        }
+        
+        function clearParentList() {
+            if (unsubParents) unsubParents();
+            document.getElementById('parentList').innerHTML = '<li><p class="text-gray-500 p-4">Select a student to see parents.</p></li>';
+            document.getElementById('parentHeader').textContent = 'Parents/Contacts';
+
+            // Disable Add Parent button
+            const addParentBtn = document.getElementById('addParentBtn');
+            if (addParentBtn) addParentBtn.disabled = true;
+        }
+
+        // --- Data Creation (Create) ---
+        
+        async function handleAddClass(event) {
+            event.preventDefault();
+            const form = event.target;
+            const className = form.className.value.trim();
+            if (!className) {
+                showMessage("Class name is required.", true);
+                return;
+            }
+
+            const collectionPath = getCollectionPath('classes');
+            if (!collectionPath) return;
+
+            try {
+                await addDoc(collection(db, collectionPath), {
+                    name: className,
+                    createdAt: new Date()
+                });
+                showMessage("Class added!", false);
+                closeModal('classModal');
+            } catch (error) {
+                console.error("Error adding class: ", error);
+                showMessage("Error adding class.", true);
+            }
+        }
+        
+        async function handleAddStudent(event) {
+            event.preventDefault();
+            if (!selectedClassId) {
+                showMessage("Please select a class first.", true);
+                return;
+            }
+            
+            const form = event.target;
+            const firstName = form.studentFirstName.value.trim();
+            const lastName = form.studentLastName.value.trim();
+            
+            if (!firstName || !lastName) {
+                showMessage("First and last name are required.", true);
+                return;
+            }
+
+            // NEW: Add to the top-level 'students' collection
+            const collectionPath = getCollectionPath('students');
+            if (!collectionPath) return;
+
+            try {
+                // NEW: Student now gets a 'classIds' array with the selected class
+                await addDoc(collection(db, collectionPath), {
+                    firstName: firstName,
+                    lastName: lastName,
+                    classIds: [selectedClassId], // Add student to the current class
+                    createdAt: new Date()
+                });
+                showMessage("Student added!", false);
+                closeModal('studentModal');
+            } catch (error) {
+                console.error("Error adding student: ", error);
+                showMessage("Error adding student.", true);
+            }
+        }
+        
+        async function handleAddParent(event) {
+            event.preventDefault();
+            if (!selectedStudentId) {
+                showMessage("Please select a student first.", true);
+                return;
+            }
+            
+            const form = event.target;
+            const name = form.parentName.value.trim();
+            const email = form.parentEmail.value.trim();
+            const phone = form.parentPhone.value.trim();
+            
+            if (!name || !email) {
+                showMessage("First Name, Last Name, and Email are required.", true);
+                return;
+            }
+
+            // Simple email validation
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showMessage("Please enter a valid email address.", true);
+                return;
+            }
+
+            const collectionPath = getCollectionPath('parents');
+            if (!collectionPath) return;
+
+            try {
+                await addDoc(collection(db, collectionPath), {
+                    studentId: selectedStudentId, // Link to the selected student
+                    name: name,
+                    email: email,
+                    phone: phone,
+                    createdAt: new Date()
+                });
+                showMessage("Parent/Contact added!", false);
+                closeModal('parentModal');
+            } catch (error) {
+                console.error("Error adding parent: ", error);
+                showMessage("Error adding parent.", true);
+            }
+        }
+        
+        // --- New Email Sending Function ---
+        async function handleSendEmail(event) {
+            event.preventDefault();
+            const serverUrl = document.getElementById('serverUrl').value.trim();
+            
+            if (!serverUrl) {
+                showMessage("Please set the Render Server URL first.", true);
+                return;
+            }
+
+            const form = document.getElementById('sendEmailForm');
+            const to = form.emailTo.value;
+            const subject = form.emailSubject.value.trim();
+            const body = form.emailBody.value.trim();
+            
+            if (!subject || !body) {
+                showMessage("Subject and Message are required.", true);
+                return;
+            }
+            
+            const sendButton = document.getElementById('sendEmailBtn');
+            sendButton.disabled = true;
+            sendButton.textContent = "Sending...";
+
+            try {
+                // Construct the full server URL
+                const endpoint = serverUrl.endsWith('/') ? `${serverUrl}send-email` : `${serverUrl}/send-email`;
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        to: to,
+                        // 'from' is no longer sent; server handles it
+                        subject: subject,
+                        body: body
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showMessage("Email sent successfully!", false);
+                    closeModal('emailModal');
+                } else {
+                    console.error("Server error:", result.message);
+                    showMessage(result.message || "Failed to send email.", true);
+                }
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+                showMessage("Error connecting to server. Check URL.", true);
+            } finally {
+                sendButton.disabled = false;
+                sendButton.textContent = "Send Email";
+            }
+        }
+
+        // --- Data Deletion (Delete) ---
+        
+        // This function is now just for Classes and Parents
+        async function deleteItem(collectionName, docId, name) {
+            // Note: This delete function is simple.
+            // It does NOT delete sub-collections (e.g., students of a class)
+            // or related data (e.g., parents of a student).
+            
+            const confirmation = `Are you sure you want to delete ${name}? This cannot be undone.`;
+            // We can't use window.confirm, so we'll just proceed.
+            // In a real app, you'd build a custom confirmation modal.
+            console.log(`Simulating confirmation for deleting ${name}`);
+            
+            const fullPath = getCollectionPath(collectionName);
+            if (!fullPath) return;
+
+            try {
+                await deleteDoc(doc(db, fullPath, docId));
+                showMessage(`${name} deleted.`, false);
+                
+                // If we deleted a parent, that's fine.
+                // If we deleted a student, we should clear the parent list.
+                // NOTE: This logic is no longer used for students.
+                if (collectionName.includes('students') && docId === selectedStudentId) {
+                    clearParentList();
+                }
+                // If we deleted a class, we should clear student/parent lists.
+                if (collectionName === 'classes' && docId === selectedClassId) {
+                    clearStudentAndParentLists();
+                }
+                
+            } catch (error) {
+                console.error(`Error deleting ${name}: `, error);
+                showMessage(`Error deleting ${name}.`, true);
+            }
+        }
+
+        // --- NEW: Function to remove a student from a single class ---
+        async function removeStudentFromClass(studentId, studentName) {
+            if (!selectedClassId) {
+                showMessage("No class selected.", true);
+                return;
+            }
+            
+            console.log(`Removing ${studentName} from ${selectedClassName}`);
+
+            // Get path to the student in the top-level 'students' collection
+            const studentDocRef = doc(db, getCollectionPath('students'), studentId);
+            
+            try {
+                // NEW: Use arrayRemove to pull the classId from the student's list
+                await updateDoc(studentDocRef, {
+                    classIds: arrayRemove(selectedClassId)
+                });
+                showMessage(`${studentName} removed from ${selectedClassName}.`, false);
+                // The onSnapshot in loadStudents will handle the UI update.
+            } catch (error) {
+                console.error("Error removing student from class: ", error);
+                showMessage("Error removing student.", true);
+            }
+        }
+
+        // --- Modal & Message Box UI ---
+        
+        function openModal(modalId) {
+            // Pre-fill modal data if needed
+            if (modalId === 'studentModal' && selectedClassName) {
+                document.getElementById('studentModalClassName').textContent = selectedClassName;
+            }
+            if (modalId === 'parentModal' && selectedStudentName) {
+                document.getElementById('parentModalStudentName').textContent = selectedStudentName;
+            }
+            // NEW: Load all students when opening the 'assign' modal
+            if (modalId === 'assignStudentModal' && selectedClassId) {
+                document.getElementById('assignStudentModalClassName').textContent = selectedClassName;
+                loadAllStudentsForModal();
+            }
+            
+            const modal = document.getElementById(modalId);
+            const content = modal.querySelector('.modal-content');
+            
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('-translate-y-10');
+        }
+        
+        window.closeModal = function(modalId) {
+            const modal = document.getElementById(modalId);
+            const content = modal.querySelector('.modal-content');
+
+            modal.classList.add('opacity-0');
+            content.classList.add('-translate-y-10');
+            
+            // Reset forms
+            document.getElementById('addClassForm').reset();
+            document.getElementById('addStudentForm').reset();
+            document.getElementById('addParentForm').reset();
+            document.getElementById('sendEmailForm').reset();
+            // NEW: Clear the assignable student list
+            document.getElementById('assignableStudentList').innerHTML = '<li><p class="text-gray-500 p-4">Loading...</p></li>';
+            
+            // We want the modal to be non-interactive *after* the transition
+            setTimeout(() => {
+                modal.classList.add('pointer-events-none');
+            }, 250); 
+        }
+        
+        // New function to open the email modal
+        function openEmailModal(email, name) {
+            document.getElementById('emailModalHeader').textContent = `Email ${name}`;
+            document.getElementById('emailTo').value = email;
+            openModal('emailModal');
+        }
+
+        // --- NEW: Functions for "Add Existing Student" Modal ---
+
+        // Load all students who are NOT already in the selected class
+        async function loadAllStudentsForModal() {
+            if (!selectedClassId) return;
+
+            const listEl = document.getElementById('assignableStudentList');
+            listEl.innerHTML = '<li><p class="text-gray-500 p-4">Loading all students...</p></li>';
+
+            const studentsCollectionPath = getCollectionPath('students');
+            if (!studentsCollectionPath) return;
+
+            try {
+                // We query *all* students
+                const q = query(collection(db, studentsCollectionPath));
+                const snapshot = await getDocs(q);
+                
+                let allStudents = [];
+                snapshot.forEach(doc => allStudents.push({ id: doc.id, ...doc.data() }));
+                
+                // Filter out students *already* in the selected class
+                const assignableStudents = allStudents.filter(s => s.classIds && !s.classIds.includes(selectedClassId));
+                
+                // Sort by name
+                assignableStudents.sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
+                
+                listEl.innerHTML = ''; // Clear
+                
+                if (assignableStudents.length === 0) {
+                    listEl.innerHTML = '<li><p class="text-gray-500 p-4">No other students to add.</p></li>';
+                    return;
+                }
+
+                // Render the list of assignable students
+                assignableStudents.forEach(student => {
+                    const item = document.createElement('li');
+                    item.className = 'flex justify-between items-center p-3 hover:bg-gray-100 rounded-lg';
+                    item.innerHTML = `
+                        <span class="font-medium">${student.firstName} ${student.lastName}</span>
+                        <button onclick="assignStudentToClass('${student.id}', this)" class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold py-1 px-3 rounded-full transition duration-150">
+                            Add
+                        </button>
+                    `;
+                    listEl.appendChild(item);
+                });
+
+            } catch (error) {
+                console.error("Error loading all students:", error);
+                showMessage("Error loading students.", true);
+                listEl.innerHTML = '<li><p class="text-red-500 p-4">Error loading students.</p></li>';
+            }
+        }
+
+        // Assign an existing student to the currently selected class
+        async function assignStudentToClass(studentId, buttonElement) {
+            buttonElement.disabled = true;
+            buttonElement.textContent = "Adding...";
+            
+            const studentDocRef = doc(db, getCollectionPath('students'), studentId);
+            
+            try {
+                // NEW: Use arrayUnion to add the classId to the student's list
+                await updateDoc(studentDocRef, {
+                    classIds: arrayUnion(selectedClassId)
+                });
+                
+                // Success! Remove the item from the modal list.
+                buttonElement.closest('li').remove();
+                
+                // Check if the list is now empty
+                const listEl = document.getElementById('assignableStudentList');
+                if (listEl.children.length === 0) {
+                     listEl.innerHTML = '<li><p class="text-gray-500 p-4">All other students have been added.</p></li>';
+                }
+
+                showMessage("Student added to class.", false);
+                // The main student list will update automatically via its onSnapshot listener
+            } catch (error) {
+                console.error("Error assigning student:", error);
+                showMessage("Error adding student.", true);
+                buttonElement.disabled = false;
+                buttonElement.textContent = "Add";
+            }
+        }
+
+
+        function showMessage(message, isError = false) {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.textContent = message;
+            
+            // Remove old color classes
+            messageBox.classList.remove('bg-red-600', 'bg-green-500');
+            
+            // Add new color class
+            if (isError) {
+                messageBox.classList.add('bg-red-600');
+            } else {
+                messageBox.classList.add('bg-green-500');
+            }
+            
+            // Animate in
+            messageBox.classList.remove('opacity-0', 'translate-y-10');
+            
+            // Animate out after 3 seconds
+            setTimeout(() => {
+                messageBox.classList.add('opacity-0', 'translate-y-10');
+            }, 3000);
+        }
+        
+        // --- Expose functions to window for onclick attributes ---
+        window.openModal = openModal;
+        window.handleAddClass = handleAddClass;
+        window.handleAddStudent = handleAddStudent;
+        window.handleAddParent = handleAddParent;
+        window.deleteItem = deleteItem;
+        window.removeStudentFromClass = removeStudentFromClass; // Expose new function
+        window.openEmailModal = openEmailModal; // Expose new function
+        window.handleSendEmail = handleSendEmail; // Expose new function
+        window.assignStudentToClass = assignStudentToClass; // Expose new function
+
+        // --- App Start ---
+        document.addEventListener('DOMContentLoaded', initializeFirebase);
+    </script>
+    
+    <style>
+        /* Inter font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6; /* A very light, soft green-gray */
+        }
+        /* Custom scrollbar for columns */
+        .column-list {
+            overflow-y: auto;
+            max-height: 60vh; /* Adjust height as needed */
+        }
+        /* Webkit scrollbar styles */
+        .column-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        .column-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .column-list::-webkit-scrollbar-thumb {
+            background: #c5c5c5;
+            border-radius: 10px;
+        }
+        .column-list::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        /* Modal transition */
+        .modal, .modal-content, #messageBox {
+            transition: all 0.25s ease-in-out;
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-900">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        
+        <!-- Header -->
+        <header class="mb-8 p-6 bg-white rounded-lg shadow-sm border border-gray-200">
+            <h1 class="text-4xl font-bold text-gray-800">After-School Manager</h1>
+            <p class="text-gray-600">Manage your classes, students, and contacts.</p>
+            <p class="text-xs text-gray-500 mt-2">Your User ID: <span id="userIdDisplay" class="font-mono">Loading...</span></p>
+            
+            <!-- New Server URL Input -->
+            <div class="mt-4">
+                <label for="serverUrl" class="block text-sm font-medium text-gray-700">Render Server URL</label>
+                <input type="text" id="serverUrl" name="serverUrl" class="w-full md:w-1/2 mt-1 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https.your-app-name.onrender.com">
+            </div>
+            <!-- Your verified sender email -->
+            <!-- This section is no longer needed, the server will use its environment variable -->
+            <!--
+            <div class="mt-2">
+                <label for="senderEmail" class="block text-sm font-medium text-gray-700">Your Sender Email</label>
+                <input type="email" id="senderEmail" name="senderEmail" class="w-full md:w-1/2 mt-1 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="your-verified-email@example.com">
+                <p class="text-xs text-gray-500 mt-1">Must be a verified Sender Identity in SendGrid.</p>
+            </div>
+            -->
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Column 1: Classes -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="flex justify-between items-center p-4 border-b border-gray-200 flex-wrap">
+                    <h2 id="classHeader" class="text-2xl font-semibold mr-2">Classes</h2>
+                    <button onclick="openModal('classModal')" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150">
+                        Add Class
+                    </button>
+                </div>
+                <ul id="classList" class="column-list divide-y divide-gray-100 p-2">
+                    <!-- Class items will be injected here -->
+                    <li><p class="text-gray-500 p-4">Loading classes...</p></li>
+                </ul>
+            </div>
+            
+            <!-- Column 2: Students -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="flex justify-between items-center p-4 border-b border-gray-200 flex-wrap">
+                    <h2 id="studentHeader" class="text-2xl font-semibold mr-2">Students</h2>
+                    <!-- NEW: Button container for flex layout -->
+                    <div class="flex-shrink-0 mt-2 sm:mt-0">
+                        <button id="addStudentBtn" onclick="openModal('studentModal')" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg transition duration-150 disabled:opacity-50 text-sm">
+                            Add New
+                        </button>
+                        <button id="addExistingStudentBtn" onclick="openModal('assignStudentModal')" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 rounded-lg transition duration-150 disabled:opacity-50 ml-2 text-sm">
+                            Add Existing
+                        </button>
+                    </div>
+                </div>
+                <ul id="studentList" class="column-list divide-y divide-gray-100 p-2">
+                    <!-- Student items will be injected here -->
+                    <li><p class="text-gray-500 p-4">Select a class to see students.</p></li>
+                </ul>
+            </div>
+            
+            <!-- Column 3: Parents/Contacts -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="flex justify-between items-center p-4 border-b border-gray-200 flex-wrap">
+                    <h2 id="parentHeader" class="text-2xl font-semibold mr-2">Parents/Contacts</h2>
+                    <button id="addParentBtn" onclick="openModal('parentModal')" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150 disabled:opacity-50">
+                        Add Contact
+                    </button>
+                </div>
+                <div id="parentList" class="column-list p-4 space-y-3">
+                    <!-- Parent items will be injected here -->
+                    <li><p class="text-gray-500 p-4">Select a student to see parents.</p></li>
+                </div>
+            </div>
+            
+        </div>
+        
+    </div>
+    
+    <!-- Add Class Modal -->
+    <div id="classModal" class="modal fixed w-full h-full top-0 left-0 flex items-center justify-center z-50 pointer-events-none opacity-0">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        
+        <div class="modal-content bg-white w-11/12 md:max-w-md mx-auto rounded-lg shadow-lg z-50 overflow-y-auto -translate-y-10">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-5 border-b border-gray-200">
+                <p class="text-xl font-semibold">Add New Class</p>
+                <button onclick="closeModal('classModal')" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <form id="addClassForm" onsubmit="handleAddClass(event)" class="p-5">
+                <div>
+                    <label for="className" class="block text-sm font-medium text-gray-700 mb-1">Class Name</label>
+                    <input type="text" id="className" name="className" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+            </form>
+            
+            <!-- Modal Footer -->
+            <div class="flex justify-end p-5 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                <button onclick="closeModal('classModal')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg mr-3 transition duration-150">
+                    Cancel
+                </button>
+                <button type="submit" form="addClassForm" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150">
+                    Save Class
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Student Modal (FIXED: This was missing) -->
+    <div id="studentModal" class="modal fixed w-full h-full top-0 left-0 flex items-center justify-center z-50 pointer-events-none opacity-0">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        
+        <div class="modal-content bg-white w-11/12 md:max-w-md mx-auto rounded-lg shadow-lg z-50 overflow-y-auto -translate-y-10">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-5 border-b border-gray-200">
+                <p class="text-xl font-semibold">Add New Student</p>
+                <button onclick="closeModal('studentModal')" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <form id="addStudentForm" onsubmit="handleAddStudent(event)" class="p-5 space-y-4">
+                <!-- This is the element that was causing the error -->
+                <p class="text-sm text-gray-600">Adding to class: <span id="studentModalClassName" class="font-semibold"></span></p> 
+                <div>
+                    <label for="studentFirstName" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                    <input type="text" id="studentFirstName" name="studentFirstName" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
+                </div>
+                <div>
+                    <label for="studentLastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    <input type="text" id="studentLastName" name="studentLastName" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500" required>
+                </div>
+            </form>
+            
+            <!-- Modal Footer -->
+            <div class="flex justify-end p-5 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                <button onclick="closeModal('studentModal')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg mr-3 transition duration-150">
+                    Cancel
+                </button>
+                <button type="submit" form="addStudentForm" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150">
+                    Save Student
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: "Add Existing Student" Modal -->
+    <div id="assignStudentModal" class="modal fixed w-full h-full top-0 left-0 flex items-center justify-center z-50 pointer-events-none opacity-0">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        
+        <div class="modal-content bg-white w-11/12 md:max-w-md mx-auto rounded-lg shadow-lg z-50 overflow-y-auto -translate-y-10">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-5 border-b border-gray-200">
+                <p class="text-xl font-semibold">Add Existing Student</p>
+                <button onclick="closeModal('assignStudentModal')" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="p-5">
+                <p class="text-sm text-gray-600 mb-4">Adding to class: <span id="assignStudentModalClassName" class="font-semibold"></span></p>
+                <p class="text-sm font-medium text-gray-700 mb-2">Select students to add:</p>
+                <ul id="assignableStudentList" class="column-list divide-y divide-gray-100 p-2 border border-gray-200 rounded-lg bg-gray-50" style="max-height: 40vh;">
+                    <!-- Assignable students will be injected here -->
+                    <li><p class="text-gray-500 p-4">Loading students...</p></li>
+                </ul>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="flex justify-end p-5 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                <button onclick="closeModal('assignStudentModal')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg mr-3 transition duration-150">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Parent Modal -->
+    <div id="parentModal" class="modal fixed w-full h-full top-0 left-0 flex items-center justify-center z-50 pointer-events-none opacity-0">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        
+        <div class="modal-content bg-white w-11/12 md:max-w-md mx-auto rounded-lg shadow-lg z-50 overflow-y-auto -translate-y-10">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-5 border-b border-gray-200">
+                <p class="text-xl font-semibold">Add Parent/Contact</p>
+                <button onclick="closeModal('parentModal')" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <form id="addParentForm" onsubmit="handleAddParent(event)" class="p-5 space-y-4">
+                <p class="text-sm text-gray-600">Adding contact for student: <span id="parentModalStudentName" class="font-semibold"></span></p>
+                <div>
+                    <label for="parentName" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input type="text" id="parentName" name="parentName" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                </div>
+                <div>
+                    <label for="parentEmail" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="parentEmail" name="parentEmail" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                </div>
+                <div>
+                    <label for="parentPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone (Optional)</label>
+                    <input type="tel" id="parentPhone" name="parentPhone" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+            </form>
+            
+            <!-- Modal Footer -->
+            <div class="flex justify-end p-5 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                <button onclick="closeModal('parentModal')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg mr-3 transition duration-150">
+                    Cancel
+                </button>
+                <button type="submit" form="addParentForm" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150">
+                    Save Contact
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- New: Add Email Modal -->
+    <div id="emailModal" class="modal fixed w-full h-full top-0 left-0 flex items-center justify-center z-50 pointer-events-none opacity-0">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        
+        <div class="modal-content bg-white w-11/12 md:max-w-lg mx-auto rounded-lg shadow-lg z-50 overflow-y-auto -translate-y-10">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-5 border-b border-gray-200">
+                <p id="emailModalHeader" class="text-xl font-semibold">Compose Email</p>
+                <button onclick="closeModal('emailModal')" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <form id="sendEmailForm" class="p-5 space-y-4">
+                <div>
+                    <label for="emailTo" class="block text-sm font-medium text-gray-700 mb-1">To</label>
+                    <input type="email" id="emailTo" name="emailTo" class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100" readonly>
+                </div>
+                <div>
+                    <label for="emailSubject" class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                    <input type="text" id="emailSubject" name="emailSubject" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                </div>
+                <div>
+                    <label for="emailBody" class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                    <textarea id="emailBody" name="emailBody" rows="8" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" required></textarea>
+                </div>
+            </form>
+            
+            <!-- Modal Footer -->
+            <div class="flex justify-between items-center p-5 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+                <button onclick="closeModal('emailModal')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg mr-3 transition duration-150">
+                    Cancel
+                </button>
+                <button id="sendEmailBtn" onclick="handleSendEmail(event)" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150">
+                    Send Email
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Custom Alert/Message Box -->
+    <div id="messageBox" class="fixed bottom-5 right-5 z-50 bg-red-600 text-white py-3 px-5 rounded-lg shadow-xl opacity-0 translate-y-10 transition-all duration-300">
+        <!-- Message content set via JS -->
+    </div>
+
+</body>
+</html>
+
+

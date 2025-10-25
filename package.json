@@ -1,0 +1,15 @@
+{
+  "name": "after-school-mailer",
+  "version": "1.0.0",
+  "description": "Email server for after-school app",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "nodemailer": "^6.9.7"
+  }
+}
