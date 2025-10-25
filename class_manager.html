@@ -37,7 +37,7 @@
 <body class="h-full flex flex-col">
 
     <!-- NEW: Auth Loading Overlay -->
-    <div id="auth-loading-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-white">
+    <div id="auth-loading-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-white text-center p-4">
         <div class="flex flex-col items-center">
             <div class="spinner"></div>
             <p class="text-lg font-medium text-gray-700 mt-4">Connecting to database...</p>
@@ -470,9 +470,11 @@
         const renderStudentDropdown = () => {
             const selectEl = document.getElementById('existing-student-select');
             selectEl.innerHTML = '<option value="">Select a student...</option>';
-            // Filter out students already in the current class
+            if (!currentClassId) return; // Don't run if no class is selected
+
             const classRef = doc(getClassesCol(), currentClassId);
             getDoc(classRef).then(classDoc => {
+                if (!classDoc.exists()) return;
                 const studentIdsInClass = classDoc.data().students || [];
                 const availableStudents = allStudentsCache.filter(s => !studentIdsInClass.includes(s.id));
                 
@@ -546,9 +548,16 @@
                 snapshot.forEach(doc => {
                     allStudentsCache.push({ id: doc.id, name: doc.data().name });
                 });
-                // If a class is selected, we might need to update the dropdown
+                // If a class is selected, we MUST re-render the student list
+                // and dropdown, as a student's name might have changed.
                 if (currentClassId) {
                     renderStudentDropdown();
+                    // ***NEW FIX***: Re-run the (new, simple) student list listener logic.
+                    // This is not a listener, so we just call the function.
+                    // The *class* listener will handle rendering.
+                    // But if a student is added, the class listener *will* run.
+                    // Let's force a re-render from here.
+                    listenForStudentsInClass(currentClassId);
                 }
             }, (error) => {
                 console.error("Error listening for all students: ", error);
@@ -556,69 +565,44 @@
             });
         }
 
+        // ***NEW, SIMPLER LOGIC***
         // Listen for students in a specific class
         const listenForStudentsInClass = (classId) => {
+            if (unsubscribeStudents) unsubscribeStudents(); // Unsubscribe from old listener
+            
             if (!classId) {
                 renderStudentList([]);
                 return;
             }
-            
-            // FIX: Unsubscribe from the old listener *before* creating a new one
-            if (unsubscribeStudents) unsubscribeStudents();
 
             const classRef = doc(getClassesCol(), classId);
-            // Listen to the class document for changes to its `students` array
-            unsubscribeStudents = onSnapshot(classRef, async (classDoc) => {
+            unsubscribeStudents = onSnapshot(classRef, (classDoc) => {
                 if (!classDoc.exists()) {
                     renderStudentList([]);
                     return;
                 }
-                const classData = classDoc.data();
-                const studentIds = classData.students || []; // `students` is an array of IDs
-
+                const studentIds = classDoc.data().students || [];
                 if (studentIds.length === 0) {
                     renderStudentList([]);
                     return;
                 }
+
+                // NEW LOGIC: Filter the real-time cache. No new queries.
+                // This is fast and avoids all race conditions.
+                const studentsInClass = allStudentsCache.filter(student => 
+                    studentIds.includes(student.id)
+                );
                 
-                try {
-                    // FIX: Re-fetch student docs every time the list changes.
-                    // This avoids all race conditions with the allStudentsCache.
-                    const studentDocsPromises = [];
-                    // Chunk the array into pieces of 30 (Firestore 'in' query limit)
-                    for (let i = 0; i < studentIds.length; i += 30) {
-                        const chunk = studentIds.slice(i, i + 30);
-                        if (chunk.length === 0) continue;
-                        const q = query(getStudentsCol(), where('__name__', 'in', chunk));
-                        studentDocsPromises.push(getDocs(q));
-                    }
-                    
-                    if (studentDocsPromises.length === 0) {
-                        renderStudentList([]);
-                        return;
-                    }
+                // We have the students. Now render them.
+                renderStudentList(studentsInClass);
 
-                    const snapshots = await Promise.all(studentDocsPromises);
-                    const students = [];
-                    snapshots.forEach(snapshot => {
-                        snapshot.docs.forEach(doc => {
-                            students.push({ id: doc.id, ...doc.data() });
-                        });
-                    });
-
-                    renderStudentList(students);
-
-                } catch (error) {
-                    console.error("Error fetching students for class: ", error);
-                    toast('Failed to load students.', 'error');
-                    renderStudentList([]); // Render empty list on error
-                }
             }, (error) => {
                 console.error("Error listening for class students: ", error);
                 toast('Failed to load students.', 'error');
                 renderStudentList([]);
             });
         }
+
 
         // Fetch contacts for a specific student
         const fetchContactsForStudent = (studentId) => {
@@ -647,10 +631,16 @@
                     // Chunk array
                     for (let i = 0; i < parentIds.length; i += 30) {
                         const chunk = parentIds.slice(i, i + 30);
+                        if(chunk.length === 0) continue; // Safety check
                         const q = query(getParentsCol(), where('__name__', 'in', chunk));
                         parentDocsPromises.push(getDocs(q));
                     }
                     
+                    if (parentDocsPromises.length === 0) {
+                       renderContactList([]);
+                       return;
+                    }
+
                     const snapshots = await Promise.all(parentDocsPromises);
                     const contacts = [];
                     snapshots.forEach(snapshot => {
@@ -695,7 +685,7 @@
             
             // Render dropdown and student list
             renderStudentDropdown();
-            listenForStudentsInClass(classId);
+            listenForStudentsInClass(classId); // Call the *new* listener
 
             // Clear contacts
             renderContactList([]);
@@ -754,7 +744,12 @@
             } catch (error) {
                 console.error("Error adding class: ", error);
                 toast('Failed to add class.', 'error');
-                submitBtn.disabled = false; // Re-enable *only* on error.
+            } finally {
+                // Always re-enable the button *unless* it was successful
+                // (and the modal is now closed)
+                if (document.getElementById('add-class-modal').classList.contains('flex')) {
+                    submitBtn.disabled = false;
+                }
             }
         }
 
@@ -818,7 +813,10 @@
             } catch (error) {
                 console.error("Error adding new student: ", error);
                 toast('Failed to add new student.', 'error');
-                submitBtn.disabled = false; // Re-enable *only* on error.
+            } finally {
+                 if (document.getElementById('add-new-student-modal').classList.contains('flex')) {
+                    submitBtn.disabled = false;
+                }
             }
         }
 
@@ -848,7 +846,10 @@
             {
                 console.error("Error adding existing student to class: ", error);
                 toast('Failed to add student to class.', 'error');
-                submitBtn.disabled = false; // Re-enable *only* on error.
+            } finally {
+                if (document.getElementById('add-existing-student-modal').classList.contains('flex')) {
+                    submitBtn.disabled = false;
+                }
             }
         }
 
@@ -915,7 +916,10 @@
             } catch (error) {
                 console.error("Error adding contact: ", error);
                 toast('Failed to add contact.', 'error');
-                submitBtn.disabled = false; // Re-enable *only* on error.
+            } finally {
+                if (document.getElementById('add-contact-modal').classList.contains('flex')) {
+                    submitBtn.disabled = false;
+                }
             }
         }
 
@@ -1050,6 +1054,7 @@
         
         // --- Firebase Initialization ---
         const initializeAppAndAuth = (firebaseConfig) => {
+            const overlay = document.getElementById('auth-loading-overlay');
             try {
                 appId = firebaseConfig.appId; // Set the global App ID
                 const app = initializeApp(firebaseConfig);
@@ -1071,38 +1076,46 @@
                             listenForAllStudents();
                             
                             // FIX: Hide overlay and enable app *after* user is set and listeners are on
-                            document.getElementById('auth-loading-overlay').classList.add('hidden');
+                            overlay.classList.add('hidden');
                             document.getElementById('add-class-btn').disabled = false;
                         } catch (e) {
                             console.error("Error setting up listeners: ", e);
-                            document.getElementById('auth-loading-overlay').innerHTML = '<p class="text-red-500">Error loading data. Check console.</p>';
+                            overlay.innerHTML = '<p class="text-red-500">Error loading data. Check console.</p>';
                         }
                     } else {
                         // User is signed out. Sign them in anonymously.
                         try {
                             const userCredential = await signInAnonymously(auth);
                             userId = userCredential.user.uid;
-                            
-                            // Start data listeners
-                            listenForClasses();
-                            listenForAllStudents();
-                            
-                            // FIX: Hide overlay and enable app *after* user is set and listeners are on
-                            document.getElementById('auth-loading-overlay').classList.add('hidden');
-                            document.getElementById('add-class-btn').disabled = false;
+                            // (onAuthStateChanged will be called again with this new user)
                         } catch (error) {
                             console.error("Anonymous sign-in failed: ", error);
-                            toast('Authentication failed.', 'error');
-                            document.getElementById('auth-loading-overlay').innerHTML = '<p class="text-red-500">Authentication Failed. Please check Firebase Anonymous Auth rules.</p>';
+                            // ***NEW DIAGNOSTIC***
+                            let errMsg = `<p class="text-red-500 font-bold">Authentication Failed</p><p class="text-gray-500 text-xs mt-1">${error.message}</p>`;
+                            if (error.code === 'auth/operation-not-allowed') {
+                                errMsg = `
+                                <p class="text-red-500 font-bold">Authentication Failed</p>
+                                <p class="text-gray-600 text-sm mt-2">You must enable "Anonymous" sign-in in your Firebase project.</p>
+                                <p class="text-gray-500 text-xs mt-1">(Error: ${error.code})</p>`;
+                            }
+                            overlay.innerHTML = errMsg;
                         }
                     }
                 });
             } catch (error) {
                 console.error("Firebase init failed: ", error);
-                toast('Firebase initialization failed.', 'error');
+                // ***NEW DIAGNOSTIC***
+                let errMsg = `
+                    <p class="text-red-500 font-bold">Firebase Init Failed</p>
+                    <p class="text-gray-600 text-sm mt-2">Check your hardcoded config or saved config.</p>
+                    <p class="text-gray-500 text-xs mt-1">${error.message}</p>`;
+                overlay.innerHTML = errMsg;
+                
+                // Clear bad config and show modal
                 localStorage.removeItem('firebaseConfig');
-                openModal('firebase-config-modal');
-                document.getElementById('auth-loading-overlay').classList.add('hidden');
+                if (!HARDCODED_CONFIG.firebase.apiKey) {
+                    openModal('firebase-config-modal');
+                }
             }
         }
         
