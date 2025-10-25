@@ -52,7 +52,7 @@
                 <div class="header-sticky p-4 border-b border-gray-200">
                     <div class="flex flex-wrap justify-between items-center gap-2">
                         <h2 class="text-lg font-semibold text-gray-900">Classes</h2>
-                        <button id="add-class-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm">
+                        <button id="add-class-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm disabled:bg-gray-400" disabled>
                             Add Class
                         </button>
                     </div>
@@ -125,7 +125,7 @@
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
                     <button type="button" id="cancel-add-class" class="bg-white border border-gray-300 rounded-md shadow-sm px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                    <button type="submit" class="bg-blue-600 border border-transparent rounded-md shadow-sm px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Save Class</button>
+                    <button type="submit" class="bg-blue-600 border border-transparent rounded-md shadow-sm px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-400">Save Class</button>
                 </div>
             </form>
         </div>
@@ -145,7 +145,7 @@
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
                     <button type="button" id="cancel-add-new-student" class="bg-white border border-gray-300 rounded-md shadow-sm px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                    <button type="submit" class="bg-blue-600 border border-transparent rounded-md shadow-sm px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Save Student</button>
+                    <button type="submit" class="bg-blue-600 border border-transparent rounded-md shadow-sm px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-400">Save Student</button>
                 </div>
             </form>
         </div>
@@ -165,7 +165,7 @@
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
                     <button type="button" id="cancel-add-existing-student" class="bg-white border border-gray-300 rounded-md shadow-sm px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                    <button type="submit" class="bg-blue-600 border border-transparent rounded-md shadow-sm px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Add to Class</button>
+                    <button type="submit" class="bg-blue-600 border border-transparent rounded-md shadow-sm px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-400">Add to Class</button>
                 </div>
             </form>
         </div>
@@ -193,7 +193,7 @@
                 </div>
                 <div class="mt-6 flex justify-end space-x-3">
                     <button type="button" id="cancel-add-contact" class="bg-white border border-gray-300 rounded-md shadow-sm px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                    <button type="submit" class="bg-blue-600 border border-transparent rounded-md shadow-sm px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Save Contact</button>
+                    <button type="submit" class="bg-blue-600 border border-transparent rounded-md shadow-sm px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-400">Save Contact</button>
                 </div>
             </form>
         </div>
@@ -220,10 +220,10 @@
                 </div>
                 <div class="mt-6 flex justify-between items-center">
                     <span id="email-status" class="text-sm text-gray-500"></span>
-                    <div class="flex space-x-3">
-                        <button type="button" id="cancel-compose-email" class="bg-white border border-gray-300 rounded-md shadow-sm px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                        <button type="submit" id="send-email-btn" class="bg-blue-600 border border-transparent rounded-md shadow-sm px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Send Email</button>
-                    </div>
+            <div class="flex space-x-3">
+                <button type="button" id="cancel-compose-email" class="bg-white border border-gray-300 rounded-md shadow-sm px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button type="submit" id="send-email-btn" class="bg-blue-600 border border-transparent rounded-md shadow-sm px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-400">Send Email</button>
+            </div>
                 </div>
             </form>
         </div>
@@ -531,7 +531,7 @@
             
             const classRef = doc(getClassesCol(), classId);
             // Listen to the class document for changes to its `students` array
-            unsubscribeStudents = onSnapshot(classRef, async (classDoc) => {
+            unsubscribeStudents = onSnapshot(classRef, (classDoc) => {
                 if (!classDoc.exists()) {
                     renderStudentList([]);
                     return;
@@ -545,27 +545,15 @@
                 }
                 
                 try {
-                    // We have IDs, now fetch the student documents
-                    // Firestore 'in' query is limited to 30 items
-                    const studentDocsPromises = [];
-                    // Chunk the array into pieces of 30
-                    for (let i = 0; i < studentIds.length; i += 30) {
-                        const chunk = studentIds.slice(i, i + 30);
-                        const q = query(getStudentsCol(), where('__name__', 'in', chunk));
-                        studentDocsPromises.push(getDocs(q));
-                    }
-                    
-                    const snapshots = await Promise.all(studentDocsPromises);
-                    const students = [];
-                    snapshots.forEach(snapshot => {
-                        snapshot.docs.forEach(doc => {
-                            students.push({ id: doc.id, ...doc.data() });
-                        });
-                    });
+                    // Use the cache instead of re-fetching
+                    const students = studentIds
+                        .map(id => allStudentsCache.find(s => s.id === id))
+                        .filter(s => s); // Filter out any students not found in cache (e.g., deleted)
 
                     renderStudentList(students);
+
                 } catch (error) {
-                    console.error("Error fetching students for class: ", error);
+                    console.error("Error filtering students from cache: ", error);
                     toast('Failed to load students.', 'error');
                     renderStudentList([]); // Render empty list on error
                 }
@@ -625,9 +613,15 @@
         // Add a new class
         const handleAddClass = async (e) => {
             e.preventDefault();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+
             const name = document.getElementById('class-name').value;
             const teacher = document.getElementById('teacher-name').value;
-            if (!name || !teacher) return;
+            if (!name || !teacher) {
+                submitBtn.disabled = false;
+                return;
+            }
 
             try {
                 await addDoc(getClassesCol(), {
@@ -641,6 +635,8 @@
             } catch (error) {
                 console.error("Error adding class: ", error);
                 toast('Failed to add class.', 'error');
+            } finally {
+                submitBtn.disabled = false;
             }
         }
 
@@ -670,8 +666,14 @@
         // Add a brand new student and enroll them in the current class
         const handleAddNewStudent = async (e) => {
             e.preventDefault();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+
             const name = document.getElementById('new-student-name').value;
-            if (!name || !currentClassId) return;
+            if (!name || !currentClassId) {
+                submitBtn.disabled = false;
+                return;
+            }
 
             try {
                 // 1. Create the new student
@@ -693,14 +695,22 @@
             } catch (error) {
                 console.error("Error adding new student: ", error);
                 toast('Failed to add new student.', 'error');
+            } finally {
+                submitBtn.disabled = false;
             }
         }
 
         // Add an existing student to the current class
         const handleAddExistingStudent = async (e) => {
             e.preventDefault();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+
             const studentId = document.getElementById('existing-student-select').value;
-            if (!studentId || !currentClassId) return;
+            if (!studentId || !currentClassId) {
+                submitBtn.disabled = false;
+                return;
+            }
 
             try {
                 // Add the student's ID to the class's `students` array
@@ -716,6 +726,8 @@
             } catch (error) {
                 console.error("Error adding existing student to class: ", error);
                 toast('Failed to add student to class.', 'error');
+            } finally {
+                submitBtn.disabled = false;
             }
         }
 
@@ -746,10 +758,16 @@
         // Add a new contact and link them to the current student
         const handleAddContact = async (e) => {
             e.preventDefault();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+
             const name = document.getElementById('contact-name').value;
             const email = document.getElementById('contact-email').value;
             const phone = document.getElementById('contact-phone').value;
-            if (!name || !email || !currentStudentId) return;
+            if (!name || !email || !currentStudentId) {
+                submitBtn.disabled = false;
+                return;
+            }
 
             try {
                 // 1. Create the new parent/contact
@@ -773,6 +791,8 @@
             } catch (error) {
                 console.error("Error adding contact: ", error);
                 toast('Failed to add contact.', 'error');
+            } finally {
+                submitBtn.disabled = false;
             }
         }
 
@@ -850,8 +870,9 @@
             } catch (error) {
                 console.error("Error sending email: ", error);
                 toast(`Failed to send email: ${error.message}`, 'error');
-                sendBtn.disabled = false;
                 status.textContent = 'Failed. Try again.';
+            } finally {
+                sendBtn.disabled = false;
             }
         }
 
@@ -979,6 +1000,7 @@
                         listenForClasses();
                         listenForAllStudents();
                         document.getElementById('loading-overlay').classList.add('hidden'); // Hide overlay
+                        document.getElementById('add-class-btn').disabled = false; // Enable add class
                     } else {
                         // User is signed out. Attempt anonymous sign-in.
                         try {
@@ -1007,6 +1029,9 @@
             setupEventListeners();
             loadServerConfig();
 
+            // Disable all main action buttons until auth is ready
+            document.getElementById('add-class-btn').disabled = true;
+
             // Check if we are in the special preview environment
             if (typeof __firebase_config !== 'undefined' && typeof __initial_auth_token !== 'undefined') {
                 // We are in the preview environment
@@ -1022,6 +1047,7 @@
                     listenForClasses();
                     listenForAllStudents();
                     document.getElementById('loading-overlay').classList.add('hidden'); // Hide overlay
+                    document.getElementById('add-class-btn').disabled = false; // Enable add class
                 } catch (error) {
                     console.error("Preview auth failed: ", error);
                     toast('Preview environment auth failed.', 'error');
@@ -1050,4 +1076,5 @@
     </script>
 </body>
 </html>
+
 
