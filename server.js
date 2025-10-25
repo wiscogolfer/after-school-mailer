@@ -1,78 +1,75 @@
-import express from 'express';
-import nodemailer from 'nodemailer';
-import cors from 'cors';
-
-// Initialize Express app
+const express = require('express');
+const nodemailer = require('nodemailer');
+const cors = require('cors'); // Import the cors package
 const app = express();
-const port = process.env.PORT || 3001; // Render will set the PORT environment variable
+const port = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors()); // Enable Cross-Origin Resource Sharing for your app
-app.use(express.json()); // Parse incoming JSON bodies
+// --- CRITICAL FIX ---
+// Enable CORS for all routes. This allows your GitHub Pages
+// site to make requests to your Render server.
+app.use(cors());
+// --------------------
 
-// --- Nodemailer Transporter Setup (for Gmail) ---
-// We will get these values from Render's Environment Variables
+// Middleware to parse JSON bodies
+app.use(express.json());
+
+// Check for required environment variables at startup
 const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+const GMAIL_APP_PASSWORD = process.env.GOOGLE_APP_PASSWORD;
 
 if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
-    console.error("FATAL ERROR: GMAIL_USER or GMAIL_APP_PASSWORD environment variables are not set.");
-    // We don't exit the process here, but sending email will fail.
-    // Render will show this in the logs.
+    console.error('FATAL ERROR: GMAIL_USER or GOOGLE_APP_PASSWORD environment variables are not set.');
+    process.exit(1); // Stop the server
 }
 
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
+// Create a Nodemailer transporter using your Google App Password
+let transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // true for 465, false for other ports
     auth: {
         user: GMAIL_USER,
         pass: GMAIL_APP_PASSWORD,
     },
 });
 
-// --- API Endpoints ---
-
-// Health check endpoint for Render
-app.get('/', (req, res) => {
-    res.status(200).json({ status: 'Server is running' });
+// Verify the transporter configuration on startup
+transporter.verify((error, success) => {
+    if (error) {
+        console.error('Nodemailer config error:', error);
+    } else {
+        console.log('Nodemailer is ready to send emails');
+    }
 });
 
-// Main endpoint for sending email
+// POST endpoint to send emails
 app.post('/send-email', async (req, res) => {
-    const { to, subject, body } = req.body;
+    const { to, subject, text } = req.body;
 
-    // Check for missing environment variables
-    if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
-        console.error("Attempted to send email, but server is not configured. Missing GMAIL_USER or GMAIL_APP_PASSWORD.");
-        return res.status(500).json({ success: false, message: "Server error: Email service not configured." });
-    }
-
-    // Basic validation
-    if (!to || !subject || !body) {
-        return res.status(400).json({ success: false, message: 'Missing required fields: to, subject, or body.' });
+    if (!to || !subject || !text) {
+        return res.status(400).json({ error: 'Missing required fields: to, subject, text' });
     }
 
     const mailOptions = {
-        from: GMAIL_USER, // This is YOUR email (from environment variable)
-        to: to,           // The recipient (from the app)
-        subject: subject, // The subject (from the app)
-        text: body,       // The plain-text body (from the app)
+        from: GMAIL_USER,
+        to: to,
+        subject: subject,
+        text: text,
     };
 
     try {
-        await transporter.sendMail(mailOptions);
-        console.log(`Email sent successfully to ${to}`);
-        res.status(200).json({ success: true, message: 'Email sent successfully!' });
+        let info = await transporter.sendMail(mailOptions);
+        console.log('Email sent: ' + info.response);
+        res.status(200).json({ message: 'Email sent successfully' });
     } catch (error) {
-        console.error(`Failed to send email to ${to}:`, error);
-        
-        // Check for specific auth errors from Google
-        if (error.code === 'EAUTH') {
-            console.error("Authentication failed. Check GMAIL_USER and GMAIL_APP_PASSWORD.");
-            return res.status(500).json({ success: false, message: "Server error: Authentication failed. Check your App Password." });
-        }
-        
-        res.status(500).json({ success: false, message: 'Failed to send email. Check server logs.' });
+        console.error('Error sending email:', error);
+        res.status(500).json({ error: 'Failed to send email', details: error.message });
     }
+});
+
+// Root endpoint for health check (Render uses this)
+app.get('/', (req, res) => {
+    res.status(200).send('Email server is running.');
 });
 
 // Start the server
