@@ -251,6 +251,10 @@
                         <label for="firebase-project-id" class="block text-sm font-medium text-gray-700">Project ID</label>
                         <input type="text" id="firebase-project-id" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
                     </div>
+                    <div>
+                        <label for="firebase-app-id" class="block text-sm font-medium text-gray-700">App ID</label>
+                        <input type="text" id="firebase-app-id" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" placeholder="e.g., my-school-app" required>
+                    </div>
                 </div>
                 <div class="mt-6 flex justify-end">
                     <button type="submit" class="bg-blue-600 border border-transparent rounded-md shadow-sm px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Save Configuration</button>
@@ -313,6 +317,7 @@
         let currentStudentId = null;
         let allStudentsCache = []; // Cache of all students { id, name }
         let unsubscribeStudents = null; // Listener for students in a class
+        let appId; // Will be set by startApp
 
         // --- Collections ---
         const getClassesCol = () => collection(db, 'artifacts', appId, 'users', userId, 'classes');
@@ -320,7 +325,7 @@
         const getParentsCol = () => collection(db, 'artifacts', appId, 'users', userId, 'parents');
 
         // --- App ID ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // This is now set in startApp()
 
         // --- Toast Notification ---
         const toast = (message, type = 'success', duration = 3000) => {
@@ -531,7 +536,7 @@
             
             const classRef = doc(getClassesCol(), classId);
             // Listen to the class document for changes to its `students` array
-            unsubscribeStudents = onSnapshot(classRef, (classDoc) => {
+            unsubscribeStudents = onSnapshot(classRef, async (classDoc) => {
                 if (!classDoc.exists()) {
                     renderStudentList([]);
                     return;
@@ -545,15 +550,28 @@
                 }
                 
                 try {
-                    // Use the cache instead of re-fetching
-                    const students = studentIds
-                        .map(id => allStudentsCache.find(s => s.id === id))
-                        .filter(s => s); // Filter out any students not found in cache (e.g., deleted)
+                    // We have IDs, now fetch the student documents
+                    // This fixes the race condition where the cache wasn't updated
+                    const studentDocsPromises = [];
+                    // Chunk the array into pieces of 30
+                    for (let i = 0; i < studentIds.length; i += 30) {
+                        const chunk = studentIds.slice(i, i + 30);
+                        const q = query(getStudentsCol(), where('__name__', 'in', chunk));
+                        studentDocsPromises.push(getDocs(q));
+                    }
+                    
+                    const snapshots = await Promise.all(studentDocsPromises);
+                    const students = [];
+                    snapshots.forEach(snapshot => {
+                        snapshot.docs.forEach(doc => {
+                            students.push({ id: doc.id, ...doc.data() });
+                        });
+                    });
 
                     renderStudentList(students);
 
                 } catch (error) {
-                    console.error("Error filtering students from cache: ", error);
+                    console.error("Error fetching students for class: ", error);
                     toast('Failed to load students.', 'error');
                     renderStudentList([]); // Render empty list on error
                 }
@@ -631,7 +649,7 @@
                 });
                 toast('Class added successfully!', 'success');
                 closeModal('add-class-modal');
-                document.getElementById('add-class-form').reset();
+                setTimeout(() => document.getElementById('add-class-form').reset(), 100);
             } catch (error) {
                 console.error("Error adding class: ", error);
                 toast('Failed to add class.', 'error');
@@ -690,7 +708,7 @@
 
                 toast('Student added and enrolled!', 'success');
                 closeModal('add-new-student-modal');
-                document.getElementById('add-new-student-form').reset();
+                setTimeout(() => document.getElementById('add-new-student-form').reset(), 100);
                 // The onSnapshot listener for the class will automatically update the list
             } catch (error) {
                 console.error("Error adding new student: ", error);
@@ -721,7 +739,7 @@
 
                 toast('Student added to class!', 'success');
                 closeModal('add-existing-student-modal');
-                document.getElementById('add-existing-student-form').reset();
+                setTimeout(() => document.getElementById('add-existing-student-form').reset(), 100);
                 // The onSnapshot listener for the class will automatically update the list
             } catch (error) {
                 console.error("Error adding existing student to class: ", error);
@@ -785,7 +803,7 @@
 
                 toast('Contact added!', 'success');
                 closeModal('add-contact-modal');
-                document.getElementById('add-contact-form').reset();
+                setTimeout(() => document.getElementById('add-contact-form').reset(), 100);
                 // Re-fetch contacts for this student
                 fetchContactsForStudent(currentStudentId);
             } catch (error) {
@@ -975,10 +993,12 @@
                     apiKey: document.getElementById('firebase-api-key').value,
                     authDomain: document.getElementById('firebase-auth-domain').value,
                     projectId: document.getElementById('firebase-project-id').value,
+                    appId: document.getElementById('firebase-app-id').value
                 };
-                if (config.apiKey && config.authDomain && config.projectId) {
+                if (config.apiKey && config.authDomain && config.projectId && config.appId) {
                     localStorage.setItem('firebaseConfig', JSON.stringify(config));
                     closeModal('firebase-config-modal');
+                    document.getElementById('loading-overlay').classList.remove('hidden');
                     initializeAppAndAuth(config); // Re-initialize with new config
                 } else {
                     toast('Please fill in all fields.', 'error');
@@ -989,6 +1009,7 @@
         // --- Firebase Initialization ---
         const initializeAppAndAuth = (firebaseConfig) => {
             try {
+                appId = firebaseConfig.appId; // Set the global App ID
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
@@ -1035,6 +1056,7 @@
             // Check if we are in the special preview environment
             if (typeof __firebase_config !== 'undefined' && typeof __initial_auth_token !== 'undefined') {
                 // We are in the preview environment
+                appId = typeof __app_id !== 'undefined' ? __app_id : 'preview-app-id'; // Set global appId
                 const firebaseConfig = JSON.parse(__firebase_config);
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -1055,9 +1077,20 @@
                 }
             } else {
                 // We are on a live site. Check for saved config.
-                const savedConfig = localStorage.getItem('firebaseConfig');
-                if (savedConfig) {
-                    initializeAppAndAuth(JSON.parse(savedConfig));
+                const savedConfigStr = localStorage.getItem('firebaseConfig');
+                if (savedConfigStr) {
+                    const savedConfig = JSON.parse(savedConfigStr);
+                    // Check for the new config format that includes appId
+                    if (savedConfig.appId) {
+                        initializeAppAndAuth(savedConfig);
+                    } else {
+                        // This is an old config, missing the appId.
+                        // Force the user to re-enter.
+                        localStorage.removeItem('firebaseConfig');
+                        toast('App update: Please re-enter Firebase config with App ID.', 'error');
+                        openModal('firebase-config-modal');
+                        document.getElementById('loading-overlay').classList.add('hidden');
+                    }
                 } else {
                     // No config saved. Show the modal.
                     openModal('firebase-config-modal');
@@ -1076,5 +1109,6 @@
     </script>
 </body>
 </html>
+
 
 
