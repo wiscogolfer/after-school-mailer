@@ -305,6 +305,31 @@
 
     <!-- JavaScript -->
     <script type="module">
+        
+        // --- HARDCODED CONFIGURATION ---
+        // PASTE YOUR INFO HERE to skip the pop-up modals.
+        // If you leave these values as `null`, the app will
+        // show the pop-ups to enter them manually.
+        //
+        // IMPORTANT: If you make your GitHub repo public,
+        // others will be able to see this info. For a
+        // personal app, this is okay.
+        // -------------------------------------------------
+        const HARDCODED_CONFIG = {
+            // Paste your Render Server URL (e.g., "https://my-mailer.onrender.com")
+            serverUrl: "https://after-school-mailer.onrender.com", 
+            
+            // Paste your Firebase config
+            firebase: {
+                apiKey: "AIzaSyAYDMyMAw7wf3i28C-hQ_iRZRVdMiXmaLk",
+                authDomain: "dance-classes-97ad7.firebaseapp.com",
+                projectId: "dance-classes-97ad7",
+                appId: "State-48-Dance"
+            }
+        };
+        // -------------------------------------------------
+
+
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import {
@@ -942,7 +967,7 @@
             sendBtn.disabled = true;
             status.textContent = 'Sending...';
 
-            const serverUrl = localStorage.getItem('serverUrl');
+            const serverUrl = HARDCODED_CONFIG.serverUrl || localStorage.getItem('serverUrl');
             if (!serverUrl) {
                 toast('Render Server URL is not set.', 'error');
                 status.textContent = 'Failed. Server URL not set.';
@@ -997,9 +1022,15 @@
         });
 
         const loadServerConfig = () => {
-            const url = localStorage.getItem('serverUrl');
-            if (url) {
-                document.getElementById('server-url').value = url;
+            // If hardcoded, set it and hide the config bar
+            if (HARDCODED_CONFIG.serverUrl) {
+                document.getElementById('server-url').value = HARDCODED_CONFIG.serverUrl;
+                document.querySelector('.bg-gray-800').classList.add('hidden'); // Hide the bar
+            } else {
+                const url = localStorage.getItem('serverUrl');
+                if (url) {
+                    document.getElementById('server-url').value = url;
+                }
             }
         }
         
@@ -1187,26 +1218,32 @@
                     }
                 });
             } else {
-                // We are on a live site. Check for saved config.
-                const savedConfigStr = localStorage.getItem('firebaseConfig');
-                if (savedConfigStr) {
-                    const savedConfig = JSON.parse(savedConfigStr);
-                    // Check for the new config format that includes appId
-                    if (savedConfig.appId) {
-                        // Config exists, overlay is already visible, just initialize.
-                        initializeAppAndAuth(savedConfig);
+                // We are on a live site. Check for hardcoded config first.
+                if (HARDCODED_CONFIG.firebase.apiKey) {
+                    // Config is hardcoded, initialize immediately
+                    initializeAppAndAuth(HARDCODED_CONFIG.firebase);
+                } else {
+                    // No hardcoded config. Check for saved config in localStorage.
+                    const savedConfigStr = localStorage.getItem('firebaseConfig');
+                    if (savedConfigStr) {
+                        const savedConfig = JSON.parse(savedConfigStr);
+                        // Check for the new config format that includes appId
+                        if (savedConfig.appId) {
+                            // Config exists, overlay is already visible, just initialize.
+                            initializeAppAndAuth(savedConfig);
+                        } else {
+                            // This is an old config, missing the appId.
+                            // Force the user to re-enter.
+                            localStorage.removeItem('firebaseConfig');
+                            toast('App update: Please re-enter Firebase config with App ID.', 'error');
+                            openModal('firebase-config-modal');
+                            document.getElementById('auth-loading-overlay').classList.add('hidden'); // Hide loading, show config modal
+                        }
                     } else {
-                        // This is an old config, missing the appId.
-                        // Force the user to re-enter.
-                        localStorage.removeItem('firebaseConfig');
-                        toast('App update: Please re-enter Firebase config with App ID.', 'error');
+                        // No config saved. Show the modal.
                         openModal('firebase-config-modal');
                         document.getElementById('auth-loading-overlay').classList.add('hidden'); // Hide loading, show config modal
                     }
-                } else {
-                    // No config saved. Show the modal.
-                    openModal('firebase-config-modal');
-                    document.getElementById('auth-loading-overlay').classList.add('hidden'); // Hide loading, show config modal
                 }
             }
         });
@@ -1214,5 +1251,4 @@
 
 </body>
 </html>
-
 
