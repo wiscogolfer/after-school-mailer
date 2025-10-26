@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>After-School Program Manager</title>
+    <!-- 
+      FIXED: These links are now correct.
+    -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,24 +40,12 @@
 
 <body class="h-full flex flex-col">
 
-    <!-- NEW: Auth Screen (Login / Register) -->
+    <!-- NEW: Auth Screen (Login Only) -->
     <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-100 p-4">
         <div class="w-full max-w-md p-8 bg-white rounded-lg shadow-xl">
-            <!-- Toggle Tabs -->
-            <div class="mb-6 border-b border-gray-200">
-                <nav class="flex -mb-px" aria-label="Tabs">
-                    <button id="tab-login" class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm text-blue-600 border-blue-500">
-                        Sign In
-                    </button>
-                    <button id="tab-register" class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300">
-                        Register
-                    </button>
-                </nav>
-            </div>
-
-            <!-- Login Form -->
+             <!-- Login Form -->
             <form id="login-form">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Welcome Back!</h2>
+                <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Sign In</h2>
                 <div class="space-y-4">
                     <div>
                         <label for="login-email" class="block text-sm font-medium text-gray-700">Email address</label>
@@ -72,31 +63,10 @@
                 </div>
                 <p id="login-error" class="text-xs text-red-600 mt-2 text-center h-4"></p>
             </form>
-
-            <!-- Register Form (Hidden by default) -->
-            <form id="register-form" class="hidden">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Create Your Account</h2>
-                <p class="text-sm text-gray-600 text-center mb-4">Create one admin account to manage your app from any device.</p>
-                <div class="space-y-4">
-                    <div>
-                        <label for="register-email" class="block text-sm font-medium text-gray-700">Email address</label>
-                        <input type="email" id="register-email" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                    </div>
-                    <div>
-                        <label for="register-password" class="block text-sm font-medium text-gray-700">Password</label>
-                        <input type="password" id="register-password" minlength="6" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                    </div>
-                </div>
-                <div class="mt-6">
-                    <button id="register-btn" type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-                        Register
-                    </button>
-                </div>
-                <p id="register-error" class="text-xs text-red-600 mt-2 text-center h-4"></p>
-            </form>
+            <!-- REMOVED Register Form -->
         </div>
     </div>
-    
+
     <!-- App Shell (Hidden until logged in) -->
     <div id="app-shell" class="h-full flex flex-col">
         <!-- Toast Notification -->
@@ -109,11 +79,15 @@
         
         <!-- Header Bar -->
         <div class="bg-gray-800 p-2 text-white">
-            <div class="container mx-auto flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+            <div class="container mx-auto flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
                 <div>
                     <span class="text-sm font-medium">Signed in as:</span>
                     <span id="user-email-display" class="text-sm text-gray-300"></span>
                 </div>
+                <!-- NEW: User Management Button -->
+                <button id="manage-users-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm self-end sm:self-center mt-2 sm:mt-0">
+                    Manage Users
+                </button>
                 <button id="sign-out-btn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm self-end sm:self-center mt-2 sm:mt-0">
                     Sign Out
                 </button>
@@ -146,7 +120,7 @@
                         <!-- Items will be injected here -->
                     </div>
                 </section>
-
+    
                 <!-- Column 2: Students / Classes -->
                 <section id="col-2-section" class="bg-white p-4 rounded-lg shadow-lg flex-col h-full hidden md:flex">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
@@ -167,7 +141,7 @@
                         <!-- Items will be injected here -->
                     </div>
                 </section>
-
+    
                 <!-- Column 3: Parents/Contacts -->
                 <section id="col-3-section" class="bg-white p-4 rounded-lg shadow-lg flex-col h-full hidden md:flex">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
@@ -185,7 +159,7 @@
                 </section>
             </div>
         </div>
-
+    
         <!-- Bottom Navigation (Mobile) -->
         <nav class="md:hidden sticky bottom-0 bg-white shadow-inner p-2 border-t border-gray-200">
             <div class="flex justify-around">
@@ -204,10 +178,10 @@
             </div>
         </nav>
     </div>
-
-
+    
+    
     <!-- Modals -->
-
+    
     <!-- Add Class Modal -->
     <div id="add-class-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
@@ -233,7 +207,7 @@
             </form>
         </div>
     </div>
-
+    
     <!-- Add New Student Modal -->
     <div id="add-new-student-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
@@ -253,7 +227,7 @@
             </form>
         </div>
     </div>
-
+    
     <!-- Add Existing Student Modal -->
     <div id="add-existing-student-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
@@ -276,7 +250,7 @@
             </form>
         </div>
     </div>
-
+    
     <!-- Add Contact Modal -->
     <div id="add-contact-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
@@ -307,7 +281,7 @@
             </form>
         </div>
     </div>
-
+    
     <!-- Compose Email Modal -->
     <div id="email-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
         <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
@@ -317,11 +291,11 @@
             </div>
             <form id="email-form">
                 <div class="space-y-4">
-                    <div>
+                    <div id="email-to-wrapper">
                         <label for="email-to" class="block text-sm font-medium text-gray-700">To:</label>
                         <input type="email" id="email-to" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100" readonly>
                     </div>
-                    <div>
+                    <div id="email-bcc-wrapper">
                         <label for="email-bcc" class="block text-sm font-medium text-gray-700">BCC:</label>
                         <input type="text" id="email-bcc" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100" readonly>
                     </div>
@@ -344,7 +318,48 @@
             </form>
         </div>
     </div>
-
+    
+    <!-- NEW: User Management Modal -->
+    <div id="user-management-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
+        <div class="relative top-10 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-medium leading-6 text-gray-900">Manage Users</h3>
+                <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="user-management-modal">&times;</button>
+            </div>
+    
+            <!-- Add New User Form -->
+            <form id="add-user-form" class="mb-6 pb-6 border-b border-gray-200">
+                 <h4 class="text-lg font-medium text-gray-800 mb-3">Add New User</h4>
+                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                     <div>
+                         <label for="new-user-email" class="block text-sm font-medium text-gray-700">Email</label>
+                         <input type="email" id="new-user-email" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                     </div>
+                     <div>
+                         <label for="new-user-password" class="block text-sm font-medium text-gray-700">Password</label>
+                         <input type="password" id="new-user-password" minlength="6" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                     </div>
+                     <button type="submit" id="add-user-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition sm:w-auto">Add User</button>
+                 </div>
+                 <p id="add-user-status" class="text-xs mt-2 h-4"></p>
+            </form>
+    
+            <!-- Existing Users List -->
+            <div>
+                 <h4 class="text-lg font-medium text-gray-800 mb-3">Existing Users</h4>
+                 <div id="user-list" class="scrolling-list max-h-60 overflow-y-auto space-y-2 pr-2">
+                     <p class="text-gray-500">Loading users...</p>
+                     <!-- User list will be injected here -->
+                 </div>
+            </div>
+    
+             <div class="mt-6 flex justify-end">
+                 <button type="button" class="close-modal-btn bg-white border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" data-modal="user-management-modal">Close</button>
+             </div>
+        </div>
+    </div>
+    
+    
     <!-- JavaScript -->
     <script type="module">
         
@@ -355,12 +370,17 @@
             // Paste your Render Server URL (e.g., "https://my-mailer.onrender.com")
             serverUrl: "https://after-school-mailer.onrender.com", // "https://after-school-mailer.onrender.com", 
             
-            // Paste your Firebase config
+            // Your custom, shared ID (e.g., "State-48-Dance")
+            // This MUST match your Firestore security rules.
+            organizationId: "State-48-Dance", // "State-48-Dance"
+
             firebase: {
-                apiKey: "AIzaSyAYDMyMAw7wf3i28C-hQ_iRZRVdMiXmaLk", // "AIza...",
-                authDomain: "dance-classes-97ad7.firebaseapp.com", // "my-app.firebaseapp.com",
-                projectId: "dance-classes-97ad7", // "my-app-project-id",
-                appId: "State-48-Dance" // "my-school-app"
+                // --- Find these 4 keys in ---
+                // Firebase Console > Project Settings (⚙️) > General tab > Your apps > Web app > SDK config
+                apiKey: "AIzaSyAYDMyMAw7wf3i28C-hQ_iRZRVdMiXmaLk",         // From config object
+                authDomain: "dance-classes-97ad7.firebaseapp.com", // e.g., "my-project.firebaseapp.com"
+                projectId: "dance-classes-97ad7",    // From config object
+                appId: "1:1041555303856:web:5b80e0497eacaf161b7a75"             // e.g., "1:123456789:web:abcdef..."
             }
         };
         // -------------------------------------------------
@@ -375,7 +395,8 @@
             browserLocalPersistence,
             createUserWithEmailAndPassword,
             signInWithEmailAndPassword,
-            signOut
+            signOut,
+            getIdToken // Import getIdToken
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import {
             getFirestore,
@@ -399,21 +420,26 @@
         let db;
         let auth;
         let userId = null;
+        let currentUser = null; // Store the current user object
         let currentClassId = null;
         let currentStudentId = null;
         let allStudentsCache = []; // Cache of all students { id, name }
         let allClassCache = []; // Cache of all classes { id, name, teacher, students[] }
         let unsubscribeClasses = null;
         let unsubscribeAllStudents = null;
-        let appId; // Will be set by startApp
+        
+        // **FIX**: Get organizationId from the correct place
+        const organizationId = HARDCODED_CONFIG.organizationId; 
 
         // View State
         let currentView = 'class'; // 'class' or 'student'
 
         // --- Collections ---
-        const getClassesCol = () => collection(db, 'artifacts', appId, 'users', userId, 'classes');
-        const getStudentsCol = () => collection(db, 'artifacts', appId, 'users', userId, 'students');
-        const getParentsCol = () => collection(db, 'artifacts', appId, 'users', userId, 'parents');
+        // **FIX**: Use new multi-organization data path
+        const getClassesCol = () => collection(db, 'organizations', organizationId, 'classes');
+        const getStudentsCol = () => collection(db, 'organizations', organizationId, 'students');
+        const getParentsCol = () => collection(db, 'organizations', organizationId, 'parents');
+
 
         // --- Toast Notification ---
         const toast = (message, type = 'success', duration = 3000) => {
@@ -573,7 +599,7 @@
             const studentsInClass = allStudentsCache
                 .filter(s => studentIds.includes(s.id))
                 .sort((a, b) => a.name.localeCompare(b.name)); // Sort by name
-            
+        
             listEl.innerHTML = '';
             studentsInClass.forEach(s => {
                 const el = document.createElement('div');
@@ -680,6 +706,38 @@
                 });
                 listEl.appendChild(el);
             });
+        }
+
+        // Render User Management List
+        const renderUserList = (users) => {
+             const listEl = document.getElementById('user-list');
+             listEl.innerHTML = '';
+             if (!users || users.length === 0) {
+                 listEl.innerHTML = '<p class="text-gray-500 text-center">No other users found.</p>';
+                 return;
+             }
+             // Sort users by email
+             const sortedUsers = [...users].sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+
+             sortedUsers.forEach(user => {
+                 // Don't list the currently logged-in user
+                 if (user.uid === userId) return;
+
+                 const el = document.createElement('div');
+                 el.className = 'p-3 rounded-lg border border-gray-200 flex justify-between items-center';
+                 el.innerHTML = `
+                     <div>
+                         <span class="font-medium text-gray-800">${user.email || 'No Email'}</span>
+                         <span class="text-xs text-gray-500 ml-2">(UID: ${user.uid})</span>
+                     </div>
+                     <button class="delete-user-btn text-red-500 hover:text-red-700 text-sm font-medium" data-uid="${user.uid}" data-email="${user.email || ''}">Delete</button>
+                 `;
+                 el.querySelector('.delete-user-btn').addEventListener('click', (e) => {
+                     e.stopPropagation();
+                     handleDeleteUser(user.uid, user.email || 'this user');
+                 });
+                 listEl.appendChild(el);
+             });
         }
 
         // Reset functions
@@ -897,8 +955,6 @@
             }
 
             try {
-                // We need to remove this class from any students who were in it
-                // This is a "denormalization" step
                 const batch = writeBatch(db);
                 
                 // Find students in this class
@@ -950,15 +1006,15 @@
                 
                 // 2. If in "By Class" view, add the student to the current class
                 if (currentView === 'class' && currentClassId) {
+                    const batch = writeBatch(db);
+                    
                     const classRef = doc(getClassesCol(), currentClassId);
-                    await updateDoc(classRef, {
-                        students: arrayUnion(studentRef.id)
-                    });
+                    batch.update(classRef, { students: arrayUnion(studentRef.id) });
                     
                     // Also update student's record
-                    await updateDoc(studentRef, {
-                        classes: arrayUnion(currentClassId)
-                    });
+                    batch.update(studentRef, { classes: arrayUnion(currentClassId) });
+                    
+                    await batch.commit();
                 }
 
                 closeModal('add-new-student-modal');
@@ -1162,18 +1218,20 @@
         const openEmailModal = ({ to, bcc }) => {
             const toEl = document.getElementById('email-to');
             const bccEl = document.getElementById('email-bcc');
+            const toWrapper = document.getElementById('email-to-wrapper');
+            const bccWrapper = document.getElementById('email-bcc-wrapper');
             
             if (to) {
                 toEl.value = to;
-                toEl.parentElement.classList.remove('hidden');
+                toWrapper.classList.remove('hidden');
                 bccEl.value = '';
-                bccEl.parentElement.classList.add('hidden');
+                bccWrapper.classList.add('hidden');
             }
             if (bcc) {
                 toEl.value = '';
-                toEl.parentElement.classList.add('hidden');
+                toWrapper.classList.add('hidden');
                 bccEl.value = `BCC: ${bcc.length} recipient(s)`;
-                bccEl.parentElement.classList.remove('hidden');
+                bccWrapper.classList.remove('hidden');
             }
             
             document.getElementById('email-subject').value = '';
@@ -1265,9 +1323,8 @@
             const bccVal = document.getElementById('email-bcc').value;
             
             let bccList = null;
-            if (bccVal) {
-                // We need to re-fetch the list. This is not ideal,
-                // but safer than storing it. Let's re-run the logic.
+            if (bccVal && currentClassId) { // Only re-fetch if bccVal is present
+                // We need to re-fetch the list.
                 const classData = allClassCache.find(c => c.id === currentClassId);
                 const studentIds = classData.students;
                 const parentIds = allStudentsCache
@@ -1322,7 +1379,7 @@
                 toast(`Failed to send email: ${error.message}`, 'error');
                 status.textContent = 'Failed. Try again.';
             } finally {
-                sendBtn.disabled = false; // Re-enable on failure
+                sendBtn.disabled = false; // Re-enable
             }
         }
         
@@ -1363,29 +1420,8 @@
                 });
         };
 
-        const handleRegister = (e) => {
-            e.preventDefault();
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const errorEl = document.getElementById('register-error');
-            const btn = document.getElementById('register-btn');
-            btn.disabled = true;
-            errorEl.textContent = '';
-
-            createUserWithEmailAndPassword(auth, email, password)
-                .then((userCredential) => {
-                    // Signed up and in, onAuthStateChanged will handle the rest
-                    toast('Account created successfully!', 'success');
-                })
-                .catch((error) => {
-                    console.error("Register failed:", error);
-                    errorEl.textContent = error.message.replace('Firebase: ', '');
-                })
-                .finally(() => {
-                    btn.disabled = false;
-                });
-        };
-
+        // REMOVED handleRegister
+        
         const handleSignOut = () => {
             if (unsubscribeClasses) unsubscribeClasses();
             if (unsubscribeAllStudents) unsubscribeAllStudents();
@@ -1394,23 +1430,166 @@
                 toast('Sign out failed.', 'error');
             });
         };
+
+        // --- NEW: User Management Functions ---
+        const openUserManagementModal = async () => {
+             openModal('user-management-modal');
+             // Fetch users when modal opens
+             await fetchUsers();
+        };
+
+        // Fetch users from server
+        const fetchUsers = async () => {
+             const listEl = document.getElementById('user-list');
+             listEl.innerHTML = '<p class="text-gray-500">Loading users...</p>';
+             
+             if (!currentUser) {
+                 listEl.innerHTML = '<p class="text-red-500">Error: Not authenticated.</p>';
+                 return;
+             }
+
+             try {
+                 // Get the ID token for the current user
+                 const idToken = await getIdToken(currentUser);
+                 
+                 const serverUrl = HARDCODED_CONFIG.serverUrl;
+                 const response = await fetch(`${serverUrl}/list-users`, {
+                     method: 'GET',
+                     headers: {
+                         'Authorization': `Bearer ${idToken}`
+                     }
+                 });
+
+                 if (!response.ok) {
+                     const res = await response.json();
+                     throw new Error(res.error || `Server responded with ${response.status}`);
+                 }
+
+                 const { users } = await response.json();
+                 renderUserList(users);
+
+             } catch (error) {
+                 console.error("Error fetching users:", error);
+                 listEl.innerHTML = `<p class="text-red-500">Error loading users: ${error.message}</p>`;
+                 toast('Failed to load users.', 'error');
+             }
+        };
+
+        // Handle creating a new user
+        const handleCreateUser = async (e) => {
+             e.preventDefault();
+             const email = document.getElementById('new-user-email').value;
+             const password = document.getElementById('new-user-password').value;
+             const statusEl = document.getElementById('add-user-status');
+             const btn = document.getElementById('add-user-btn');
+             btn.disabled = true;
+             statusEl.textContent = 'Creating...';
+             statusEl.classList.remove('text-red-600', 'text-green-600');
+
+             if (!currentUser) {
+                 statusEl.textContent = 'Error: Not authenticated.';
+                 statusEl.classList.add('text-red-600');
+                 btn.disabled = false;
+                 return;
+             }
+             
+             try {
+                 const idToken = await getIdToken(currentUser);
+                 const serverUrl = HARDCODED_CONFIG.serverUrl;
+                 
+                 const response = await fetch(`${serverUrl}/create-user`, {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'Authorization': `Bearer ${idToken}`
+                     },
+                     body: JSON.stringify({ email, password })
+                 });
+
+                 if (!response.ok) {
+                     const res = await response.json();
+                     throw new Error(res.error || `Server responded with ${response.status}`);
+                 }
+
+                 const result = await response.json();
+                 toast('User created successfully!', 'success');
+                 statusEl.textContent = `User ${result.email} created.`;
+                 statusEl.classList.add('text-green-600');
+                 e.target.reset(); // Clear form
+                 await fetchUsers(); // Refresh user list
+
+             } catch (error) {
+                 console.error("Error creating user:", error);
+                 statusEl.textContent = `Error: ${error.message}`;
+                 statusEl.classList.add('text-red-600');
+                 toast('Failed to create user.', 'error');
+             } finally {
+                 btn.disabled = false;
+             }
+        };
+
+        // Handle deleting a user
+        const handleDeleteUser = async (uidToDelete, emailToDelete) => {
+             if (!confirm(`Are you sure you want to permanently delete the user: ${emailToDelete}? This cannot be undone.`)) {
+                 return;
+             }
+
+             const statusEl = document.getElementById('add-user-status'); // Use status area for feedback
+             statusEl.textContent = `Deleting ${emailToDelete}...`;
+             statusEl.classList.remove('text-red-600', 'text-green-600');
+             
+             if (!currentUser) {
+                 statusEl.textContent = 'Error: Not authenticated.';
+                 statusEl.classList.add('text-red-600');
+                 return;
+             }
+
+             try {
+                 const idToken = await getIdToken(currentUser);
+                 const serverUrl = HARDCODED_CONFIG.serverUrl;
+
+                 const response = await fetch(`${serverUrl}/delete-user`, {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'Authorization': `Bearer ${idToken}`
+                     },
+                     body: JSON.stringify({ uid: uidToDelete })
+                 });
+
+                 if (!response.ok) {
+                     const res = await response.json();
+                     throw new Error(res.error || `Server responded with ${response.status}`);
+                 }
+
+                 toast(`User ${emailToDelete} deleted successfully.`, 'success');
+                 statusEl.textContent = `User ${emailToDelete} deleted.`;
+                 statusEl.classList.add('text-green-600');
+                 await fetchUsers(); // Refresh the list
+
+             } catch (error) {
+                 console.error("Error deleting user:", error);
+                 statusEl.textContent = `Error deleting user: ${error.message}`;
+                 statusEl.classList.add('text-red-600');
+                 toast('Failed to delete user.', 'error');
+             }
+        };
+
+
         
         // --- App Start ---
         document.addEventListener('DOMContentLoaded', () => {
             
             // Check for hardcoded config
-            if (!HARDCODED_CONFIG.firebase.apiKey || !HARDCODED_CONFIG.firebase.appId || !HARDCODED_CONFIG.serverUrl) {
+            if (!HARDCODED_CONFIG.firebase.apiKey || !HARDCODED_CONFIG.firebase.appId || !HARDCODED_CONFIG.serverUrl || !HARDCODED_CONFIG.organizationId) {
                 document.body.innerHTML = `<div class="p-8 text-center text-red-600">
                     <h1 class="text-2xl font-bold">Configuration Error</h1>
-                    <p class="mt-4">You must fill in the <strong>HARDCODED_CONFIG</strong> object in the HTML file.</p>
+                    <p class="mt-4">You must fill in all 5 values in the <strong>HARDCODED_CONFIG</strong> object in the HTML file.</p>
                 </div>`;
                 return;
             }
             
-            // Set global App ID
-            appId = HARDCODED_CONFIG.firebase.appId;
-            
-            // Initialize Firebase
+            // **FIX**: Initialize Firebase with the .firebase object
             try {
                 const app = initializeApp(HARDCODED_CONFIG.firebase);
                 db = getFirestore(app);
@@ -1421,6 +1600,7 @@
                 // --- Auth State Change Listener ---
                 // This is the main controller for the app's state
                 onAuthStateChanged(auth, (user) => {
+                    currentUser = user; // Store the user object
                     if (user) {
                         // User is signed in
                         userId = user.uid;
@@ -1458,7 +1638,7 @@
             } catch (error) {
                  document.body.innerHTML = `<div class="p-8 text-center text-red-600">
                     <h1 class="text-2xl font-bold">Firebase Init Failed</h1>
-                    <p class="mt-4">Please check your <strong>HARDCODED_CONFIG</strong> values.</p>
+                    <p class="mt-4">Please check your 4 <strong>HARDCODED_CONFIG.firebase</strong> values.</p>
                     <p class="mt-2 text-sm text-gray-500">${error.message}</p>
                 </div>`;
                 return;
@@ -1466,22 +1646,13 @@
 
             // --- Setup Event Listeners ---
 
-            // Auth
-            document.getElementById('tab-login').addEventListener('click', () => {
-                document.getElementById('login-form').classList.remove('hidden');
-                document.getElementById('register-form').classList.add('hidden');
-                document.getElementById('tab-login').classList.add('text-blue-600', 'border-blue-500');
-                document.getElementById('tab-register').classList.remove('text-blue-600', 'border-blue-500');
-            });
-            document.getElementById('tab-register').addEventListener('click', () => {
-                document.getElementById('login-form').classList.add('hidden');
-                document.getElementById('register-form').classList.remove('hidden');
-                document.getElementById('tab-login').classList.remove('text-blue-600', 'border-blue-500');
-                document.getElementById('tab-register').classList.add('text-blue-600', 'border-blue-500');
-            });
+            // Auth (Login Only)
             document.getElementById('login-form').addEventListener('submit', handleLogin);
-            document.getElementById('register-form').addEventListener('submit', handleRegister);
             document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
+            
+            // User Management
+            document.getElementById('manage-users-btn').addEventListener('click', openUserManagementModal);
+            document.getElementById('add-user-form').addEventListener('submit', handleCreateUser);
 
             // View Toggle
             document.getElementById('view-by-class').addEventListener('click', renderViewByClass);
@@ -1507,23 +1678,24 @@
                 if (currentView === 'class') {
                     openModal('add-class-modal');
                 } else {
+                    // When in student view, "Add Student" opens the new student modal
                     openModal('add-new-student-modal');
                 }
             });
             document.getElementById('add-new-student-btn').addEventListener('click', () => {
+                // This button is only visible in "By Class" view
                 openModal('add-new-student-modal');
             });
             document.getElementById('add-existing-student-btn').addEventListener('click', () => {
                 document.querySelector('#add-existing-student-subtitle span').textContent = allClassCache.find(c => c.id === currentClassId)?.name || '';
                 renderStudentDropdown(); // Re-render dropdown just in case
                 openModal('add-existing-student-modal');
-Nothing
             });
             document.getElementById('add-contact-btn').addEventListener('click', () => {
                 document.querySelector('#add-contact-subtitle span').textContent = allStudentsCache.find(s => s.id === currentStudentId)?.name || '';
                 openModal('add-contact-modal');
             });
-
+    
             // Mobile nav listeners
             document.getElementById('nav-col-1').addEventListener('click', () => {
                 showCol('col-1-section');
