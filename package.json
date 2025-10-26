@@ -1,15 +1,23 @@
 {
   "name": "after-school-mailer",
   "version": "1.0.0",
-  "description": "Email server for after-school app",
+  "description": "Backend server for sending emails",
   "main": "server.js",
+  "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "@sendgrid/mail": "^7.7.0",
+    "@sendgrid/mail": "^8.0.0",
     "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "firebase-admin": "^11.11.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
 
