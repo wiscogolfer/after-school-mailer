@@ -3,7 +3,7 @@
 // Deploy this to Render.com
 // -------------------------------------------
 
-import 'dotenv/config'; // Load environment variables from .env file (for local testing)
+// The "dotenv" import was removed from here. It's not needed for Render.
 import express from 'express';
 import cors from 'cors';
 import sgMail from '@sendgrid/mail';
@@ -103,4 +103,5 @@ app.post('/send-email', async (req, res) => {
 app.listen(port, () => {
     console.log(`Email server listening on port ${port}`);
 });
+
 
