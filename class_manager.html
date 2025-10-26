@@ -75,10 +75,10 @@
                 <div>
                     <span class="text-sm font-medium">Signed in as:</span>
                     <span id="user-email-display" class="text-sm text-gray-300"></span>
-                    {/* <!-- NEW: Show (Admin) if user has admin claim --> */}
+                    <!-- NEW: Show (Admin) if user has admin claim -->
                     <span id="user-admin-status" class="text-xs text-yellow-400 ml-1 font-medium hidden">(Admin)</span>
                 </div>
-                {/* <!-- User Management Button (Now conditional) --> */}
+                <!-- User Management Button (Now conditional) -->
                 <button id="manage-users-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm self-end sm:self-center mt-2 sm:mt-0 hidden">
                     Manage Users
                 </button>
@@ -102,7 +102,7 @@
             </div>
             
             <div id="main-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 h-full overflow-hidden">
-                 {/* <!-- Column 1: Classes / Students --> */}
+                 <!-- Column 1: Classes / Students -->
                 <section id="col-1-section" class="bg-white p-4 rounded-lg shadow-lg flex flex-col h-full md:flex">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                         <h2 id="col-1-title" class="text-2xl font-bold text-gray-800">Classes</h2>
@@ -111,11 +111,11 @@
                         </button>
                     </div>
                     <div id="col-1-list" class="scrolling-list flex-1 overflow-y-auto space-y-2">
-                        {/* <!-- Items will be injected here --> */}
+                        <!-- Items will be injected here -->
                     </div>
                 </section>
     
-                {/* <!-- Column 2: Students / Classes --> */}
+                <!-- Column 2: Students / Classes -->
                 <section id="col-2-section" class="bg-white p-4 rounded-lg shadow-lg flex-col h-full hidden md:flex">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                         <div>
@@ -132,11 +132,11 @@
                         </div>
                     </div>
                     <div id="col-2-list" class="scrolling-list flex-1 overflow-y-auto space-y-2">
-                        {/* <!-- Items will be injected here --> */}
+                        <!-- Items will be injected here -->
                     </div>
                 </section>
     
-                {/* <!-- Column 3: Parents/Contacts --> */}
+                <!-- Column 3: Parents/Contacts -->
                 <section id="col-3-section" class="bg-white p-4 rounded-lg shadow-lg flex-col h-full hidden md:flex">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                         <div>
@@ -148,15 +148,15 @@
                         </button>
                     </div>
                     <div id="contact-list" class="scrolling-list flex-1 overflow-y-auto space-y-2">
-                        {/* <!-- Contacts will be injected here --> */}
+                        <!-- Contacts will be injected here -->
                     </div>
                 </section>
             </div>
         </div>
     
-        {/* <!-- Bottom Navigation (Mobile) --> */}
+        <!-- Bottom Navigation (Mobile) -->
         <nav class="md:hidden sticky bottom-0 bg-white shadow-inner p-2 border-t border-gray-200">
-             {/* <!-- Nav structure remains the same --> */}
+             <!-- Nav structure remains the same -->
              <div class="flex justify-around">
                 <button id="nav-col-1" class="flex flex-col items-center p-2 text-blue-600" data-col="col-1-section">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg>
@@ -176,7 +176,7 @@
     
     
     <!-- Modals -->
-    {/* <!-- Other modals remain structurally the same --> */}
+     <!-- Other modals remain structurally the same -->
      <!-- Add Class Modal -->
     <div id="add-class-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
@@ -314,7 +314,7 @@
         </div>
     </div>
     
-    {/* <!-- User Management Modal --> */}
+    <!-- User Management Modal -->
     <div id="user-management-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
         <div class="relative top-10 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center mb-6">
@@ -322,7 +322,7 @@
                 <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="user-management-modal">&times;</button>
             </div>
     
-            {/* <!-- Add New User Form --> */}
+            <!-- Add New User Form -->
             <form id="add-user-form" class="mb-6 pb-6 border-b border-gray-200">
                  <h4 class="text-lg font-medium text-gray-800 mb-3">Add New User</h4>
                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
@@ -339,12 +339,12 @@
                  <p id="add-user-status" class="text-xs mt-2 h-4"></p>
             </form>
     
-            {/* <!-- Existing Users List --> */}
+            <!-- Existing Users List -->
             <div>
                  <h4 class="text-lg font-medium text-gray-800 mb-3">Existing Users</h4>
                  <div id="user-list" class="scrolling-list max-h-60 overflow-y-auto space-y-2 pr-2">
                      <p class="text-gray-500">Loading users...</p>
-                     {/* <!-- User list will be injected here --> */}
+                     <!-- User list will be injected here -->
                  </div>
             </div>
     
@@ -355,7 +355,7 @@
     </div>
     
     
-    {/* <!-- JavaScript --> */}
+    <!-- JavaScript -->
     <script type="module">
         
         // --- HARDCODED CONFIGURATION ---
@@ -543,6 +543,7 @@
                 if (user.uid === userId) return; // Don't list self
                 const el = document.createElement('div'); el.className = 'p-3 rounded-lg border border-gray-200 flex justify-between items-center gap-4';
                 let adminStatus = ''; let actionButton = '';
+                // NEW: Use isAdmin property from server response
                 if (user.isAdmin) { adminStatus = '<span class="text-xs font-medium text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full">Admin</span>'; }
                 else { actionButton = `<button class="make-admin-btn text-green-600 hover:text-green-800 text-sm font-medium" data-uid="${user.uid}" data-email="${user.email || ''}">Make Admin</button>`; }
                 el.innerHTML = `<div class="flex-1 min-w-0"><span class="font-medium text-gray-800 block truncate">${user.email || 'No Email'}</span><span class="text-xs text-gray-500 block truncate">(UID: ${user.uid})</span></div><div class="flex items-center gap-2 flex-shrink-0">${adminStatus}${actionButton}<button class="delete-user-btn text-red-500 hover:text-red-700 text-sm font-medium" data-uid="${user.uid}" data-email="${user.email || ''}">Delete</button></div>`;
