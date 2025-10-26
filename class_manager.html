@@ -410,7 +410,7 @@
 
         // --- Firebase services ---
         let db;
-        let auth;
+        let auth; // Keep auth in module scope
         let userId = null;
         let currentUser = null;
         let isAdmin = false; // Track admin status
@@ -422,14 +422,12 @@
         let unsubscribeAllStudents = null;
         
         // --- Get Organization ID ---
-        // CORRECTED: This now comes from the corrected config
         const organizationId = HARDCODED_CONFIG.organizationId; 
 
         // --- View State ---
         let currentView = 'class'; // 'class' or 'student'
 
         // --- Collections ---
-        // CORRECTED: Use organizationId for paths
         const getClassesCol = () => collection(db, 'organizations', organizationId, 'classes');
         const getStudentsCol = () => collection(db, 'organizations', organizationId, 'students');
         const getParentsCol = () => collection(db, 'organizations', organizationId, 'parents');
@@ -830,6 +828,11 @@
             document.getElementById('nav-col-1').addEventListener('click', () => { showCol('col-1-section'); setActiveNav('nav-col-1'); });
             document.getElementById('nav-col-2').addEventListener('click', () => { showCol('col-2-section'); setActiveNav('nav-col-2'); });
             document.getElementById('nav-contacts').addEventListener('click', () => { showCol('col-3-section'); setActiveNav('nav-contacts'); });
+
+            // --- Expose functions to window for console access ---
+            window.auth = auth; // Expose auth for getting UID
+            window.handleMakeAdmin = handleMakeAdmin; // Expose for bootstrapping
+
         });
     </script>
 
