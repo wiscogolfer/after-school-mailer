@@ -10,7 +10,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        /* ... existing styles ... */
         .modal { display: none; }
         .modal.flex { display: flex; }
         /* Scrollbar styles */
@@ -36,11 +35,11 @@
 
 <body class="h-full flex flex-col">
 
-    <!-- NEW: Auth Loading Overlay -->
+    <!-- Auth Loading Overlay -->
     <div id="auth-loading-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-white text-center p-4">
         <div class="flex flex-col items-center">
             <div class="spinner"></div>
-            <p class="text-lg font-medium text-gray-700 mt-4">Connecting to database...</p>
+            <p id="auth-loading-message" class="text-lg font-medium text-gray-700 mt-4">Connecting to database...</p>
         </div>
     </div>
 
@@ -52,8 +51,8 @@
         <div id="toast-message" class="ml-3 text-sm font-normal">Item moved successfully.</div>
     </div>
 
-    <!-- Server Config Bar -->
-    <div class="bg-gray-800 p-2 text-white">
+    <!-- Server Config Bar (now hidden by default if hardcoded) -->
+    <div id="server-config-bar" class="bg-gray-800 p-2 text-white">
         <div class="container mx-auto flex flex-col sm:flex-row sm:items-center gap-2">
             <div class="flex-1">
                 <label for="server-url" class="block text-sm font-medium">Render Server URL:</label>
@@ -174,7 +173,7 @@
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-medium leading-6 text-gray-900">Add New Class</h3>
-                <button id="close-add-class-modal" class="text-gray-400 hover:text-gray-600">&times;</button>
+                <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="add-class-modal">&times;</button>
             </div>
             <form id="add-class-form">
                 <div class="space-y-4">
@@ -200,7 +199,7 @@
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-medium leading-6 text-gray-900">Add New Student</h3>
-                <button id="close-add-new-student-modal" class="text-gray-400 hover:text-gray-600">&times;</button>
+                <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="add-new-student-modal">&times;</button>
             </div>
             <p id="add-new-student-subtitle" class="text-sm text-gray-600 mb-4">Adding to class: <span class="font-medium"></span></p>
             <form id="add-new-student-form">
@@ -221,7 +220,7 @@
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-medium leading-6 text-gray-900">Add Existing Student</h3>
-                <button id="close-add-existing-student-modal" class="text-gray-400 hover:text-gray-600">&times;</button>
+                <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="add-existing-student-modal">&times;</button>
             </div>
             <p id="add-existing-student-subtitle" class="text-sm text-gray-600 mb-4">Adding to class: <span class="font-medium"></span></p>
             <form id="add-existing-student-form">
@@ -244,7 +243,7 @@
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-medium leading-6 text-gray-900">Add New Contact</h3>
-                <button id="close-add-contact-modal" class="text-gray-400 hover:text-gray-600">&times;</button>
+                <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="add-contact-modal">&times;</button>
             </div>
             <p id="add-contact-subtitle" class="text-sm text-gray-600 mb-4">Adding contact for: <span class="font-medium"></span></p>
             <form id="add-contact-form">
@@ -275,7 +274,7 @@
         <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-medium leading-6 text-gray-900">Compose Email</h3>
-                <button id="close-email-modal" class="text-gray-400 hover:text-gray-600">&times;</button>
+                <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="email-modal">&times;</button>
             </div>
             <form id="email-form">
                 <div class="space-y-4">
@@ -308,23 +307,16 @@
         
         // --- HARDCODED CONFIGURATION ---
         // PASTE YOUR INFO HERE to skip the pop-up modals.
-        // If you leave these values as `null`, the app will
-        // show the pop-ups to enter them manually.
-        //
-        // IMPORTANT: If you make your GitHub repo public,
-        // others will be able to see this info. For a
-        // personal app, this is okay.
-        // -------------------------------------------------
         const HARDCODED_CONFIG = {
             // Paste your Render Server URL (e.g., "https://my-mailer.onrender.com")
-            serverUrl: "https://after-school-mailer.onrender.com", 
+            serverUrl: null, 
             
             // Paste your Firebase config
             firebase: {
-                apiKey: "AIzaSyAYDMyMAw7wf3i28C-hQ_iRZRVdMiXmaLk",
-                authDomain: "dance-classes-97ad7.firebaseapp.com",
-                projectId: "dance-classes-97ad7",
-                appId: "State-48-Dance"
+                apiKey: null,
+                authDomain: null,
+                projectId: null,
+                appId: null // This MUST match the path in your Firestore rules
             }
         };
         // -------------------------------------------------
@@ -337,8 +329,8 @@
             signInAnonymously,
             onAuthStateChanged,
             signInWithCustomToken,
-            initializeAuth, // Import initializeAuth
-            browserLocalPersistence // Import persistence
+            initializeAuth,
+            browserLocalPersistence // Ensures login is saved across refreshes
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import {
             getFirestore,
@@ -383,7 +375,6 @@
 
             msgEl.textContent = message;
             
-            // Reset classes
             toastEl.classList.remove('hidden', 'bg-green-100', 'bg-red-100');
             iconEl.classList.remove('text-green-500', 'text-red-500');
 
@@ -410,8 +401,6 @@
         }
 
         // --- Render Functions ---
-
-        // Render the list of classes
         const renderClassList = (classes) => {
             const listEl = document.getElementById('class-list');
             listEl.innerHTML = '';
@@ -439,7 +428,6 @@
             });
         }
 
-        // Render the list of students for the selected class
         const renderStudentList = (students) => {
             const listEl = document.getElementById('student-list');
             listEl.innerHTML = '';
@@ -466,11 +454,10 @@
             });
         }
 
-        // Render the "Add Existing Student" dropdown
         const renderStudentDropdown = () => {
             const selectEl = document.getElementById('existing-student-select');
             selectEl.innerHTML = '<option value="">Select a student...</option>';
-            if (!currentClassId) return; // Don't run if no class is selected
+            if (!currentClassId) return; 
 
             const classRef = doc(getClassesCol(), currentClassId);
             getDoc(classRef).then(classDoc => {
@@ -491,7 +478,6 @@
             });
         }
 
-        // Render the list of contacts for the selected student
         const renderContactList = (contacts) => {
             const listEl = document.getElementById('contact-list');
             listEl.innerHTML = '';
@@ -548,15 +534,10 @@
                 snapshot.forEach(doc => {
                     allStudentsCache.push({ id: doc.id, name: doc.data().name });
                 });
-                // If a class is selected, we MUST re-render the student list
+                // If a class is selected, we must re-render the student list
                 // and dropdown, as a student's name might have changed.
                 if (currentClassId) {
                     renderStudentDropdown();
-                    // ***NEW FIX***: Re-run the (new, simple) student list listener logic.
-                    // This is not a listener, so we just call the function.
-                    // The *class* listener will handle rendering.
-                    // But if a student is added, the class listener *will* run.
-                    // Let's force a re-render from here.
                     listenForStudentsInClass(currentClassId);
                 }
             }, (error) => {
@@ -565,10 +546,9 @@
             });
         }
 
-        // ***NEW, SIMPLER LOGIC***
         // Listen for students in a specific class
         const listenForStudentsInClass = (classId) => {
-            if (unsubscribeStudents) unsubscribeStudents(); // Unsubscribe from old listener
+            if (unsubscribeStudents) unsubscribeStudents(); 
             
             if (!classId) {
                 renderStudentList([]);
@@ -586,16 +566,11 @@
                     renderStudentList([]);
                     return;
                 }
-
-                // NEW LOGIC: Filter the real-time cache. No new queries.
-                // This is fast and avoids all race conditions.
+                // Use the real-time cache. This is fast and avoids race conditions.
                 const studentsInClass = allStudentsCache.filter(student => 
                     studentIds.includes(student.id)
                 );
-                
-                // We have the students. Now render them.
                 renderStudentList(studentsInClass);
-
             }, (error) => {
                 console.error("Error listening for class students: ", error);
                 toast('Failed to load students.', 'error');
@@ -627,11 +602,11 @@
 
                 try {
                     // We have IDs, now fetch the parent documents
+                    // Firestore `in` queries are limited to 30 items.
                     const parentDocsPromises = [];
-                    // Chunk array
                     for (let i = 0; i < parentIds.length; i += 30) {
                         const chunk = parentIds.slice(i, i + 30);
-                        if(chunk.length === 0) continue; // Safety check
+                        if(chunk.length === 0) continue;
                         const q = query(getParentsCol(), where('__name__', 'in', chunk));
                         parentDocsPromises.push(getDocs(q));
                     }
@@ -648,29 +623,25 @@
                             contacts.push({ id: doc.id, ...doc.data() });
                         });
                     });
-
                     renderContactList(contacts);
 
                 } catch (error) {
                     console.error("Error fetching contacts for student: ", error);
-                    toast('Failed to load contacts.', 'error');
+                    toast('Failed to load contacts. Check security rules.', 'error');
                     renderContactList([]);
                 }
             }).catch(error => {
                 console.error("Error fetching student for contacts: ", error);
-                toast('Failed to load contacts.', 'error');
+                toast('Failed to load contacts. Check security rules.', 'error');
                 renderContactList([]);
             });
         }
 
         // --- UI Selectors ---
-
-        // Select a class
         const selectClass = (classId, className) => {
             currentClassId = classId;
             currentStudentId = null; // Reset student
             
-            // Update UI
             document.querySelectorAll('#class-list > div').forEach(el => {
                 el.classList.toggle('bg-blue-50', el.dataset.id === classId);
                 el.classList.toggle('border-blue-300', el.dataset.id === classId);
@@ -678,41 +649,31 @@
             document.getElementById('student-class-subtitle').textContent = `For: ${className}`;
             document.getElementById('contact-student-subtitle').textContent = 'Select a student';
             
-            // Enable student buttons
             document.getElementById('add-new-student-btn').disabled = false;
             document.getElementById('add-existing-student-btn').disabled = false;
-            document.getElementById('add-contact-btn').disabled = true; // Can't add contact yet
+            document.getElementById('add-contact-btn').disabled = true; 
             
-            // Render dropdown and student list
             renderStudentDropdown();
-            listenForStudentsInClass(classId); // Call the *new* listener
+            listenForStudentsInClass(classId); 
 
-            // Clear contacts
             renderContactList([]);
 
-            // Mobile nav
             showCol('students-col');
             setActiveNav('nav-students');
         }
         
-        // Select a student
         const selectStudent = (studentId, studentName) => {
             currentStudentId = studentId;
 
-            // Update UI
             document.querySelectorAll('#student-list > div').forEach(el => {
                 el.classList.toggle('bg-blue-50', el.dataset.id === studentId);
                 el.classList.toggle('border-blue-300', el.dataset.id === studentId);
             });
             document.getElementById('contact-student-subtitle').textContent = `For: ${studentName}`;
-
-            // Enable contact button
             document.getElementById('add-contact-btn').disabled = false;
 
-            // Fetch contacts
             fetchContactsForStudent(studentId);
 
-            // Mobile nav
             showCol('contacts-col');
             setActiveNav('nav-contacts');
         }
@@ -722,41 +683,33 @@
         // Add a new class
         const handleAddClass = async (e) => {
             e.preventDefault();
-            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const form = e.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
 
             const name = document.getElementById('class-name').value;
             const teacher = document.getElementById('teacher-name').value;
-            if (!name || !teacher) {
-                submitBtn.disabled = false; // Re-enable if validation fails
-                return;
-            }
 
             try {
                 await addDoc(getClassesCol(), {
                     name,
                     teacher,
-                    students: [] // Initialize with an empty array of student IDs
+                    students: []
                 });
                 closeModal('add-class-modal');
-                document.getElementById('add-class-form').reset();
+                form.reset();
                 toast('Class added successfully!', 'success');
             } catch (error) {
                 console.error("Error adding class: ", error);
-                toast('Failed to add class.', 'error');
+                toast(`Failed to add class. ${error.message}`, 'error');
             } finally {
-                // Always re-enable the button *unless* it was successful
-                // (and the modal is now closed)
-                if (document.getElementById('add-class-modal').classList.contains('flex')) {
-                    submitBtn.disabled = false;
-                }
+                // BUG FIX: Re-enable button
+                submitBtn.disabled = false; 
             }
         }
 
         // Delete a class
         const handleDeleteClass = async (classId, className) => {
-            // NOTE: This is a "soft delete" of the class. It does not delete the students.
-            // A more robust app would handle un-enrolling students or deleting them if they are in no other classes.
             if (!confirm(`Are you sure you want to delete the class "${className}"? This will not delete the students.`)) {
                 return;
             }
@@ -764,7 +717,6 @@
             try {
                 await deleteDoc(doc(getClassesCol(), classId));
                 toast('Class deleted.', 'success');
-                // Check if the deleted class was the selected one
                 if (currentClassId === classId) {
                     currentClassId = null;
                     currentStudentId = null;
@@ -778,78 +730,75 @@
                 }
             } catch (error) {
                 console.error("Error deleting class: ", error);
-                toast('Failed to delete class.', 'error');
+                toast(`Failed to delete class. ${error.message}`, 'error');
             }
         }
         
         // Add a new student and enroll them in the current class
         const handleAddNewStudent = async (e) => {
             e.preventDefault();
-            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const form = e.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
 
             const name = document.getElementById('new-student-name').value;
             if (!name || !currentClassId) {
-                submitBtn.disabled = false; // Re-enable if validation fails
+                submitBtn.disabled = false;
                 return;
             }
 
             try {
-                // 1. Create the new student
                 const studentRef = await addDoc(getStudentsCol(), {
                     name,
                     parents: []
                 });
                 
-                // 2. Add the student's ID to the class's `students` array
                 const classRef = doc(getClassesCol(), currentClassId);
                 await updateDoc(classRef, {
                     students: arrayUnion(studentRef.id)
                 });
 
                 closeModal('add-new-student-modal');
-                document.getElementById('add-new-student-form').reset();
+                form.reset();
                 toast('Student added and enrolled!', 'success');
             } catch (error) {
                 console.error("Error adding new student: ", error);
-                toast('Failed to add new student.', 'error');
+                toast(`Failed to add new student. ${error.message}`, 'error');
             } finally {
-                 if (document.getElementById('add-new-student-modal').classList.contains('flex')) {
-                    submitBtn.disabled = false;
-                }
+                // BUG FIX: Re-enable button
+                submitBtn.disabled = false;
             }
         }
 
         // Add an existing student to the current class
         const handleAddExistingStudent = async (e) => {
             e.preventDefault();
-            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const form = e.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
 
             const studentId = document.getElementById('existing-student-select').value;
             if (!studentId || !currentClassId) {
-                submitBtn.disabled = false; // Re-enable if validation fails
+                submitBtn.disabled = false;
                 return;
             }
 
             try {
-                // Add the student's ID to the class's `students` array
                 const classRef = doc(getClassesCol(), currentClassId);
                 await updateDoc(classRef, {
                     students: arrayUnion(studentId)
                 });
 
                 closeModal('add-existing-student-modal');
-                document.getElementById('add-existing-student-form').reset();
+                form.reset();
                 toast('Student added to class!', 'success');
-            } catch (error)
-            {
+            }
+            catch (error) {
                 console.error("Error adding existing student to class: ", error);
-                toast('Failed to add student to class.', 'error');
+                toast(`Failed to add student to class. ${error.message}`, 'error');
             } finally {
-                if (document.getElementById('add-existing-student-modal').classList.contains('flex')) {
-                    submitBtn.disabled = false;
-                }
+                // BUG FIX: Re-enable button
+                submitBtn.disabled = false;
             }
         }
 
@@ -867,7 +816,6 @@
                 });
                 
                 toast('Student removed from class.', 'success');
-                // Check if removed student was the selected one
                 if (currentStudentId === studentId) {
                     currentStudentId = null;
                     document.getElementById('contact-student-subtitle').textContent = 'Select a student';
@@ -876,50 +824,47 @@
                 }
             } catch (error) {
                 console.error("Error removing student from class: ", error);
-                toast('Failed to remove student.', 'error');
+                toast(`Failed to remove student. ${error.message}`, 'error');
             }
         }
 
         // Add a new contact and link them to the student
         const handleAddContact = async (e) => {
             e.preventDefault();
-            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const form = e.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
 
             const name = document.getElementById('contact-name').value;
             const email = document.getElementById('contact-email').value;
             const phone = document.getElementById('contact-phone').value;
             if (!name || !email || !currentStudentId) {
-                submitBtn.disabled = false; // Re-enable if validation fails
+                submitBtn.disabled = false;
                 return;
             }
 
             try {
-                // 1. Create the new parent/contact
                 const parentRef = await addDoc(getParentsCol(), {
                     name,
                     email,
                     phone
                 });
 
-                // 2. Add the parent's ID to the student's `parents` array
                 const studentRef = doc(getStudentsCol(), currentStudentId);
                 await updateDoc(studentRef, {
                     parents: arrayUnion(parentRef.id)
                 });
 
                 closeModal('add-contact-modal');
-                document.getElementById('add-contact-form').reset();
+                form.reset();
                 toast('Contact added!', 'success');
-                // Re-fetch contacts for this student
                 fetchContactsForStudent(currentStudentId);
             } catch (error) {
                 console.error("Error adding contact: ", error);
-                toast('Failed to add contact.', 'error');
+                toast(`Failed to add contact. ${error.message}`, 'error');
             } finally {
-                if (document.getElementById('add-contact-modal').classList.contains('flex')) {
-                    submitBtn.disabled = false;
-                }
+                 // BUG FIX: Re-enable button
+                submitBtn.disabled = false;
             }
         }
 
@@ -933,24 +878,21 @@
             try {
                 const batch = writeBatch(db);
 
-                // 1. Remove contact from student's `parents` array
                 const studentRef = doc(getStudentsCol(), currentStudentId);
                 batch.update(studentRef, {
                     parents: arrayRemove(contactId)
                 });
                 
-                // 2. Delete the contact document
                 const contactRef = doc(getParentsCol(), contactId);
                 batch.delete(contactRef);
 
                 await batch.commit();
 
                 toast('Contact deleted.', 'success');
-                // Re-fetch contacts
                 fetchContactsForStudent(currentStudentId);
             } catch (error) {
                 console.error("Error deleting contact: ", error);
-                toast('Failed to delete contact.', 'error');
+                toast(`Failed to delete contact. ${error.message}`, 'error');
             }
         }
 
@@ -1008,7 +950,7 @@
                 console.error("Error sending email: ", error);
                 toast(`Failed to send email: ${error.message}`, 'error');
                 status.textContent = 'Failed. Try again.';
-                sendBtn.disabled = false; // Re-enable on failure
+                sendBtn.disabled = false;
             }
         }
 
@@ -1026,10 +968,9 @@
         });
 
         const loadServerConfig = () => {
-            // If hardcoded, set it and hide the config bar
             if (HARDCODED_CONFIG.serverUrl) {
                 document.getElementById('server-url').value = HARDCODED_CONFIG.serverUrl;
-                document.querySelector('.bg-gray-800').classList.add('hidden'); // Hide the bar
+                document.getElementById('server-config-bar').classList.add('hidden');
             } else {
                 const url = localStorage.getItem('serverUrl');
                 if (url) {
@@ -1055,13 +996,13 @@
         // --- Firebase Initialization ---
         const initializeAppAndAuth = (firebaseConfig) => {
             const overlay = document.getElementById('auth-loading-overlay');
+            const overlayMsg = document.getElementById('auth-loading-message');
             try {
                 appId = firebaseConfig.appId; // Set the global App ID
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 
-                // FIX: Explicitly initialize auth with local persistence
-                // This ensures the anonymous user is saved between refreshes.
+                // Explicitly initialize auth with local persistence
                 auth = initializeAuth(app, {
                     persistence: browserLocalPersistence
                 });
@@ -1071,26 +1012,21 @@
                         // User is signed in.
                         userId = user.uid;
                         try {
-                            // Start data listeners
                             listenForClasses();
                             listenForAllStudents();
-                            
-                            // FIX: Hide overlay and enable app *after* user is set and listeners are on
                             overlay.classList.add('hidden');
                             document.getElementById('add-class-btn').disabled = false;
                         } catch (e) {
                             console.error("Error setting up listeners: ", e);
-                            overlay.innerHTML = '<p class="text-red-500">Error loading data. Check console.</p>';
+                            overlayMsg.innerHTML = '<p class="text-red-500">Error loading data. Check console.</p>';
                         }
                     } else {
                         // User is signed out. Sign them in anonymously.
                         try {
                             const userCredential = await signInAnonymously(auth);
                             userId = userCredential.user.uid;
-                            // (onAuthStateChanged will be called again with this new user)
                         } catch (error) {
                             console.error("Anonymous sign-in failed: ", error);
-                            // ***NEW DIAGNOSTIC***
                             let errMsg = `<p class="text-red-500 font-bold">Authentication Failed</p><p class="text-gray-500 text-xs mt-1">${error.message}</p>`;
                             if (error.code === 'auth/operation-not-allowed') {
                                 errMsg = `
@@ -1098,20 +1034,18 @@
                                 <p class="text-gray-600 text-sm mt-2">You must enable "Anonymous" sign-in in your Firebase project.</p>
                                 <p class="text-gray-500 text-xs mt-1">(Error: ${error.code})</p>`;
                             }
-                            overlay.innerHTML = errMsg;
+                            overlayMsg.parentElement.innerHTML = errMsg;
                         }
                     }
                 });
             } catch (error) {
                 console.error("Firebase init failed: ", error);
-                // ***NEW DIAGNOSTIC***
                 let errMsg = `
-                    <p class="text-red-500 font-bold">Firebase Init Failed</p>
+                    <p class="text-red-500 font-bold">Firebase Init Failed</A</p>
                     <p class="text-gray-600 text-sm mt-2">Check your hardcoded config or saved config.</p>
                     <p class="text-gray-500 text-xs mt-1">${error.message}</p>`;
-                overlay.innerHTML = errMsg;
+                overlayMsg.parentElement.innerHTML = errMsg;
                 
-                // Clear bad config and show modal
                 localStorage.removeItem('firebaseConfig');
                 if (!HARDCODED_CONFIG.firebase.apiKey) {
                     openModal('firebase-config-modal');
@@ -1121,18 +1055,12 @@
         
         // --- App Start ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Load saved server URL
             loadServerConfig();
 
             // Setup modal close buttons
             document.querySelectorAll('.close-modal-btn').forEach(btn => {
                 btn.addEventListener('click', () => closeModal(btn.dataset.modal));
             });
-            document.getElementById('close-add-class-modal').addEventListener('click', () => closeModal('add-class-modal'));
-            document.getElementById('close-add-new-student-modal').addEventListener('click', () => closeModal('add-new-student-modal'));
-            document.getElementById('close-add-existing-student-modal').addEventListener('click', () => closeModal('add-existing-student-modal'));
-            document.getElementById('close-add-contact-modal').addEventListener('click', () => closeModal('add-contact-modal'));
-            document.getElementById('close-email-modal').addEventListener('click', () => closeModal('email-modal'));
 
             // Setup modal form handlers
             document.getElementById('add-class-form').addEventListener('submit', handleAddClass);
@@ -1149,7 +1077,7 @@
             });
             document.getElementById('add-existing-student-btn').addEventListener('click', () => {
                 document.querySelector('#add-existing-student-subtitle span').textContent = document.getElementById('student-class-subtitle').textContent.replace('For: ', '');
-                renderStudentDropdown(); // Re-render dropdown just in case
+                renderStudentDropdown();
                 openModal('add-existing-student-modal');
             });
             document.getElementById('add-contact-btn').addEventListener('click', () => {
@@ -1183,79 +1111,58 @@
                 if (config.apiKey && config.authDomain && config.projectId && config.appId) {
                     localStorage.setItem('firebaseConfig', JSON.stringify(config));
                     closeModal('firebase-config-modal');
-                    // Show loading overlay *before* initializing
                     document.getElementById('auth-loading-overlay').classList.remove('hidden');
-                    initializeAppAndAuth(config); // (Re-)initialize with new config
+                    initializeAppAndAuth(config);
                 } else {
                     toast('Please fill in all fields.', 'error');
                 }
             });
         
-            // Check if we are in the special preview environment
+            // Check for special preview environment
             if (typeof __firebase_config !== 'undefined' && typeof __initial_auth_token !== 'undefined') {
-                // We are in the preview environment
-                appId = typeof __app_id !== 'undefined' ? __app_id : 'preview-app-id'; // Set global appId
+                appId = typeof __app_id !== 'undefined' ? __app_id : 'preview-app-id';
                 const firebaseConfig = JSON.parse(__firebase_config);
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
-                
-                // Use local persistence for auth
-                auth = initializeAuth(app, {
-                    persistence: browserLocalPersistence
-                });
+                auth = initializeAuth(app, { persistence: browserLocalPersistence });
 
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
-                        // Start listeners
                         listenForClasses();
                         listenForAllStudents();
-                        // Hide loading overlay and enable app
                         document.getElementById('auth-loading-overlay').classList.add('hidden');
                         document.getElementById('add-class-btn').disabled = false;
                     } else {
-                        // No user, use the initial token
                         try {
                             const userCredential = await signInWithCustomToken(auth, __initial_auth_token);
                             userId = userCredential.user.uid;
-                            // Start listeners
-                            listenForClasses();
-                            listenForAllStudents();
-                            // Hide loading overlay and enable app
-                            document.getElementById('auth-loading-overlay').classList.add('hidden');
-                            document.getElementById('add-class-btn').disabled = false;
+                            // onAuthStateChanged will be called again with this user
                         } catch (error) {
                              console.error("Custom token sign-in failed: ", error);
-                             document.getElementById('auth-loading-overlay').innerHTML = '<p class="text-red-500">Preview auth failed. Refresh.</p>';
+                             document.getElementById('auth-loading-message').parentElement.innerHTML = '<p class="text-red-500">Preview auth failed. Refresh.</p>';
                         }
                     }
                 });
             } else {
-                // We are on a live site. Check for hardcoded config first.
-                if (HARDCODED_CONFIG.firebase.apiKey) {
-                    // Config is hardcoded, initialize immediately
+                // We are on a live site
+                if (HARDCODED_CONFIG.firebase.apiKey && HARDCODED_CONFIG.firebase.appId) {
                     initializeAppAndAuth(HARDCODED_CONFIG.firebase);
                 } else {
-                    // No hardcoded config. Check for saved config in localStorage.
                     const savedConfigStr = localStorage.getItem('firebaseConfig');
                     if (savedConfigStr) {
                         const savedConfig = JSON.parse(savedConfigStr);
-                        // Check for the new config format that includes appId
                         if (savedConfig.appId) {
-                            // Config exists, overlay is already visible, just initialize.
                             initializeAppAndAuth(savedConfig);
                         } else {
-                            // This is an old config, missing the appId.
-                            // Force the user to re-enter.
                             localStorage.removeItem('firebaseConfig');
                             toast('App update: Please re-enter Firebase config with App ID.', 'error');
                             openModal('firebase-config-modal');
-                            document.getElementById('auth-loading-overlay').classList.add('hidden'); // Hide loading, show config modal
+                            document.getElementById('auth-loading-overlay').classList.add('hidden');
                         }
                     } else {
-                        // No config saved. Show the modal.
                         openModal('firebase-config-modal');
-                        document.getElementById('auth-loading-overlay').classList.add('hidden'); // Hide loading, show config modal
+                        document.getElementById('auth-loading-overlay').classList.add('hidden');
                     }
                 }
             }
