@@ -4,9 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>After-School Program Manager</title>
-    <!-- 
-      FIXED: These links are now correct.
-    -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,12 +12,10 @@
         body { font-family: 'Inter', sans-serif; }
         .modal { display: none; }
         .modal.flex { display: flex; }
-        /* Scrollbar styles */
         .scrolling-list::-webkit-scrollbar { width: 6px; }
         .scrolling-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
         .scrolling-list::-webkit-scrollbar-thumb { background: #c5c5c5; border-radius: 10px; }
         .scrolling-list::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-        /* Spinner */
         .spinner {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #3498db;
@@ -33,18 +28,16 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        /* Hide app until logged in */
-        #app-shell { display: none; }
+        #app-shell { display: none; } /* Hide app until logged in */
     </style>
 </head>
 
 <body class="h-full flex flex-col">
 
-    <!-- NEW: Auth Screen (Login Only) -->
+    <!-- Auth Screen (Login Only) -->
     <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-100 p-4">
         <div class="w-full max-w-md p-8 bg-white rounded-lg shadow-xl">
-             <!-- Login Form -->
-            <form id="login-form">
+             <form id="login-form">
                 <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Sign In</h2>
                 <div class="space-y-4">
                     <div>
@@ -63,7 +56,6 @@
                 </div>
                 <p id="login-error" class="text-xs text-red-600 mt-2 text-center h-4"></p>
             </form>
-            <!-- REMOVED Register Form -->
         </div>
     </div>
 
@@ -83,9 +75,11 @@
                 <div>
                     <span class="text-sm font-medium">Signed in as:</span>
                     <span id="user-email-display" class="text-sm text-gray-300"></span>
+                    {/* <!-- NEW: Show (Admin) if user has admin claim --> */}
+                    <span id="user-admin-status" class="text-xs text-yellow-400 ml-1 font-medium hidden">(Admin)</span>
                 </div>
-                <!-- NEW: User Management Button -->
-                <button id="manage-users-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm self-end sm:self-center mt-2 sm:mt-0">
+                {/* <!-- User Management Button (Now conditional) --> */}
+                <button id="manage-users-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm self-end sm:self-center mt-2 sm:mt-0 hidden">
                     Manage Users
                 </button>
                 <button id="sign-out-btn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm self-end sm:self-center mt-2 sm:mt-0">
@@ -108,7 +102,7 @@
             </div>
             
             <div id="main-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 h-full overflow-hidden">
-                <!-- Column 1: Classes / Students -->
+                 {/* <!-- Column 1: Classes / Students --> */}
                 <section id="col-1-section" class="bg-white p-4 rounded-lg shadow-lg flex flex-col h-full md:flex">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                         <h2 id="col-1-title" class="text-2xl font-bold text-gray-800">Classes</h2>
@@ -117,11 +111,11 @@
                         </button>
                     </div>
                     <div id="col-1-list" class="scrolling-list flex-1 overflow-y-auto space-y-2">
-                        <!-- Items will be injected here -->
+                        {/* <!-- Items will be injected here --> */}
                     </div>
                 </section>
     
-                <!-- Column 2: Students / Classes -->
+                {/* <!-- Column 2: Students / Classes --> */}
                 <section id="col-2-section" class="bg-white p-4 rounded-lg shadow-lg flex-col h-full hidden md:flex">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                         <div>
@@ -138,11 +132,11 @@
                         </div>
                     </div>
                     <div id="col-2-list" class="scrolling-list flex-1 overflow-y-auto space-y-2">
-                        <!-- Items will be injected here -->
+                        {/* <!-- Items will be injected here --> */}
                     </div>
                 </section>
     
-                <!-- Column 3: Parents/Contacts -->
+                {/* <!-- Column 3: Parents/Contacts --> */}
                 <section id="col-3-section" class="bg-white p-4 rounded-lg shadow-lg flex-col h-full hidden md:flex">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                         <div>
@@ -154,15 +148,16 @@
                         </button>
                     </div>
                     <div id="contact-list" class="scrolling-list flex-1 overflow-y-auto space-y-2">
-                        <!-- Contacts will be injected here -->
+                        {/* <!-- Contacts will be injected here --> */}
                     </div>
                 </section>
             </div>
         </div>
     
-        <!-- Bottom Navigation (Mobile) -->
+        {/* <!-- Bottom Navigation (Mobile) --> */}
         <nav class="md:hidden sticky bottom-0 bg-white shadow-inner p-2 border-t border-gray-200">
-            <div class="flex justify-around">
+             {/* <!-- Nav structure remains the same --> */}
+             <div class="flex justify-around">
                 <button id="nav-col-1" class="flex flex-col items-center p-2 text-blue-600" data-col="col-1-section">
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg>
                     <span id="nav-col-1-title" class="text-xs">Classes</span>
@@ -181,8 +176,8 @@
     
     
     <!-- Modals -->
-    
-    <!-- Add Class Modal -->
+    {/* <!-- Other modals remain structurally the same --> */}
+     <!-- Add Class Modal -->
     <div id="add-class-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center mb-4">
@@ -319,7 +314,7 @@
         </div>
     </div>
     
-    <!-- NEW: User Management Modal -->
+    {/* <!-- User Management Modal --> */}
     <div id="user-management-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
         <div class="relative top-10 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center mb-6">
@@ -327,7 +322,7 @@
                 <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="user-management-modal">&times;</button>
             </div>
     
-            <!-- Add New User Form -->
+            {/* <!-- Add New User Form --> */}
             <form id="add-user-form" class="mb-6 pb-6 border-b border-gray-200">
                  <h4 class="text-lg font-medium text-gray-800 mb-3">Add New User</h4>
                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
@@ -344,12 +339,12 @@
                  <p id="add-user-status" class="text-xs mt-2 h-4"></p>
             </form>
     
-            <!-- Existing Users List -->
+            {/* <!-- Existing Users List --> */}
             <div>
                  <h4 class="text-lg font-medium text-gray-800 mb-3">Existing Users</h4>
                  <div id="user-list" class="scrolling-list max-h-60 overflow-y-auto space-y-2 pr-2">
                      <p class="text-gray-500">Loading users...</p>
-                     <!-- User list will be injected here -->
+                     {/* <!-- User list will be injected here --> */}
                  </div>
             </div>
     
@@ -360,43 +355,40 @@
     </div>
     
     
-    <!-- JavaScript -->
+    {/* <!-- JavaScript --> */}
     <script type="module">
         
         // --- HARDCODED CONFIGURATION ---
-        // PASTE YOUR INFO HERE. This is now mandatory.
-        // -------------------------------------------------
         const HARDCODED_CONFIG = {
-            // Paste your Render Server URL (e.g., "https://my-mailer.onrender.com")
-            serverUrl: "https://after-school-mailer.onrender.com", // "https://after-school-mailer.onrender.com", 
+            serverUrl: "https://after-school-mailer.onrender.com", // "YOUR_RENDER_URL", // e.g., "https://after-school-mailer.onrender.com"
             
             // Your custom, shared ID (e.g., "State-48-Dance")
             // This MUST match your Firestore security rules.
-            organizationId: "State-48-Dance", // "State-48-Dance"
+            organizationId: "State-48-Dance", // "YOUR_CUSTOM_ORGANIZATION_ID", 
 
             firebase: {
                 // --- Find these 4 keys in ---
                 // Firebase Console > Project Settings (⚙️) > General tab > Your apps > Web app > SDK config
-                apiKey: "AIzaSyAYDMyMAw7wf3i28C-hQ_iRZRVdMiXmaLk",         // From config object
-                authDomain: "dance-classes-97ad7.firebaseapp.com", // e.g., "my-project.firebaseapp.com"
-                projectId: "dance-classes-97ad7",    // From config object
-                appId: "1:1041555303856:web:5b80e0497eacaf161b7a75"             // e.g., "1:123456789:web:abcdef..."
+                apiKey: "AIzaSyAYDMyMAw7wf3i28C-hQ_iRZRVdMiXmaLk",         // "YOUR_API_KEY",         // From config object
+                authDomain: "dance-classes-97ad7.firebaseapp.com", // "YOUR_AUTH_DOMAIN", // e.g., "my-project.firebaseapp.com"
+                projectId: "dance-classes-97ad7",    // "YOUR_PROJECT_ID",    // From config object
+                appId: "1:1041555303856:web:5b80e0497eacaf161b7a75"            // "YOUR_APP_ID"             // e.g., "1:123456789:web:abcdef..."
             }
         };
         // -------------------------------------------------
 
 
-        // Import Firebase modules
+        // --- Import Firebase modules ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import {
             getAuth,
             onAuthStateChanged,
             initializeAuth,
             browserLocalPersistence,
-            createUserWithEmailAndPassword,
             signInWithEmailAndPassword,
             signOut,
-            getIdToken // Import getIdToken
+            getIdToken, // Needed for server auth
+            getIdTokenResult // Needed for admin claims
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import {
             getFirestore,
@@ -416,26 +408,28 @@
             writeBatch
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase services
+        // --- Firebase services ---
         let db;
         let auth;
         let userId = null;
-        let currentUser = null; // Store the current user object
+        let currentUser = null;
+        let isAdmin = false; // Track admin status
         let currentClassId = null;
         let currentStudentId = null;
-        let allStudentsCache = []; // Cache of all students { id, name }
-        let allClassCache = []; // Cache of all classes { id, name, teacher, students[] }
+        let allStudentsCache = [];
+        let allClassCache = [];
         let unsubscribeClasses = null;
         let unsubscribeAllStudents = null;
         
-        // **FIX**: Get organizationId from the correct place
+        // --- Get Organization ID ---
+        // CORRECTED: This now comes from the corrected config
         const organizationId = HARDCODED_CONFIG.organizationId; 
 
-        // View State
+        // --- View State ---
         let currentView = 'class'; // 'class' or 'student'
 
         // --- Collections ---
-        // **FIX**: Use new multi-organization data path
+        // CORRECTED: Use organizationId for paths
         const getClassesCol = () => collection(db, 'organizations', organizationId, 'classes');
         const getStudentsCol = () => collection(db, 'organizations', organizationId, 'students');
         const getParentsCol = () => collection(db, 'organizations', organizationId, 'parents');
@@ -443,1273 +437,398 @@
 
         // --- Toast Notification ---
         const toast = (message, type = 'success', duration = 3000) => {
-            const toastEl = document.getElementById('toast');
-            if (!toastEl) return;
-            const iconEl = document.getElementById('toast-icon');
-            const msgEl = document.getElementById('toast-message');
-
+            const toastEl = document.getElementById('toast'); if (!toastEl) return;
+            const iconEl = document.getElementById('toast-icon'); const msgEl = document.getElementById('toast-message');
             msgEl.textContent = message;
-            
-            toastEl.classList.remove('hidden', 'bg-green-100', 'bg-red-100');
-            iconEl.classList.remove('text-green-500', 'text-red-500');
-
-            if (type === 'success') {
-                iconEl.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>`;
-                iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg';
-            } else if (type === 'error') {
-                iconEl.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>`;
-                iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg';
-            }
-
-            toastEl.classList.remove('hidden');
-            setTimeout(() => {
-                toastEl.classList.add('hidden');
-            }, duration);
+            toastEl.classList.remove('hidden', 'bg-green-100', 'bg-red-100'); iconEl.classList.remove('text-green-500', 'text-red-500');
+            if (type === 'success') { iconEl.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>`; iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg'; }
+            else if (type === 'error') { iconEl.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>`; iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg'; }
+            toastEl.classList.remove('hidden'); setTimeout(() => toastEl.classList.add('hidden'), duration);
         }
 
         // --- Modal Controls ---
-        const openModal = (modalId) => {
-            document.getElementById(modalId)?.classList.add('flex');
-        }
-        const closeModal = (modalId) => {
-            document.getElementById(modalId)?.classList.remove('flex');
-        }
+        const openModal = (modalId) => document.getElementById(modalId)?.classList.add('flex');
+        const closeModal = (modalId) => document.getElementById(modalId)?.classList.remove('flex');
 
         // --- Render Functions ---
-
-        // Render "View By Class"
         const renderViewByClass = () => {
             currentView = 'class';
-            // Update UI elements
-            document.getElementById('col-1-title').textContent = 'Classes';
-            document.getElementById('col-1-add-btn').textContent = 'Add Class';
-            document.getElementById('col-2-title').textContent = 'Students';
-            document.getElementById('col-2-btn-group').classList.remove('hidden');
-            document.getElementById('email-class-btn').classList.remove('hidden');
-            document.getElementById('nav-col-1-title').textContent = 'Classes';
+            document.getElementById('col-1-title').textContent = 'Classes'; document.getElementById('col-1-add-btn').textContent = 'Add Class';
+            document.getElementById('col-2-title').textContent = 'Students'; document.getElementById('col-2-btn-group').classList.remove('hidden');
+            document.getElementById('email-class-btn').classList.remove('hidden'); document.getElementById('nav-col-1-title').textContent = 'Classes';
             document.getElementById('nav-col-2-title').textContent = 'Students';
             document.getElementById('view-by-class').classList.add('bg-white', 'text-blue-700', 'shadow-sm');
             document.getElementById('view-by-student').classList.remove('bg-white', 'text-blue-700', 'shadow-sm');
-
-            // Reset selections
-            currentClassId = null;
-            currentStudentId = null;
-            resetCol2();
-            resetCol3();
-
-            // Render class list
-            renderCol1ClassList();
+            currentClassId = null; currentStudentId = null; resetCol2(); resetCol3(); renderCol1ClassList();
         }
-
-        // Render "View By Student"
         const renderViewByStudent = () => {
             currentView = 'student';
-            // Update UI elements
-            document.getElementById('col-1-title').textContent = 'All Students';
-            document.getElementById('col-1-add-btn').textContent = 'Add Student';
-            document.getElementById('col-2-title').textContent = 'Enrolled In';
-            document.getElementById('col-2-btn-group').classList.add('hidden');
-            document.getElementById('email-class-btn').classList.add('hidden');
-            document.getElementById('nav-col-1-title').textContent = 'Students';
+            document.getElementById('col-1-title').textContent = 'All Students'; document.getElementById('col-1-add-btn').textContent = 'Add Student';
+            document.getElementById('col-2-title').textContent = 'Enrolled In'; document.getElementById('col-2-btn-group').classList.add('hidden');
+            document.getElementById('email-class-btn').classList.add('hidden'); document.getElementById('nav-col-1-title').textContent = 'Students';
             document.getElementById('nav-col-2-title').textContent = 'Classes';
             document.getElementById('view-by-student').classList.add('bg-white', 'text-blue-700', 'shadow-sm');
             document.getElementById('view-by-class').classList.remove('bg-white', 'text-blue-700', 'shadow-sm');
-            
-            // Reset selections
-            currentClassId = null;
-            currentStudentId = null;
-            resetCol2();
-            resetCol3();
-            
-            // Render student list
-            renderCol1StudentList();
+            currentClassId = null; currentStudentId = null; resetCol2(); resetCol3(); renderCol1StudentList();
         }
-
-        // Render Col 1 (Classes)
         const renderCol1ClassList = () => {
-            const listEl = document.getElementById('col-1-list');
-            listEl.innerHTML = '';
-            if (allClassCache.length === 0) {
-                listEl.innerHTML = '<p class="text-gray-500 text-center">No classes found. Add one!</p>';
-                return;
-            }
-            // Sort classes alphabetically by name
+            const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
+            if (allClassCache.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No classes found. Add one!</p>'; return; }
             const sortedClasses = [...allClassCache].sort((a, b) => a.name.localeCompare(b.name));
-            
             sortedClasses.forEach(c => {
-                const el = document.createElement('div');
-                el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentClassId === c.id ? 'bg-blue-50 border-blue-300' : ''}`;
-                el.dataset.id = c.id;
-                el.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="font-medium text-gray-800">${c.name}</span>
-                        <button class="delete-class-btn text-gray-400 hover:text-red-500" data-id="${c.id}">&times;</button>
-                    </div>
-                    <p class="text-sm text-gray-600">${c.teacher}</p>
-                `;
+                const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentClassId === c.id ? 'bg-blue-50 border-blue-300' : ''}`; el.dataset.id = c.id;
+                el.innerHTML = `<div class="flex justify-between items-center"><span class="font-medium text-gray-800">${c.name}</span><button class="delete-class-btn text-gray-400 hover:text-red-500" data-id="${c.id}">&times;</button></div><p class="text-sm text-gray-600">${c.teacher}</p>`;
                 el.addEventListener('click', () => selectClass(c.id, c.name));
-                el.querySelector('.delete-class-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    handleDeleteClass(c.id, c.name);
-                });
+                el.querySelector('.delete-class-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteClass(c.id, c.name); });
                 listEl.appendChild(el);
             });
         }
-        
-        // Render Col 1 (Students)
         const renderCol1StudentList = () => {
-            const listEl = document.getElementById('col-1-list');
-            listEl.innerHTML = '';
-            if (allStudentsCache.length === 0) {
-                listEl.innerHTML = '<p class="text-gray-500 text-center">No students found. Add one!</p>';
-                return;
-            }
-            // Sort students alphabetically by name
+            const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
+            if (allStudentsCache.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No students found. Add one!</p>'; return; }
             const sortedStudents = [...allStudentsCache].sort((a, b) => a.name.localeCompare(b.name));
-
             sortedStudents.forEach(s => {
-                const el = document.createElement('div');
-                el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`;
-                el.dataset.id = s.id;
-                el.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="font-medium text-gray-800">${s.name}</span>
-                        <button class="delete-student-btn text-gray-400 hover:text-red-500" data-id="${s.id}" data-name="${s.name}">&times;</button>
-                    </div>
-                `;
+                const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; el.dataset.id = s.id;
+                el.innerHTML = `<div class="flex justify-between items-center"><span class="font-medium text-gray-800">${s.name}</span><button class="delete-student-btn text-gray-400 hover:text-red-500" data-id="${s.id}" data-name="${s.name}">&times;</button></div>`;
                 el.addEventListener('click', () => selectStudent(s.id, s.name));
-                el.querySelector('.delete-student-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    handleDeleteStudent(s.id, s.name);
-                });
+                el.querySelector('.delete-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteStudent(s.id, s.name); });
                 listEl.appendChild(el);
             });
         }
-        
-        // Render Col 2 (Students in a Class)
         const renderCol2StudentList = (classId) => {
-            const listEl = document.getElementById('col-2-list');
-            const classData = allClassCache.find(c => c.id === classId);
-            if (!classData || !classData.students || classData.students.length === 0) {
-                listEl.innerHTML = '<p class="text-gray-500 text-center">No students in this class.</p>';
-                return;
-            }
-            
-            const studentIds = classData.students;
-            const studentsInClass = allStudentsCache
-                .filter(s => studentIds.includes(s.id))
-                .sort((a, b) => a.name.localeCompare(b.name)); // Sort by name
-        
+            const listEl = document.getElementById('col-2-list'); const classData = allClassCache.find(c => c.id === classId);
+            if (!classData || !classData.students || classData.students.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No students in this class.</p>'; return; }
+            const studentIds = classData.students; const studentsInClass = allStudentsCache.filter(s => studentIds.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name));
             listEl.innerHTML = '';
             studentsInClass.forEach(s => {
-                const el = document.createElement('div');
-                el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`;
-                el.dataset.id = s.id;
-                el.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="font-medium text-gray-800">${s.name}</span>
-                        <button class="remove-student-btn text-gray-400 hover:text-red-500" data-id="${s.id}" data-name="${s.name}">&times;</button>
-                    </div>
-                `;
+                const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; el.dataset.id = s.id;
+                el.innerHTML = `<div class="flex justify-between items-center"><span class="font-medium text-gray-800">${s.name}</span><button class="remove-student-btn text-gray-400 hover:text-red-500" data-id="${s.id}" data-name="${s.name}">&times;</button></div>`;
                 el.addEventListener('click', () => selectStudent(s.id, s.name));
-                el.querySelector('.remove-student-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    handleRemoveStudent(s.id, s.name);
-                });
+                el.querySelector('.remove-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleRemoveStudent(s.id, s.name); });
                 listEl.appendChild(el);
             });
         }
-        
-        // Render Col 2 (Classes for a Student)
         const renderCol2ClassList = (studentId) => {
-            const listEl = document.getElementById('col-2-list');
-            const classesForStudent = allClassCache
-                .filter(c => c.students && c.students.includes(studentId))
-                .sort((a, b) => a.name.localeCompare(b.name)); // Sort by name
-
-            if (classesForStudent.length === 0) {
-                listEl.innerHTML = '<p class="text-gray-500 text-center">Not enrolled in any classes.</p>';
-                return;
-            }
-
+            const listEl = document.getElementById('col-2-list'); const classesForStudent = allClassCache.filter(c => c.students && c.students.includes(studentId)).sort((a, b) => a.name.localeCompare(b.name));
+            if (classesForStudent.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">Not enrolled in any classes.</p>'; return; }
             listEl.innerHTML = '';
             classesForStudent.forEach(c => {
-                const el = document.createElement('div');
-                el.className = `p-3 rounded-lg border border-gray-200`;
-                el.dataset.id = c.id;
-                el.innerHTML = `
-                    <span class="font-medium text-gray-800">${c.name}</span>
-                    <p class="text-sm text-gray-600">${c.teacher}</p>
-                `;
+                const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200`; el.dataset.id = c.id;
+                el.innerHTML = `<span class="font-medium text-gray-800">${c.name}</span><p class="text-sm text-gray-600">${c.teacher}</p>`;
                 listEl.appendChild(el);
             });
         }
-        
-        // Render the "Add Existing Student" dropdown
         const renderStudentDropdown = () => {
-            const selectEl = document.getElementById('existing-student-select');
-            selectEl.innerHTML = '<option value="">Select a student...</option>';
-            if (!currentClassId) return;
-
-            const classData = allClassCache.find(c => c.id === currentClassId);
-            if (!classData) return;
-            
-            const studentIdsInClass = classData.students || [];
-            const availableStudents = allStudentsCache
-                .filter(s => !studentIdsInClass.includes(s.id))
-                .sort((a, b) => a.name.localeCompare(b.name)); // Sort by name
-            
-            if (availableStudents.length === 0) {
-                selectEl.innerHTML = '<option value="">No other students available</option>';
-                return;
-            }
-            availableStudents.forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s.id;
-                opt.textContent = s.name;
-                selectEl.appendChild(opt);
-            });
+            const selectEl = document.getElementById('existing-student-select'); selectEl.innerHTML = '<option value="">Select a student...</option>'; if (!currentClassId) return;
+            const classData = allClassCache.find(c => c.id === currentClassId); if (!classData) return; const studentIdsInClass = classData.students || [];
+            const availableStudents = allStudentsCache.filter(s => !studentIdsInClass.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name));
+            if (availableStudents.length === 0) { selectEl.innerHTML = '<option value="">No other students available</option>'; return; }
+            availableStudents.forEach(s => { const opt = document.createElement('option'); opt.value = s.id; opt.textContent = s.name; selectEl.appendChild(opt); });
         }
-
-        // Render Col 3 (Contacts)
         const renderContactList = (contacts) => {
-            const listEl = document.getElementById('contact-list');
-            listEl.innerHTML = '';
-            
-            // Sort contacts alphabetically by name
-            const sortedContacts = [...contacts].sort((a, b) => a.name.localeCompare(b.name));
-
-            if (sortedContacts.length === 0) {
-                listEl.innerHTML = '<p class="text-gray-500 text-center">No contacts for this student.</p>';
-                return;
-            }
-
+            const listEl = document.getElementById('contact-list'); listEl.innerHTML = ''; const sortedContacts = [...contacts].sort((a, b) => a.name.localeCompare(b.name));
+            if (sortedContacts.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No contacts for this student.</p>'; return; }
             sortedContacts.forEach(c => {
-                const el = document.createElement('div');
-                el.className = 'p-3 rounded-lg border border-gray-200';
-                el.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="font-medium text-gray-800">${c.name}</span>
-                        <button class="delete-contact-btn text-gray-400 hover:text-red-500" data-id="${c.id}" data-name="${c.name}">&times;</button>
-                    </div>
-                    <p class="text-sm text-gray-600">${c.email}</p>
-                    <p class="text-sm text-gray-600">${c.phone || ''}</p>
-                    <button class="email-contact-btn text-sm text-blue-600 hover:underline mt-2" data-email="${c.email}" data-name="${c.name}">Email Contact</button>
-                `;
-                el.querySelector('.delete-contact-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    handleDeleteContact(c.id, c.name);
-                });
-                el.querySelector('.email-contact-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    openEmailModal({ to: c.email });
-                });
+                const el = document.createElement('div'); el.className = 'p-3 rounded-lg border border-gray-200';
+                el.innerHTML = `<div class="flex justify-between items-center"><span class="font-medium text-gray-800">${c.name}</span><button class="delete-contact-btn text-gray-400 hover:text-red-500" data-id="${c.id}" data-name="${c.name}">&times;</button></div><p class="text-sm text-gray-600">${c.email}</p><p class="text-sm text-gray-600">${c.phone || ''}</p><button class="email-contact-btn text-sm text-blue-600 hover:underline mt-2" data-email="${c.email}" data-name="${c.name}">Email Contact</button>`;
+                el.querySelector('.delete-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteContact(c.id, c.name); });
+                el.querySelector('.email-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); openEmailModal({ to: c.email }); });
                 listEl.appendChild(el);
             });
         }
-
-        // Render User Management List
         const renderUserList = (users) => {
-             const listEl = document.getElementById('user-list');
-             listEl.innerHTML = '';
-             if (!users || users.length === 0) {
-                 listEl.innerHTML = '<p class="text-gray-500 text-center">No other users found.</p>';
-                 return;
-             }
-             // Sort users by email
-             const sortedUsers = [...users].sort((a, b) => (a.email || '').localeCompare(b.email || ''));
-
-             sortedUsers.forEach(user => {
-                 // Don't list the currently logged-in user
-                 if (user.uid === userId) return;
-
-                 const el = document.createElement('div');
-                 el.className = 'p-3 rounded-lg border border-gray-200 flex justify-between items-center';
-                 el.innerHTML = `
-                     <div>
-                         <span class="font-medium text-gray-800">${user.email || 'No Email'}</span>
-                         <span class="text-xs text-gray-500 ml-2">(UID: ${user.uid})</span>
-                     </div>
-                     <button class="delete-user-btn text-red-500 hover:text-red-700 text-sm font-medium" data-uid="${user.uid}" data-email="${user.email || ''}">Delete</button>
-                 `;
-                 el.querySelector('.delete-user-btn').addEventListener('click', (e) => {
-                     e.stopPropagation();
-                     handleDeleteUser(user.uid, user.email || 'this user');
-                 });
-                 listEl.appendChild(el);
-             });
+            const listEl = document.getElementById('user-list'); listEl.innerHTML = ''; if (!users || users.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No other users found.</p>'; return; }
+            const sortedUsers = [...users].sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+            sortedUsers.forEach(user => {
+                if (user.uid === userId) return; // Don't list self
+                const el = document.createElement('div'); el.className = 'p-3 rounded-lg border border-gray-200 flex justify-between items-center gap-4';
+                let adminStatus = ''; let actionButton = '';
+                if (user.isAdmin) { adminStatus = '<span class="text-xs font-medium text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full">Admin</span>'; }
+                else { actionButton = `<button class="make-admin-btn text-green-600 hover:text-green-800 text-sm font-medium" data-uid="${user.uid}" data-email="${user.email || ''}">Make Admin</button>`; }
+                el.innerHTML = `<div class="flex-1 min-w-0"><span class="font-medium text-gray-800 block truncate">${user.email || 'No Email'}</span><span class="text-xs text-gray-500 block truncate">(UID: ${user.uid})</span></div><div class="flex items-center gap-2 flex-shrink-0">${adminStatus}${actionButton}<button class="delete-user-btn text-red-500 hover:text-red-700 text-sm font-medium" data-uid="${user.uid}" data-email="${user.email || ''}">Delete</button></div>`;
+                const makeAdminBtn = el.querySelector('.make-admin-btn'); if (makeAdminBtn) { makeAdminBtn.addEventListener('click', (e) => { e.stopPropagation(); handleMakeAdmin(user.uid, user.email || 'this user'); }); }
+                el.querySelector('.delete-user-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteUser(user.uid, user.email || 'this user'); });
+                listEl.appendChild(el);
+            });
         }
-
-        // Reset functions
-        const resetCol2 = () => {
-            document.getElementById('col-2-subtitle').textContent = currentView === 'class' ? 'Select a class' : 'Select a student';
-            document.getElementById('col-2-list').innerHTML = '';
-            if (currentView === 'class') {
-                document.getElementById('add-new-student-btn').disabled = true;
-                document.getElementById('add-existing-student-btn').disabled = true;
-            }
-        }
-        const resetCol3 = () => {
-            document.getElementById('contact-student-subtitle').textContent = 'Select a student';
-            document.getElementById('contact-list').innerHTML = '';
-            document.getElementById('add-contact-btn').disabled = true;
-        }
+        const resetCol2 = () => { document.getElementById('col-2-subtitle').textContent = currentView === 'class' ? 'Select a class' : 'Select a student'; document.getElementById('col-2-list').innerHTML = ''; if (currentView === 'class') { document.getElementById('add-new-student-btn').disabled = true; document.getElementById('add-existing-student-btn').disabled = true; } }
+        const resetCol3 = () => { document.getElementById('contact-student-subtitle').textContent = 'Select a student'; document.getElementById('contact-list').innerHTML = ''; document.getElementById('add-contact-btn').disabled = true; }
         
         // --- Data Listeners ---
-
-        // Listen for changes to the classes collection
         const listenForClasses = () => {
             if (unsubscribeClasses) unsubscribeClasses();
             unsubscribeClasses = onSnapshot(getClassesCol(), (snapshot) => {
-                allClassCache = [];
-                snapshot.forEach(doc => {
-                    allClassCache.push({ id: doc.id, ...doc.data() });
-                });
-                
-                // Re-render Col 1 if in class view
-                if (currentView === 'class') {
-                    renderCol1ClassList();
-                }
-                
-                // Re-render Col 2 if a student is selected (in student view)
-                if (currentView === 'student' && currentStudentId) {
-                    renderCol2ClassList(currentStudentId);
-                }
-                
-            }, (error) => {
-                console.error("Error listening for classes: ", error);
-                toast('Failed to load classes. Check security rules.', 'error');
-            });
+                allClassCache = []; snapshot.forEach(doc => { allClassCache.push({ id: doc.id, ...doc.data() }); });
+                if (currentView === 'class') renderCol1ClassList();
+                if (currentView === 'student' && currentStudentId) renderCol2ClassList(currentStudentId);
+            }, (error) => { console.error("Error listening for classes: ", error); toast('Failed to load classes. Check security rules.', 'error'); });
         }
-
-        // Listen for changes to the (global) students collection
         const listenForAllStudents = () => {
             if (unsubscribeAllStudents) unsubscribeAllStudents();
             unsubscribeAllStudents = onSnapshot(getStudentsCol(), (snapshot) => {
-                allStudentsCache = [];
-                snapshot.forEach(doc => {
-                    allStudentsCache.push({ id: doc.id, ...doc.data() });
-                });
-                
-                // Re-render Col 1 if in student view
-                if (currentView === 'student') {
-                    renderCol1StudentList();
-                }
-                
-                // Re-render Col 2 if a class is selected (in class view)
-                if (currentView === 'class' && currentClassId) {
-                    renderCol2StudentList(currentClassId);
-                    renderStudentDropdown(); // Also update dropdown
-                }
-                
-                // Re-render Col 3 if a student is selected
-                if (currentStudentId) {
-                    fetchContactsForStudent(currentStudentId);
-                }
-            }, (error) => {
-                console.error("Error listening for all students: ", error);
-                toast('Failed to load student list. Check security rules.', 'error');
-            });
+                allStudentsCache = []; snapshot.forEach(doc => { allStudentsCache.push({ id: doc.id, ...doc.data() }); });
+                if (currentView === 'student') renderCol1StudentList();
+                if (currentView === 'class' && currentClassId) { renderCol2StudentList(currentClassId); renderStudentDropdown(); }
+                if (currentStudentId) fetchContactsForStudent(currentStudentId);
+            }, (error) => { console.error("Error listening for students: ", error); toast('Failed to load students. Check security rules.', 'error'); });
         }
-
-        // Fetch contacts for a specific student
         const fetchContactsForStudent = async (studentId) => {
-            if (!studentId) {
-                renderContactList([]);
-                return;
-            }
-            
-            const studentData = allStudentsCache.find(s => s.id === studentId);
-            if (!studentData) {
-                renderContactList([]);
-                return;
-            }
-            
-            const parentIds = studentData.parents || [];
-            if (parentIds.length === 0) {
-                renderContactList([]);
-                return;
-            }
-
+            if (!studentId) { renderContactList([]); return; } const studentData = allStudentsCache.find(s => s.id === studentId); if (!studentData) { renderContactList([]); return; }
+            const parentIds = studentData.parents || []; if (parentIds.length === 0) { renderContactList([]); return; }
             try {
-                // We have IDs, now fetch the parent documents
-                const parentDocsPromises = [];
-                // Chunk array
-                for (let i = 0; i < parentIds.length; i += 30) {
-                    const chunk = parentIds.slice(i, i + 30);
-                    if(chunk.length === 0) continue; // Safety check
-                    const q = query(getParentsCol(), where('__name__', 'in', chunk));
-                    parentDocsPromises.push(getDocs(q));
-                }
-                
-                if (parentDocsPromises.length === 0) {
-                    renderContactList([]);
-                    return;
-                }
-
-                const snapshots = await Promise.all(parentDocsPromises);
-                const contacts = [];
-                snapshots.forEach(snapshot => {
-                    snapshot.docs.forEach(doc => {
-                        contacts.push({ id: doc.id, ...doc.data() });
-                    });
-                });
-
-                renderContactList(contacts);
-
-            } catch (error) {
-                console.error("Error fetching contacts for student: ", error);
-                toast('Failed to load contacts.', 'error');
-                renderContactList([]);
-            }
+                const parentDocsPromises = []; for (let i = 0; i < parentIds.length; i += 30) { const chunk = parentIds.slice(i, i + 30); if(chunk.length === 0) continue; const q = query(getParentsCol(), where('__name__', 'in', chunk)); parentDocsPromises.push(getDocs(q)); }
+                if (parentDocsPromises.length === 0) { renderContactList([]); return; }
+                const snapshots = await Promise.all(parentDocsPromises); const contacts = []; snapshots.forEach(snap => snap.docs.forEach(d => contacts.push({ id: d.id, ...d.data() }))); renderContactList(contacts);
+            } catch (error) { console.error("Error fetching contacts: ", error); toast('Failed to load contacts.', 'error'); renderContactList([]); }
         }
 
         // --- UI Selectors ---
-
-        // Select a class
         const selectClass = (classId, className) => {
-            currentClassId = classId;
-            currentStudentId = null; // Reset student
-            
-            // Update UI
-            document.querySelectorAll('#col-1-list > div').forEach(el => {
-                el.classList.toggle('bg-blue-50', el.dataset.id === classId);
-                el.classList.toggle('border-blue-300', el.dataset.id === classId);
-            });
+            currentClassId = classId; currentStudentId = null;
+            document.querySelectorAll('#col-1-list > div').forEach(el => { el.classList.toggle('bg-blue-50', el.dataset.id === classId); el.classList.toggle('border-blue-300', el.dataset.id === classId); });
             document.getElementById('col-2-subtitle').textContent = `For: ${className}`;
-            
-            // Enable student buttons
-            document.getElementById('add-new-student-btn').disabled = false;
-            document.getElementById('add-existing-student-btn').disabled = false;
-            
-            // Render dropdown and student list
-            renderStudentDropdown();
-            renderCol2StudentList(classId);
-
-            // Reset Col 3
-            resetCol3();
-
-            // Mobile nav
-            showCol('col-2-section');
-            setActiveNav('nav-col-2');
+            document.getElementById('add-new-student-btn').disabled = false; document.getElementById('add-existing-student-btn').disabled = false;
+            renderStudentDropdown(); renderCol2StudentList(classId); resetCol3(); showCol('col-2-section'); setActiveNav('nav-col-2');
         }
-        
-        // Select a student
         const selectStudent = (studentId, studentName) => {
             currentStudentId = studentId;
-
-            // Highlight in Col 1 (if student view) or Col 2 (if class view)
-            document.querySelectorAll('#col-1-list > div, #col-2-list > div').forEach(el => {
-                el.classList.toggle('bg-blue-50', el.dataset.id === studentId);
-                el.classList.toggle('border-blue-300', el.dataset.id === studentId);
-            });
-
-            // Update Col 3 (Contacts)
-            document.getElementById('contact-student-subtitle').textContent = `For: ${studentName}`;
-            document.getElementById('add-contact-btn').disabled = false;
+            document.querySelectorAll('#col-1-list > div, #col-2-list > div').forEach(el => { el.classList.toggle('bg-blue-50', el.dataset.id === studentId); el.classList.toggle('border-blue-300', el.dataset.id === studentId); });
+            document.getElementById('contact-student-subtitle').textContent = `For: ${studentName}`; document.getElementById('add-contact-btn').disabled = false;
             fetchContactsForStudent(studentId);
-
-            // Update Col 2 (if in student view)
-            if (currentView === 'student') {
-                document.getElementById('col-2-subtitle').textContent = `For: ${studentName}`;
-                renderCol2ClassList(studentId);
-            }
-
-            // Mobile nav
-            showCol('col-3-section');
-            setActiveNav('nav-contacts');
+            if (currentView === 'student') { document.getElementById('col-2-subtitle').textContent = `For: ${studentName}`; renderCol2ClassList(studentId); }
+            showCol('col-3-section'); setActiveNav('nav-contacts');
         }
 
         // --- Data Handlers (Add, Delete) ---
-
-        // Add a new class
         const handleAddClass = async (e) => {
-            e.preventDefault();
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-
-            const name = document.getElementById('class-name').value;
-            const teacher = document.getElementById('teacher-name').value;
-
-            try {
-                await addDoc(getClassesCol(), {
-                    name,
-                    teacher,
-                    students: [] // Initialize with an empty array of student IDs
-                });
-                closeModal('add-class-modal');
-                e.target.reset();
-                toast('Class added successfully!', 'success');
-            } catch (error) {
-                console.error("Error adding class: ", error);
-                toast(`Failed to add class. Check security rules. (${error.code})`, 'error');
-            } finally {
-                submitBtn.disabled = false; // Re-enable button
-            }
+            e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+            const name = document.getElementById('class-name').value; const teacher = document.getElementById('teacher-name').value;
+            try { await addDoc(getClassesCol(), { name, teacher, students: [] }); closeModal('add-class-modal'); e.target.reset(); toast('Class added!', 'success'); }
+            catch (error) { console.error("Add Class Error:", error); toast(`Failed: ${error.message}`, 'error'); } finally { btn.disabled = false; }
         }
-
-        // Delete a class
         const handleDeleteClass = async (classId, className) => {
-            if (!confirm(`Are you sure you want to delete the class "${className}"? This will not delete the students.`)) {
-                return;
-            }
-
+            if (!confirm(`Delete class "${className}"?`)) return;
             try {
-                const batch = writeBatch(db);
-                
-                // Find students in this class
-                const classData = allClassCache.find(c => c.id === classId);
-                if (classData && classData.students) {
-                    classData.students.forEach(studentId => {
-                        const studentRef = doc(getStudentsCol(), studentId);
-                        // This field isn't used by the app, but good for consistency
-                        batch.update(studentRef, { classes: arrayRemove(classId) });
-                    });
-                }
-                
-                // Delete the class
-                const classRef = doc(getClassesCol(), classId);
-                batch.delete(classRef);
-                
-                await batch.commit();
-
-                toast('Class deleted.', 'success');
-                // Check if the deleted class was the selected one
-                if (currentClassId === classId) {
-                    resetCol2();
-                    resetCol3();
-                }
-            } catch (error) {
-                console.error("Error deleting class: ", error);
-                toast('Failed to delete class.', 'error');
-            }
+                const batch = writeBatch(db); const classData = allClassCache.find(c => c.id === classId);
+                if (classData?.students) { classData.students.forEach(sId => batch.update(doc(getStudentsCol(), sId), { classes: arrayRemove(classId) })); }
+                batch.delete(doc(getClassesCol(), classId)); await batch.commit();
+                toast('Class deleted.', 'success'); if (currentClassId === classId) { resetCol2(); resetCol3(); }
+            } catch (error) { console.error("Delete Class Error:", error); toast('Failed to delete class.', 'error'); }
         }
-        
-        // Add a new student
         const handleAddNewStudent = async (e) => {
-            e.preventDefault();
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-
-            const name = document.getElementById('new-student-name').value;
-            if (!name) {
-                submitBtn.disabled = false; return;
-            }
-
+            e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+            const name = document.getElementById('new-student-name').value; if (!name) { btn.disabled = false; return; }
             try {
-                // 1. Create the new student
-                const studentRef = await addDoc(getStudentsCol(), {
-                    name,
-                    parents: [],
-                    classes: [] // List of class IDs
-                });
-                
-                // 2. If in "By Class" view, add the student to the current class
+                const studentRef = await addDoc(getStudentsCol(), { name, parents: [], classes: [] });
                 if (currentView === 'class' && currentClassId) {
-                    const batch = writeBatch(db);
-                    
-                    const classRef = doc(getClassesCol(), currentClassId);
-                    batch.update(classRef, { students: arrayUnion(studentRef.id) });
-                    
-                    // Also update student's record
-                    batch.update(studentRef, { classes: arrayUnion(currentClassId) });
-                    
-                    await batch.commit();
-                }
-
-                closeModal('add-new-student-modal');
-                e.target.reset();
-                toast('Student added successfully!', 'success');
-            } catch (error) {
-                console.error("Error adding new student: ", error);
-                toast('Failed to add new student.', 'error');
-            } finally {
-                submitBtn.disabled = false;
-            }
+                    const batch = writeBatch(db); batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(studentRef.id) }); batch.update(studentRef, { classes: arrayUnion(currentClassId) }); await batch.commit();
+                } closeModal('add-new-student-modal'); e.target.reset(); toast('Student added!', 'success');
+            } catch (error) { console.error("Add Student Error:", error); toast('Failed to add student.', 'error'); } finally { btn.disabled = false; }
         }
-
-        // Add an existing student to the current class
         const handleAddExistingStudent = async (e) => {
-            e.preventDefault();
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-
-            const studentId = document.getElementById('existing-student-select').value;
-            if (!studentId || !currentClassId) {
-                submitBtn.disabled = false; return;
-            }
-
+            e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+            const studentId = document.getElementById('existing-student-select').value; if (!studentId || !currentClassId) { btn.disabled = false; return; }
             try {
-                const batch = writeBatch(db);
-                
-                // 1. Add student's ID to the class's `students` array
-                const classRef = doc(getClassesCol(), currentClassId);
-                batch.update(classRef, { students: arrayUnion(studentId) });
-
-                // 2. Add class's ID to the student's `classes` array
-                const studentRef = doc(getStudentsCol(), studentId);
-                batch.update(studentRef, { classes: arrayUnion(currentClassId) });
-                
-                await batch.commit();
-
-                closeModal('add-existing-student-modal');
-                e.target.reset();
-                toast('Student added to class!', 'success');
-            }
-            catch (error) {
-                console.error("Error adding existing student to class: ", error);
-                toast('Failed to add student to class.', 'error');
-            } finally {
-                submitBtn.disabled = false;
-            }
+                const batch = writeBatch(db); batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(studentId) }); batch.update(doc(getStudentsCol(), studentId), { classes: arrayUnion(currentClassId) }); await batch.commit();
+                closeModal('add-existing-student-modal'); e.target.reset(); toast('Student added to class!', 'success');
+            } catch (error) { console.error("Add Existing Student Error:", error); toast('Failed to add student.', 'error'); } finally { btn.disabled = false; }
         }
-
-        // Remove a student from a class (does not delete the student)
         const handleRemoveStudent = async (studentId, studentName) => {
-            if (!currentClassId) return;
-            if (!confirm(`Are you sure you want to remove ${studentName} from this class?`)) {
-                return;
-            }
-            
+            if (!currentClassId || !confirm(`Remove ${studentName} from this class?`)) return;
             try {
-                const batch = writeBatch(db);
-                
-                // 1. Remove student from class
-                const classRef = doc(getClassesCol(), currentClassId);
-                batch.update(classRef, { students: arrayRemove(studentId) });
-                
-                // 2. Remove class from student
-                const studentRef = doc(getStudentsCol(), studentId);
-                batch.update(studentRef, { classes: arrayRemove(currentClassId) });
-                
-                await batch.commit();
-                
-                toast('Student removed from class.', 'success');
-                // Check if removed student was the selected one
-                if (currentStudentId === studentId) {
-                    resetCol3();
-                }
-            } catch (error) {
-                console.error("Error removing student from class: ", error);
-                toast('Failed to remove student.', 'error');
-            }
+                const batch = writeBatch(db); batch.update(doc(getClassesCol(), currentClassId), { students: arrayRemove(studentId) }); batch.update(doc(getStudentsCol(), studentId), { classes: arrayRemove(currentClassId) }); await batch.commit();
+                toast('Student removed.', 'success'); if (currentStudentId === studentId) resetCol3();
+            } catch (error) { console.error("Remove Student Error:", error); toast('Failed to remove student.', 'error'); }
         }
-        
-        // Delete a student (and all their associated data)
         const handleDeleteStudent = async (studentId, studentName) => {
-            if (!confirm(`ARE YOU SURE?\n\nThis will permanently delete ${studentName} and all their parent/contact info. They will also be removed from all classes. This cannot be undone.`)) {
-                return;
-            }
-
+            if (!confirm(`PERMANENTLY DELETE ${studentName}? This cannot be undone.`)) return;
             try {
-                const batch = writeBatch(db);
-
-                // 1. Get the student doc to find their parents
-                const studentRef = doc(getStudentsCol(), studentId);
-                const studentSnap = await getDoc(studentRef);
-                if (studentSnap.exists()) {
-                    const studentData = studentSnap.data();
-                    
-                    // 2. Delete all associated parent/contact documents
-                    if (studentData.parents && studentData.parents.length > 0) {
-                        studentData.parents.forEach(parentId => {
-                            const parentRef = doc(getParentsCol(), parentId);
-                            batch.delete(parentRef);
-                        });
-                    }
-                }
-
-                // 3. Remove this student from the `students` array of all classes
-                const classesForStudent = allClassCache.filter(c => c.students && c.students.includes(studentId));
-                classesForStudent.forEach(c => {
-                    const classRef = doc(getClassesCol(), c.id);
-                    batch.update(classRef, { students: arrayRemove(studentId) });
-                });
-                
-                // 4. Delete the student document itself
-                batch.delete(studentRef);
-                
-                // Commit all changes
-                await batch.commit();
-
-                toast('Student permanently deleted.', 'success');
-                
-                // Reset UI if this student was selected
-                if (currentStudentId === studentId) {
-                    resetCol2();
-                    resetCol3();
-                }
-            } catch (error) {
-                console.error("Error deleting student: ", error);
-                toast('Failed to delete student.', 'error');
-            }
+                const batch = writeBatch(db); const studentRef = doc(getStudentsCol(), studentId); const studentSnap = await getDoc(studentRef);
+                if (studentSnap.exists()) { const data = studentSnap.data(); if (data.parents) data.parents.forEach(pId => batch.delete(doc(getParentsCol(), pId))); }
+                allClassCache.filter(c => c.students?.includes(studentId)).forEach(c => batch.update(doc(getClassesCol(), c.id), { students: arrayRemove(studentId) }));
+                batch.delete(studentRef); await batch.commit();
+                toast('Student deleted.', 'success'); if (currentStudentId === studentId) { resetCol2(); resetCol3(); }
+            } catch (error) { console.error("Delete Student Error:", error); toast('Failed to delete student.', 'error'); }
         }
-
-        // Add a new contact and link them to the student
         const handleAddContact = async (e) => {
-            e.preventDefault();
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            submitBtn.disabled = true;
-
-            const name = document.getElementById('contact-name').value;
-            const email = document.getElementById('contact-email').value;
-            const phone = document.getElementById('contact-phone').value;
-            if (!name || !email || !currentStudentId) {
-                submitBtn.disabled = false; return;
-            }
-
+            e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+            const name = document.getElementById('contact-name').value; const email = document.getElementById('contact-email').value; const phone = document.getElementById('contact-phone').value; if (!name || !email || !currentStudentId) { btn.disabled = false; return; }
             try {
-                // 1. Create the new parent/contact
-                const parentRef = await addDoc(getParentsCol(), {
-                    name,
-                    email,
-                    phone
-                });
-
-                // 2. Add the parent's ID to the student's `parents` array
-                const studentRef = doc(getStudentsCol(), currentStudentId);
-                await updateDoc(studentRef, {
-                    parents: arrayUnion(parentRef.id)
-                });
-
-                closeModal('add-contact-modal');
-                e.target.reset();
-                toast('Contact added!', 'success');
-                // Re-fetch contacts for this student (will be handled by listener)
-            } catch (error) {
-                console.error("Error adding contact: ", error);
-                toast('Failed to add contact.', 'error');
-            } finally {
-                submitBtn.disabled = false;
-            }
+                const parentRef = await addDoc(getParentsCol(), { name, email, phone }); await updateDoc(doc(getStudentsCol(), currentStudentId), { parents: arrayUnion(parentRef.id) });
+                closeModal('add-contact-modal'); e.target.reset(); toast('Contact added!', 'success');
+            } catch (error) { console.error("Add Contact Error:", error); toast('Failed to add contact.', 'error'); } finally { btn.disabled = false; }
         }
-
-        // Delete a contact and remove them from the student
         const handleDeleteContact = async (contactId, contactName) => {
-            if (!currentStudentId) return;
-            if (!confirm(`Are you sure you want to delete ${contactName}?`)) {
-                return;
-            }
-            
+            if (!currentStudentId || !confirm(`Delete contact ${contactName}?`)) return;
             try {
-                const batch = writeBatch(db);
-
-                // 1. Remove contact from student's `parents` array
-                const studentRef = doc(getStudentsCol(), currentStudentId);
-                batch.update(studentRef, {
-                    parents: arrayRemove(contactId)
-                });
-                
-                // 2. Delete the contact document
-                const contactRef = doc(getParentsCol(), contactId);
-                batch.delete(contactRef);
-
-                await batch.commit();
-
+                const batch = writeBatch(db); batch.update(doc(getStudentsCol(), currentStudentId), { parents: arrayRemove(contactId) }); batch.delete(doc(getParentsCol(), contactId)); await batch.commit();
                 toast('Contact deleted.', 'success');
-                // Re-fetch contacts (will be handled by listener)
-            } catch (error) {
-                console.error("Error deleting contact: ", error);
-                toast('Failed to delete contact.', 'error');
-            }
+            } catch (error) { console.error("Delete Contact Error:", error); toast('Failed to delete contact.', 'error'); }
         }
 
         // --- Email Sending ---
         const openEmailModal = ({ to, bcc }) => {
-            const toEl = document.getElementById('email-to');
-            const bccEl = document.getElementById('email-bcc');
-            const toWrapper = document.getElementById('email-to-wrapper');
-            const bccWrapper = document.getElementById('email-bcc-wrapper');
-            
-            if (to) {
-                toEl.value = to;
-                toWrapper.classList.remove('hidden');
-                bccEl.value = '';
-                bccWrapper.classList.add('hidden');
-            }
-            if (bcc) {
-                toEl.value = '';
-                toWrapper.classList.add('hidden');
-                bccEl.value = `BCC: ${bcc.length} recipient(s)`;
-                bccWrapper.classList.remove('hidden');
-            }
-            
-            document.getElementById('email-subject').value = '';
-            document.getElementById('email-body').value = '';
-            document.getElementById('email-status').textContent = '';
-            document.getElementById('send-email-btn').disabled = false;
-            openModal('email-modal');
+            const toEl = document.getElementById('email-to'); const bccEl = document.getElementById('email-bcc');
+            if (to) { toEl.value = to; document.getElementById('email-to-wrapper').classList.remove('hidden'); bccEl.value = ''; document.getElementById('email-bcc-wrapper').classList.add('hidden'); }
+            if (bcc) { toEl.value = ''; document.getElementById('email-to-wrapper').classList.add('hidden'); bccEl.value = `BCC: ${bcc.length} recipient(s)`; document.getElementById('email-bcc-wrapper').classList.remove('hidden'); }
+            document.getElementById('email-subject').value = ''; document.getElementById('email-body').value = ''; document.getElementById('email-status').textContent = ''; document.getElementById('send-email-btn').disabled = false; openModal('email-modal');
         }
-        
-        // Handle "Email Class" button click
         const handleEmailClass = async () => {
-            if (!currentClassId) return;
-            
-            const classData = allClassCache.find(c => c.id === currentClassId);
-            if (!classData || !classData.students || classData.students.length === 0) {
-                toast('No students in this class to email.', 'error');
-                return;
-            }
-            
-            const studentIds = classData.students;
-            
-            // Get all parent IDs for these students
-            const parentIds = allStudentsCache
-                .filter(s => studentIds.includes(s.id))
-                .flatMap(s => s.parents || []);
-                
-            if (parentIds.length === 0) {
-                toast('No parent contacts for students in this class.', 'error');
-                return;
-            }
-            
-            // De-duplicate parent IDs
+            if (!currentClassId) return; const classData = allClassCache.find(c => c.id === currentClassId);
+            if (!classData?.students?.length) { toast('No students in class.', 'error'); return; } const studentIds = classData.students;
+            const parentIds = allStudentsCache.filter(s => studentIds.includes(s.id)).flatMap(s => s.parents || []); if (parentIds.length === 0) { toast('No parent contacts.', 'error'); return; }
             const uniqueParentIds = [...new Set(parentIds)];
-            
             try {
-                // Fetch all parent documents
-                const parentDocsPromises = [];
-                for (let i = 0; i < uniqueParentIds.length; i += 30) {
-                    const chunk = uniqueParentIds.slice(i, i + 30);
-                    if(chunk.length === 0) continue;
-                    const q = query(getParentsCol(), where('__name__', 'in', chunk));
-                    parentDocsPromises.push(getDocs(q));
-                }
-
-                if (parentDocsPromises.length === 0) {
-                   toast('No parent contacts found.', 'error');
-                   return;
-                }
-                
-                const snapshots = await Promise.all(parentDocsPromises);
-                const bccEmails = [];
-                snapshots.forEach(snapshot => {
-                    snapshot.docs.forEach(doc => {
-                        bccEmails.push(doc.data().email);
-                    });
-                });
-                
-                if (bccEmails.length === 0) {
-                    toast('No parent emails found.', 'error');
-                    return;
-                }
-                
-                // Open modal with BCC list
-                openEmailModal({ bcc: bccEmails });
-
-            } catch (error) {
-                console.error("Error fetching parent emails for class: ", error);
-                toast('Failed to get parent emails.', 'error');
-            }
+                const parentDocsPromises = []; for (let i = 0; i < uniqueParentIds.length; i += 30) { const chunk = uniqueParentIds.slice(i, i + 30); if(chunk.length === 0) continue; const q = query(getParentsCol(), where('__name__', 'in', chunk)); parentDocsPromises.push(getDocs(q)); }
+                if (parentDocsPromises.length === 0) { toast('No contacts found.', 'error'); return; }
+                const snapshots = await Promise.all(parentDocsPromises); const bccEmails = []; snapshots.forEach(snap => snap.docs.forEach(d => bccEmails.push(d.data().email)));
+                if (bccEmails.length === 0) { toast('No emails found.', 'error'); return; } openEmailModal({ bcc: bccEmails });
+            } catch (error) { console.error("Email Class Error:", error); toast('Failed to get emails.', 'error'); }
         }
-
-
         const handleSendEmail = async (e) => {
-            e.preventDefault();
-            const sendBtn = document.getElementById('send-email-btn');
-            const status = document.getElementById('email-status');
-            sendBtn.disabled = true;
-            status.textContent = 'Sending...';
-
-            const serverUrl = HARDCODED_CONFIG.serverUrl;
-            if (!serverUrl) {
-                toast('Render Server URL is not configured.', 'error');
-                status.textContent = 'Failed. Server URL not set.';
-                sendBtn.disabled = false;
-                return;
+            e.preventDefault(); const btn = document.getElementById('send-email-btn'); const status = document.getElementById('email-status'); btn.disabled = true; status.textContent = 'Sending...';
+            const serverUrl = HARDCODED_CONFIG.serverUrl; if (!serverUrl) { toast('Server URL not set.', 'error'); status.textContent = 'Failed.'; btn.disabled = false; return; }
+            const to = document.getElementById('email-to').value; const bccVal = document.getElementById('email-bcc').value; let bccList = null;
+            if (bccVal) { /* Re-fetch BCC list logic... */
+                try { const classData = allClassCache.find(c => c.id === currentClassId); const studentIds = classData.students; const parentIds = allStudentsCache.filter(s => studentIds.includes(s.id)).flatMap(s => s.parents || []); const uniqueParentIds = [...new Set(parentIds)];
+                    const parentDocsPromises = []; for (let i = 0; i < uniqueParentIds.length; i += 30) { const chunk = uniqueParentIds.slice(i, i + 30); if(chunk.length === 0) continue; const q = query(getParentsCol(), where('__name__', 'in', chunk)); parentDocsPromises.push(getDocs(q)); }
+                    const snapshots = await Promise.all(parentDocsPromises); bccList = []; snapshots.forEach(snap => snap.docs.forEach(d => bccList.push(d.data().email)));
+                } catch { /* ignore error, send without BCC if fetch fails */ }
             }
-
-            const to = document.getElementById('email-to').value;
-            const bccVal = document.getElementById('email-bcc').value;
-            
-            let bccList = null;
-            if (bccVal && currentClassId) { // Only re-fetch if bccVal is present
-                // We need to re-fetch the list.
-                const classData = allClassCache.find(c => c.id === currentClassId);
-                const studentIds = classData.students;
-                const parentIds = allStudentsCache
-                    .filter(s => studentIds.includes(s.id))
-                    .flatMap(s => s.parents || []);
-                const uniqueParentIds = [...new Set(parentIds)];
-                
-                const parentDocsPromises = [];
-                for (let i = 0; i < uniqueParentIds.length; i += 30) {
-                    const chunk = uniqueParentIds.slice(i, i + 30);
-                    if(chunk.length === 0) continue;
-                    const q = query(getParentsCol(), where('__name__', 'in', chunk));
-                    parentDocsPromises.push(getDocs(q));
-                }
-                const snapshots = await Promise.all(parentDocsPromises);
-                bccList = [];
-                snapshots.forEach(snapshot => {
-                    snapshot.docs.forEach(doc => {
-                        bccList.push(doc.data().email);
-                    });
-                });
-            }
-
-            const payload = {
-                to: to ? to : null, // Send null if 'to' is hidden
-                bcc: bccList,
-                subject: document.getElementById('email-subject').value,
-                text: document.getElementById('email-body').value
-            };
-
+            const payload = { to: to || null, bcc: bccList, subject: document.getElementById('email-subject').value, text: document.getElementById('email-body').value };
             try {
-                const response = await fetch(`${serverUrl}/send-email`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const res = await response.json();
-                    throw new Error(res.error || `Server responded with ${response.status}`);
-                }
-
-                const result = await response.json();
-                toast('Email sent successfully!', 'success');
-                status.textContent = 'Email sent!';
-                setTimeout(() => {
-                    closeModal('email-modal');
-                }, 1000);
-
-            } catch (error) {
-                console.error("Error sending email: ", error);
-                toast(`Failed to send email: ${error.message}`, 'error');
-                status.textContent = 'Failed. Try again.';
-            } finally {
-                sendBtn.disabled = false; // Re-enable
-            }
+                const response = await fetch(`${serverUrl}/send-email`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server responded ${response.status}`); }
+                toast('Email sent!', 'success'); status.textContent = 'Sent!'; setTimeout(() => closeModal('email-modal'), 1000);
+            } catch (error) { console.error("Send Email Error:", error); toast(`Failed: ${error.message}`, 'error'); status.textContent = 'Failed.';
+            } finally { btn.disabled = false; }
         }
         
         // --- Mobile Navigation ---
-        const showCol = (colId) => {
-            document.getElementById('col-1-section').classList.add('hidden');
-            document.getElementById('col-2-section').classList.add('hidden');
-            document.getElementById('col-3-section').classList.add('hidden');
-            document.getElementById(colId).classList.remove('hidden');
-        }
-        const setActiveNav = (navId) => {
-            document.getElementById('nav-col-1').classList.replace('text-blue-600', 'text-gray-500');
-            document.getElementById('nav-col-2').classList.replace('text-blue-600', 'text-gray-500');
-            document.getElementById('nav-contacts').classList.replace('text-blue-600', 'text-gray-500');
-            document.getElementById(navId).classList.replace('text-gray-500', 'text-blue-600');
-        }
+        const showCol = (colId) => { document.getElementById('col-1-section').classList.add('hidden'); document.getElementById('col-2-section').classList.add('hidden'); document.getElementById('col-3-section').classList.add('hidden'); document.getElementById(colId).classList.remove('hidden'); }
+        const setActiveNav = (navId) => { document.getElementById('nav-col-1').classList.replace('text-blue-600', 'text-gray-500'); document.getElementById('nav-col-2').classList.replace('text-blue-600', 'text-gray-500'); document.getElementById('nav-contacts').classList.replace('text-blue-600', 'text-gray-500'); document.getElementById(navId).classList.replace('text-gray-500', 'text-blue-600'); }
         
-        // --- Authentication Handlers ---
+        // --- Authentication ---
         const handleLogin = (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const errorEl = document.getElementById('login-error');
-            const btn = document.getElementById('login-btn');
-            btn.disabled = true;
-            errorEl.textContent = '';
-
-            signInWithEmailAndPassword(auth, email, password)
-                .then((userCredential) => {
-                    // Signed in, onAuthStateChanged will handle the rest
-                })
-                .catch((error) => {
-                    console.error("Login failed:", error);
-                    errorEl.textContent = error.message.replace('Firebase: ', '');
-                })
-                .finally(() => {
-                    btn.disabled = false;
-                });
+            e.preventDefault(); const email = document.getElementById('login-email').value; const password = document.getElementById('login-password').value;
+            const errorEl = document.getElementById('login-error'); const btn = document.getElementById('login-btn'); btn.disabled = true; errorEl.textContent = '';
+            signInWithEmailAndPassword(auth, email, password) .catch((error) => { console.error("Login failed:", error); errorEl.textContent = error.message.replace('Firebase: ', ''); }) .finally(() => { btn.disabled = false; });
         };
+        const handleSignOut = () => { if (unsubscribeClasses) unsubscribeClasses(); if (unsubscribeAllStudents) unsubscribeAllStudents(); signOut(auth).catch((error) => { console.error("Sign out failed:", error); toast('Sign out failed.', 'error'); }); };
 
-        // REMOVED handleRegister
-        
-        const handleSignOut = () => {
-            if (unsubscribeClasses) unsubscribeClasses();
-            if (unsubscribeAllStudents) unsubscribeAllStudents();
-            signOut(auth).catch((error) => {
-                console.error("Sign out failed:", error);
-                toast('Sign out failed.', 'error');
-            });
-        };
-
-        // --- NEW: User Management Functions ---
-        const openUserManagementModal = async () => {
-             openModal('user-management-modal');
-             // Fetch users when modal opens
-             await fetchUsers();
-        };
-
-        // Fetch users from server
+        // --- User Management ---
+        const openUserManagementModal = async () => { openModal('user-management-modal'); await fetchUsers(); };
         const fetchUsers = async () => {
-             const listEl = document.getElementById('user-list');
-             listEl.innerHTML = '<p class="text-gray-500">Loading users...</p>';
-             
-             if (!currentUser) {
-                 listEl.innerHTML = '<p class="text-red-500">Error: Not authenticated.</p>';
-                 return;
-             }
-
-             try {
-                 // Get the ID token for the current user
-                 const idToken = await getIdToken(currentUser);
-                 
-                 const serverUrl = HARDCODED_CONFIG.serverUrl;
-                 const response = await fetch(`${serverUrl}/list-users`, {
-                     method: 'GET',
-                     headers: {
-                         'Authorization': `Bearer ${idToken}`
-                     }
-                 });
-
-                 if (!response.ok) {
-                     const res = await response.json();
-                     throw new Error(res.error || `Server responded with ${response.status}`);
-                 }
-
-                 const { users } = await response.json();
-                 renderUserList(users);
-
-             } catch (error) {
-                 console.error("Error fetching users:", error);
-                 listEl.innerHTML = `<p class="text-red-500">Error loading users: ${error.message}</p>`;
-                 toast('Failed to load users.', 'error');
-             }
+            const listEl = document.getElementById('user-list'); listEl.innerHTML = '<p class="text-gray-500">Loading users...</p>'; if (!currentUser) { listEl.innerHTML = '<p class="text-red-500">Error: Not authenticated.</p>'; return; }
+            try {
+                const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl;
+                const response = await fetch(`${serverUrl}/list-users`, { method: 'GET', headers: { 'Authorization': `Bearer ${idToken}` } });
+                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server error ${response.status}`); }
+                const { users } = await response.json(); renderUserList(users);
+            } catch (error) { console.error("Fetch Users Error:", error); listEl.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`; toast('Failed to load users.', 'error'); }
         };
-
-        // Handle creating a new user
         const handleCreateUser = async (e) => {
-             e.preventDefault();
-             const email = document.getElementById('new-user-email').value;
-             const password = document.getElementById('new-user-password').value;
-             const statusEl = document.getElementById('add-user-status');
-             const btn = document.getElementById('add-user-btn');
-             btn.disabled = true;
-             statusEl.textContent = 'Creating...';
-             statusEl.classList.remove('text-red-600', 'text-green-600');
-
-             if (!currentUser) {
-                 statusEl.textContent = 'Error: Not authenticated.';
-                 statusEl.classList.add('text-red-600');
-                 btn.disabled = false;
-                 return;
-             }
-             
-             try {
-                 const idToken = await getIdToken(currentUser);
-                 const serverUrl = HARDCODED_CONFIG.serverUrl;
-                 
-                 const response = await fetch(`${serverUrl}/create-user`, {
-                     method: 'POST',
-                     headers: {
-                         'Content-Type': 'application/json',
-                         'Authorization': `Bearer ${idToken}`
-                     },
-                     body: JSON.stringify({ email, password })
-                 });
-
-                 if (!response.ok) {
-                     const res = await response.json();
-                     throw new Error(res.error || `Server responded with ${response.status}`);
-                 }
-
-                 const result = await response.json();
-                 toast('User created successfully!', 'success');
-                 statusEl.textContent = `User ${result.email} created.`;
-                 statusEl.classList.add('text-green-600');
-                 e.target.reset(); // Clear form
-                 await fetchUsers(); // Refresh user list
-
-             } catch (error) {
-                 console.error("Error creating user:", error);
-                 statusEl.textContent = `Error: ${error.message}`;
-                 statusEl.classList.add('text-red-600');
-                 toast('Failed to create user.', 'error');
-             } finally {
-                 btn.disabled = false;
-             }
+            e.preventDefault(); const email = document.getElementById('new-user-email').value; const password = document.getElementById('new-user-password').value;
+            const statusEl = document.getElementById('add-user-status'); const btn = document.getElementById('add-user-btn'); btn.disabled = true; statusEl.textContent = 'Creating...'; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); btn.disabled = false; return; }
+            try {
+                const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl;
+                const response = await fetch(`${serverUrl}/create-user`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ email, password }) });
+                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server error ${response.status}`); }
+                const result = await response.json(); toast('User created!', 'success'); statusEl.textContent = `User ${result.email} created.`; statusEl.classList.add('text-green-600'); e.target.reset(); await fetchUsers();
+            } catch (error) { console.error("Create User Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed to create user.', 'error');
+            } finally { btn.disabled = false; }
         };
-
-        // Handle deleting a user
         const handleDeleteUser = async (uidToDelete, emailToDelete) => {
-             if (!confirm(`Are you sure you want to permanently delete the user: ${emailToDelete}? This cannot be undone.`)) {
-                 return;
-             }
-
-             const statusEl = document.getElementById('add-user-status'); // Use status area for feedback
-             statusEl.textContent = `Deleting ${emailToDelete}...`;
-             statusEl.classList.remove('text-red-600', 'text-green-600');
-             
-             if (!currentUser) {
-                 statusEl.textContent = 'Error: Not authenticated.';
-                 statusEl.classList.add('text-red-600');
-                 return;
-             }
-
-             try {
-                 const idToken = await getIdToken(currentUser);
-                 const serverUrl = HARDCODED_CONFIG.serverUrl;
-
-                 const response = await fetch(`${serverUrl}/delete-user`, {
-                     method: 'POST',
-                     headers: {
-                         'Content-Type': 'application/json',
-                         'Authorization': `Bearer ${idToken}`
-                     },
-                     body: JSON.stringify({ uid: uidToDelete })
-                 });
-
-                 if (!response.ok) {
-                     const res = await response.json();
-                     throw new Error(res.error || `Server responded with ${response.status}`);
-                 }
-
-                 toast(`User ${emailToDelete} deleted successfully.`, 'success');
-                 statusEl.textContent = `User ${emailToDelete} deleted.`;
-                 statusEl.classList.add('text-green-600');
-                 await fetchUsers(); // Refresh the list
-
-             } catch (error) {
-                 console.error("Error deleting user:", error);
-                 statusEl.textContent = `Error deleting user: ${error.message}`;
-                 statusEl.classList.add('text-red-600');
-                 toast('Failed to delete user.', 'error');
-             }
+            if (!confirm(`Delete user: ${emailToDelete}?`)) return;
+            const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Deleting ${emailToDelete}...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; }
+            try {
+                const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl;
+                const response = await fetch(`${serverUrl}/delete-user`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uid: uidToDelete }) });
+                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server error ${response.status}`); }
+                toast(`User ${emailToDelete} deleted.`, 'success'); statusEl.textContent = `User ${emailToDelete} deleted.`; statusEl.classList.add('text-green-600'); await fetchUsers();
+            } catch (error) { console.error("Delete User Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed to delete user.', 'error'); }
         };
-
+        const handleMakeAdmin = async (uidToMakeAdmin, emailToMakeAdmin) => {
+            if (!confirm(`Grant admin privileges to ${emailToMakeAdmin}?`)) return;
+            const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Making ${emailToMakeAdmin} admin...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; }
+            try {
+                const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl;
+                const response = await fetch(`${serverUrl}/set-admin`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uidToMakeAdmin: uidToMakeAdmin }) });
+                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server error ${response.status}`); }
+                toast(`${emailToMakeAdmin} is now an admin. They may need to sign out/in.`, 'success'); statusEl.textContent = `Admin granted.`; statusEl.classList.add('text-green-600'); await fetchUsers();
+                if (uidToMakeAdmin === userId) { isAdmin = true; document.getElementById('manage-users-btn').classList.remove('hidden'); document.getElementById('user-admin-status').classList.remove('hidden'); await getIdToken(currentUser, true); } // Force refresh if self
+            } catch (error) { console.error("Make Admin Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed to set admin.', 'error'); }
+        };
 
         
         // --- App Start ---
         document.addEventListener('DOMContentLoaded', () => {
             
-            // Check for hardcoded config
+            // Critical config check
             if (!HARDCODED_CONFIG.firebase.apiKey || !HARDCODED_CONFIG.firebase.appId || !HARDCODED_CONFIG.serverUrl || !HARDCODED_CONFIG.organizationId) {
-                document.body.innerHTML = `<div class="p-8 text-center text-red-600">
-                    <h1 class="text-2xl font-bold">Configuration Error</h1>
-                    <p class="mt-4">You must fill in all 5 values in the <strong>HARDCODED_CONFIG</strong> object in the HTML file.</p>
-                </div>`;
-                return;
+                document.body.innerHTML = `<div class="p-8 text-center text-red-600"><h1 class="text-2xl font-bold">Config Error</h1><p class="mt-4">Fill in all 5 values in <strong>HARDCODED_CONFIG</strong>.</p></div>`; return;
             }
             
-            // **FIX**: Initialize Firebase with the .firebase object
+            // Initialize Firebase
             try {
-                const app = initializeApp(HARDCODED_CONFIG.firebase);
+                // CORRECTED: Pass the correct config object
+                const app = initializeApp(HARDCODED_CONFIG.firebase); 
                 db = getFirestore(app);
-                auth = initializeAuth(app, {
-                    persistence: browserLocalPersistence
-                });
+                auth = initializeAuth(app, { persistence: browserLocalPersistence });
 
                 // --- Auth State Change Listener ---
-                // This is the main controller for the app's state
-                onAuthStateChanged(auth, (user) => {
-                    currentUser = user; // Store the user object
+                onAuthStateChanged(auth, async (user) => {
+                    currentUser = user;
                     if (user) {
-                        // User is signed in
                         userId = user.uid;
                         document.getElementById('user-email-display').textContent = user.email;
                         
-                        // Show the app, hide auth screen
-                        document.getElementById('app-shell').style.display = 'flex';
-                        document.getElementById('auth-screen').style.display = 'none';
-                        
-                        // Start data listeners
-                        listenForClasses();
-                        listenForAllStudents();
-                        
-                        // Set default view
-                        renderViewByClass();
-                        
-                    } else {
-                        // User is signed out
-                        userId = null;
-                        
-                        // Show auth screen, hide app
-                        document.getElementById('app-shell').style.display = 'none';
-                        document.getElementById('auth-screen').style.display = 'flex';
-                        
-                        // Stop listeners
-                        if (unsubscribeClasses) unsubscribeClasses();
-                        if (unsubscribeAllStudents) unsubscribeAllStudents();
-                        
-                        // Clear caches
-                        allClassCache = [];
-                        allStudentsCache = [];
+                        try { // Check for admin claim
+                            const idTokenResult = await getIdTokenResult(user, false); // false = don't force refresh
+                            isAdmin = idTokenResult.claims.admin === true;
+                            document.getElementById('manage-users-btn').classList.toggle('hidden', !isAdmin);
+                            document.getElementById('user-admin-status').classList.toggle('hidden', !isAdmin);
+                        } catch (claimError) {
+                             console.error("Error getting token claims:", claimError); isAdmin = false; // Default non-admin
+                             document.getElementById('manage-users-btn').classList.add('hidden'); document.getElementById('user-admin-status').classList.add('hidden');
+                             toast('Could not verify admin status.', 'error');
+                        }
+
+                        document.getElementById('app-shell').style.display = 'flex'; document.getElementById('auth-screen').style.display = 'none';
+                        listenForClasses(); listenForAllStudents(); renderViewByClass();
+                    } else { // Signed out
+                        userId = null; isAdmin = false; currentUser = null;
+                        document.getElementById('app-shell').style.display = 'none'; document.getElementById('auth-screen').style.display = 'flex';
+                        if (unsubscribeClasses) unsubscribeClasses(); if (unsubscribeAllStudents) unsubscribeAllStudents();
+                        allClassCache = []; allStudentsCache = [];
+                        document.getElementById('manage-users-btn').classList.add('hidden'); document.getElementById('user-admin-status').classList.add('hidden');
                     }
                 });
-
-            } catch (error) {
-                 document.body.innerHTML = `<div class="p-8 text-center text-red-600">
-                    <h1 class="text-2xl font-bold">Firebase Init Failed</h1>
-                    <p class="mt-4">Please check your 4 <strong>HARDCODED_CONFIG.firebase</strong> values.</p>
-                    <p class="mt-2 text-sm text-gray-500">${error.message}</p>
-                </div>`;
-                return;
+            } catch (error) { // Catch init error
+                 document.body.innerHTML = `<div class="p-8 text-center text-red-600"><h1 class="text-2xl font-bold">Firebase Init Failed</h1><p class="mt-4">Check <strong>HARDCODED_CONFIG.firebase</strong> values.</p><p class="mt-2 text-sm text-gray-500">${error.message}</p></div>`; return;
             }
 
             // --- Setup Event Listeners ---
-
-            // Auth (Login Only)
             document.getElementById('login-form').addEventListener('submit', handleLogin);
             document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
-            
-            // User Management
             document.getElementById('manage-users-btn').addEventListener('click', openUserManagementModal);
             document.getElementById('add-user-form').addEventListener('submit', handleCreateUser);
-
-            // View Toggle
             document.getElementById('view-by-class').addEventListener('click', renderViewByClass);
             document.getElementById('view-by-student').addEventListener('click', renderViewByStudent);
-            
-            // Email Class
             document.getElementById('email-class-btn').addEventListener('click', handleEmailClass);
-
-            // Setup modal close buttons
-            document.querySelectorAll('.close-modal-btn').forEach(btn => {
-                btn.addEventListener('click', () => closeModal(btn.dataset.modal));
-            });
-
-            // Setup modal form handlers
+            document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.modal)));
             document.getElementById('add-class-form').addEventListener('submit', handleAddClass);
             document.getElementById('add-new-student-form').addEventListener('submit', handleAddNewStudent);
             document.getElementById('add-existing-student-form').addEventListener('submit', handleAddExistingStudent);
             document.getElementById('add-contact-form').addEventListener('submit', handleAddContact);
             document.getElementById('email-form').addEventListener('submit', handleSendEmail);
-
-            // Setup button click handlers
-            document.getElementById('col-1-add-btn').addEventListener('click', () => {
-                if (currentView === 'class') {
-                    openModal('add-class-modal');
-                } else {
-                    // When in student view, "Add Student" opens the new student modal
-                    openModal('add-new-student-modal');
-                }
-            });
-            document.getElementById('add-new-student-btn').addEventListener('click', () => {
-                // This button is only visible in "By Class" view
-                openModal('add-new-student-modal');
-            });
-            document.getElementById('add-existing-student-btn').addEventListener('click', () => {
-                document.querySelector('#add-existing-student-subtitle span').textContent = allClassCache.find(c => c.id === currentClassId)?.name || '';
-                renderStudentDropdown(); // Re-render dropdown just in case
-                openModal('add-existing-student-modal');
-            });
-            document.getElementById('add-contact-btn').addEventListener('click', () => {
-                document.querySelector('#add-contact-subtitle span').textContent = allStudentsCache.find(s => s.id === currentStudentId)?.name || '';
-                openModal('add-contact-modal');
-            });
-    
-            // Mobile nav listeners
-            document.getElementById('nav-col-1').addEventListener('click', () => {
-                showCol('col-1-section');
-                setActiveNav('nav-col-1');
-            });
-            document.getElementById('nav-col-2').addEventListener('click', () => {
-                showCol('col-2-section');
-                setActiveNav('nav-col-2');
-            });
-            document.getElementById('nav-contacts').addEventListener('click', () => {
-                showCol('col-3-section');
-                setActiveNav('nav-contacts');
-            });
-        
+            document.getElementById('col-1-add-btn').addEventListener('click', () => openModal(currentView === 'class' ? 'add-class-modal' : 'add-new-student-modal'));
+            document.getElementById('add-new-student-btn').addEventListener('click', () => openModal('add-new-student-modal'));
+            document.getElementById('add-existing-student-btn').addEventListener('click', () => { document.querySelector('#add-existing-student-subtitle span').textContent = allClassCache.find(c => c.id === currentClassId)?.name || ''; renderStudentDropdown(); openModal('add-existing-student-modal'); });
+            document.getElementById('add-contact-btn').addEventListener('click', () => { document.querySelector('#add-contact-subtitle span').textContent = allStudentsCache.find(s => s.id === currentStudentId)?.name || ''; openModal('add-contact-modal'); });
+            document.getElementById('nav-col-1').addEventListener('click', () => { showCol('col-1-section'); setActiveNav('nav-col-1'); });
+            document.getElementById('nav-col-2').addEventListener('click', () => { showCol('col-2-section'); setActiveNav('nav-col-2'); });
+            document.getElementById('nav-contacts').addEventListener('click', () => { showCol('col-3-section'); setActiveNav('nav-contacts'); });
         });
     </script>
 

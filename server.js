@@ -23,11 +23,9 @@ try {
     console.log("Firebase Admin SDK initialized successfully.");
 } catch (error) {
     console.error("FATAL ERROR: FIREBASE_SERVICE_ACCOUNT_KEY env var is missing, invalid JSON, or SDK init failed.", error.message);
-    // Log the beginning of the key if it exists, to help debug JSON parsing
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
         console.error("Key starts with:", process.env.FIREBASE_SERVICE_ACCOUNT_KEY.substring(0, 30) + "...");
     }
-     // Don't exit, allow server to run but endpoints needing admin will fail
 }
 // ---------------------------------
 
@@ -45,7 +43,6 @@ if (SENDGRID_API_KEY && SENDER_EMAIL) {
 
 // --- Middleware for Authentication ---
 const authenticateToken = async (req, res, next) => {
-    // Check if Admin SDK initialized
     if (!adminApp) {
         console.error("Auth Middleware Error: Firebase Admin SDK not initialized.");
         return res.status(500).json({ error: 'Server configuration error.' });
@@ -58,12 +55,25 @@ const authenticateToken = async (req, res, next) => {
     }
 
     try {
+        // Verify the token and decode it
         const decodedToken = await admin.auth().verifyIdToken(token);
-        req.user = decodedToken; // Add user info to the request object
-        next(); // Proceed to the next middleware or route handler
+        // Add decoded token (which includes claims like `admin`) to the request object
+        req.user = decodedToken;
+        next();
     } catch (error) {
         console.error("Token verification failed:", error);
         return res.status(403).json({ error: 'Invalid or expired token.' });
+    }
+};
+
+// --- NEW: Middleware for Admin Check ---
+const isAdmin = (req, res, next) => {
+    // Check if the decoded token from authenticateToken has the admin claim
+    if (req.user && req.user.admin === true) {
+        next(); // User is admin, proceed
+    } else {
+        console.warn(`Admin access denied for user: ${req.user ? req.user.email : 'Unknown'}`);
+        res.status(403).json({ error: 'Admin privileges required.' });
     }
 };
 // ------------------------------------
@@ -75,63 +85,57 @@ app.get('/', (req, res) => {
     res.status(200).send('Server is running.');
 });
 
-// Send Email Endpoint
+// Send Email Endpoint (No auth required)
 app.post('/send-email', async (req, res) => {
-    console.log("Received /send-email request"); // Log request arrival
+    console.log("Received /send-email request");
 
     if (!SENDGRID_API_KEY || !SENDER_EMAIL) {
-        console.error("Send Email Error: Email server is not configured correctly (missing API key or sender email).");
+        console.error("Send Email Error: Email server is not configured correctly.");
         return res.status(500).json({ error: 'Email server is not configured correctly.' });
     }
-
+    // ... (rest of send-email logic remains the same)
     const { to, bcc, subject, text } = req.body;
-
-    // Validate required fields
     if (!subject || !text || (!to && !(bcc && bcc.length > 0))) {
-        console.warn("Send Email Validation Error: Missing required fields (subject, text, and to/bcc).");
+        console.warn("Send Email Validation Error: Missing required fields.");
         return res.status(400).json({ error: 'Missing required fields: subject, text, and either to or bcc.' });
     }
-    
-    // If sending BCC, use sender as the 'to' field for SendGrid API compliance
     const recipientEmail = (bcc && bcc.length > 0) ? SENDER_EMAIL : to;
-
     const msg = {
-        to: recipientEmail, // Use sender if BCC, otherwise use the 'to' field
-        from: SENDER_EMAIL, // Must be your verified sender email
+        to: recipientEmail,
+        from: SENDER_EMAIL,
         subject: subject,
         text: text,
-        bcc: (bcc && bcc.length > 0) ? bcc : undefined // Add BCC only if provided
+        bcc: (bcc && bcc.length > 0) ? bcc : undefined
     };
-
     try {
         console.log(`Attempting to send email via SendGrid. To: ${recipientEmail}, BCC count: ${bcc ? bcc.length : 0}`);
         await sgMail.send(msg);
         console.log('Email sent successfully via SendGrid');
         res.status(200).json({ message: 'Email sent successfully!' });
     } catch (error) {
-        // Log detailed SendGrid error if available
         console.error('Error sending email via SendGrid:', error.response ? JSON.stringify(error.response.body) : error.message);
         res.status(500).json({ error: `Failed to send email: ${error.message}` });
     }
 });
 
 
-// --- User Management Endpoints (Auth Required) ---
+// --- User Management Endpoints ---
 
-// List all Firebase Auth users
+// List all Firebase Auth users (Requires login)
+// MODIFIED: Returns admin status for each user
 app.get('/list-users', authenticateToken, async (req, res) => {
     console.log(`User ${req.user.email} requesting user list.`);
-     // Check if Admin SDK initialized (needed here as it's the first use)
     if (!adminApp) {
         console.error("List Users Error: Firebase Admin SDK not initialized.");
         return res.status(500).json({ error: 'Server configuration error (Admin SDK).' });
     }
     try {
-        const listUsersResult = await admin.auth().listUsers(1000); // Max 1000 users per page
-        // Map user records to a simpler format
+        const listUsersResult = await admin.auth().listUsers(1000);
+        // Map user records AND include their admin claim status
         const users = listUsersResult.users.map(userRecord => ({
             uid: userRecord.uid,
             email: userRecord.email,
+            isAdmin: userRecord.customClaims?.admin === true // Check for admin claim
         }));
         console.log(`Successfully listed ${users.length} users.`);
         res.status(200).json({ users });
@@ -141,19 +145,16 @@ app.get('/list-users', authenticateToken, async (req, res) => {
     }
 });
 
-// Create a new Firebase Auth user
-app.post('/create-user', authenticateToken, async (req, res) => {
-    // *** NEW LOGGING ***
-    console.log(`Received /create-user request from ${req.user.email}. Payload:`, req.body);
+// Create a new Firebase Auth user (Requires ADMIN login)
+// MODIFIED: Added isAdmin middleware
+app.post('/create-user', authenticateToken, isAdmin, async (req, res) => { // Added isAdmin middleware
+    console.log(`ADMIN ${req.user.email} creating user. Payload:`, req.body);
     const { email, password } = req.body;
 
-    // Check if Admin SDK initialized
     if (!adminApp) {
         console.error("Create User Error: Firebase Admin SDK not initialized.");
         return res.status(500).json({ error: 'Server configuration error (Admin SDK).' });
     }
-
-    // Basic validation
     if (!email || !password) {
         console.warn("Create User Validation Error: Missing email or password.");
         return res.status(400).json({ error: 'Email and password are required.' });
@@ -164,72 +165,132 @@ app.post('/create-user', authenticateToken, async (req, res) => {
     }
 
     try {
-        // *** NEW LOGGING ***
         console.log(`Attempting to create user: ${email}`);
-        // Create user using Firebase Admin SDK
         const userRecord = await admin.auth().createUser({
             email: email,
             password: password,
+            // New users are NOT admins by default
         });
         console.log(`Successfully created new user: ${userRecord.uid} (${userRecord.email})`);
-        res.status(201).json({ uid: userRecord.uid, email: userRecord.email });
+        res.status(201).json({ uid: userRecord.uid, email: userRecord.email, isAdmin: false }); // Return isAdmin status
     } catch (error) {
-        // *** NEW LOGGING ***
         console.error(`Error creating new user ${email}:`, error);
-        // Handle specific Firebase Auth errors
         if (error.code === 'auth/email-already-exists') {
              res.status(409).json({ error: 'Email address is already in use.' });
         } else if (error.code === 'auth/invalid-password') {
-             res.status(400).json({ error: 'Invalid password format (must be >= 6 chars).' }); // More specific
+             res.status(400).json({ error: 'Invalid password format (must be >= 6 chars).' });
         } else {
-             // Generic error for other issues
-             res.status(500).json({ error: `Failed to create user: ${error.message}` }); // Include original message
+             res.status(500).json({ error: `Failed to create user: ${error.message}` });
         }
     }
 });
 
-// Delete a Firebase Auth user
-app.post('/delete-user', authenticateToken, async (req, res) => {
-    console.log(`User ${req.user.email} attempting to delete user.`);
-    const { uid } = req.body; // UID of the user to delete
+// Delete a Firebase Auth user (Requires ADMIN login)
+// MODIFIED: Added isAdmin middleware
+app.post('/delete-user', authenticateToken, isAdmin, async (req, res) => { // Added isAdmin middleware
+    console.log(`ADMIN ${req.user.email} attempting to delete user.`);
+    const { uid } = req.body;
 
-    // Check if Admin SDK initialized
     if (!adminApp) {
         console.error("Delete User Error: Firebase Admin SDK not initialized.");
         return res.status(500).json({ error: 'Server configuration error (Admin SDK).' });
     }
-
-    // Validate input
     if (!uid) {
         console.warn("Delete User Validation Error: Missing UID.");
         return res.status(400).json({ error: 'User ID (uid) is required.' });
     }
-    
-    // Prevent self-deletion
     if (uid === req.user.uid) {
-        console.warn(`Delete User Auth Error: User ${req.user.email} attempted self-deletion.`);
+        console.warn(`Delete User Auth Error: Admin ${req.user.email} attempted self-deletion.`);
         return res.status(400).json({ error: 'Cannot delete your own account.' });
     }
 
     try {
         console.log(`Attempting to delete user: ${uid}`);
-        // Delete user using Firebase Admin SDK
         await admin.auth().deleteUser(uid);
         console.log(`Successfully deleted user: ${uid}`);
         res.status(200).json({ message: 'User deleted successfully.' });
     } catch (error) {
         console.error(`Error deleting user ${uid}:`, error);
-        // Handle specific Firebase Auth errors
         if (error.code === 'auth/user-not-found') {
             res.status(404).json({ error: 'User not found.' });
         } else {
-            // Generic error for other issues
             res.status(500).json({ error: `Failed to delete user: ${error.message}` });
         }
     }
 });
 
+// --- NEW: Set Admin Endpoint ---
+// Allows an existing admin OR the first user ever to set admin claims
+app.post('/set-admin', authenticateToken, async (req, res) => {
+    const { uidToMakeAdmin } = req.body; // The UID of the user to grant admin rights
+    const callerUid = req.user.uid; // The UID of the user making the request
+
+    console.log(`User ${req.user.email} attempting to set admin status for UID: ${uidToMakeAdmin}`);
+
+    if (!adminApp) {
+        console.error("Set Admin Error: Firebase Admin SDK not initialized.");
+        return res.status(500).json({ error: 'Server configuration error (Admin SDK).' });
+    }
+    if (!uidToMakeAdmin) {
+        console.warn("Set Admin Validation Error: Missing target UID.");
+        return res.status(400).json({ error: 'User ID (uidToMakeAdmin) is required.' });
+    }
+
+    try {
+        let canSetAdmin = false;
+
+        // Check 1: Is the caller already an admin?
+        if (req.user.admin === true) {
+            console.log(`Caller ${req.user.email} is an admin. Proceeding.`);
+            canSetAdmin = true;
+        } else {
+            // Check 2: If caller is not admin, check if ANY admin exists yet (for bootstrapping)
+            console.log(`Caller ${req.user.email} is not admin. Checking if any admins exist...`);
+            const listUsersResult = await admin.auth().listUsers(1000); // Check first 1000 users
+            const anyAdminExists = listUsersResult.users.some(user => user.customClaims?.admin === true);
+
+            if (!anyAdminExists) {
+                console.log("No admins found. Allowing first user bootstrap.");
+                // Allow setting ONLY if the target is the caller themselves
+                if (uidToMakeAdmin === callerUid) {
+                    console.log(`Caller ${req.user.email} is bootstrapping themselves as admin.`);
+                    canSetAdmin = true;
+                } else {
+                     console.warn(`Bootstrap denied: Caller ${req.user.email} tried to make someone else (${uidToMakeAdmin}) admin.`);
+                     return res.status(403).json({ error: 'Only the first user can make themselves admin.' });
+                }
+            } else {
+                console.log("An admin already exists. Denying non-admin request.");
+            }
+        }
+
+        // Proceed if authorized
+        if (canSetAdmin) {
+            console.log(`Setting custom claim { admin: true } for user ${uidToMakeAdmin}`);
+            await admin.auth().setCustomUserClaims(uidToMakeAdmin, { admin: true });
+            console.log(`Successfully set admin claim for ${uidToMakeAdmin}`);
+
+            // IMPORTANT: Force refresh of the target user's token on client-side is needed
+            // The client-side code should handle this after a successful call.
+            res.status(200).json({ message: `Admin privileges granted to user ${uidToMakeAdmin}. User must sign out and back in for changes to take effect.` });
+
+        } else {
+            // If we got here without canSetAdmin being true, it's an unauthorized attempt
+             console.warn(`Unauthorized attempt by ${req.user.email} to set admin for ${uidToMakeAdmin}.`);
+             return res.status(403).json({ error: 'Admin privileges required to perform this action.' });
+        }
+
+    } catch (error) {
+        console.error(`Error setting admin claim for ${uidToMakeAdmin}:`, error);
+         if (error.code === 'auth/user-not-found') {
+            res.status(404).json({ error: 'Target user not found.' });
+        } else {
+            res.status(500).json({ error: `Failed to set admin claim: ${error.message}` });
+        }
+    }
+});
 // ---------------------------------------------
+
 
 // Start the server
 const PORT = process.env.PORT || 3000;
