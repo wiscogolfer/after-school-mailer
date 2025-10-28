@@ -107,7 +107,7 @@
         </div>
 
         <!-- Main Content -->
-        <!-- Added pb-20 md:pb-4 for bottom padding below nav -->
+        <!-- Container now has bottom padding for mobile -->
         <div class="flex-1 container mx-auto p-4 h-full pb-20 md:pb-4"> 
             <!-- View Toggle -->
             <div class="mb-4 flex justify-between items-center">
@@ -120,10 +120,10 @@
                 </button>
             </div>
             
-             <!-- Removed overflow-hidden -->
+             <!-- Grid still constrains height -->
             <div id="main-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
-                 <!-- Column 1: Classes / Students -->
-                 <!-- Section still has flex flex-col h-full -->
+                 <!-- Column Sections -->
+                 <!-- Sections still use h-full to fill grid row height -->
                 <section id="col-1-section" class="bg-white p-4 rounded-lg shadow-lg flex flex-col h-full md:flex">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                         <h2 id="col-1-title" class="text-2xl font-bold text-gray-800">Classes</h2>
@@ -131,13 +131,12 @@
                             Add Class
                         </button>
                     </div>
-                    <!-- List div still has flex-1 overflow-y-auto min-h-0 -->
+                    <!-- List div uses flex-1, overflow, and min-h-0 -->
                     <div id="col-1-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0">
                         <!-- Items will be injected here -->
                     </div>
                 </section>
     
-                <!-- Column 2: Students / Classes -->
                 <section id="col-2-section" class="bg-white p-4 rounded-lg shadow-lg flex-col h-full hidden md:flex">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                         <div>
@@ -153,13 +152,11 @@
                             </button>
                         </div>
                     </div>
-                    <!-- List div still has flex-1 overflow-y-auto min-h-0 -->
                     <div id="col-2-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0">
                         <!-- Items will be injected here -->
                     </div>
                 </section>
     
-                <!-- Column 3: Parents/Contacts -->
                 <section id="col-3-section" class="bg-white p-4 rounded-lg shadow-lg flex-col h-full hidden md:flex">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                         <div>
@@ -170,7 +167,6 @@
                             Add Contact
                         </button>
                     </div>
-                    <!-- List div still has flex-1 overflow-y-auto min-h-0 -->
                     <div id="contact-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0">
                         <!-- Contacts will be injected here -->
                     </div>
@@ -179,7 +175,7 @@
         </div>
     
         <!-- Bottom Navigation (Mobile) -->
-        <!-- Changed sticky to fixed, added z-40, left-0, right-0 -->
+        <!-- Still uses fixed positioning -->
         <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white shadow-inner p-2 border-t border-gray-200">
              <div class="flex justify-around">
                 <button id="nav-col-1" class="flex flex-col items-center p-2 text-blue-600" data-col="col-1-section">
