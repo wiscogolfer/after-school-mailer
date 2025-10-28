@@ -41,8 +41,8 @@
     </style>
 </head>
 
-<!-- ADDED pb-20 md:pb-0 to body for mobile bottom nav spacing -->
-<body class="h-full flex flex-col pb-20 md:pb-0">
+<!-- REMOVED bottom padding from body -->
+<body class="h-full flex flex-col">
 
     <!-- Auth Screen (Login Only) -->
     <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-100 p-4">
@@ -108,7 +108,6 @@
         </div>
 
         <!-- Main Content -->
-        <!-- REMOVED bottom padding -->
         <div class="flex-1 container mx-auto p-4 h-full"> 
             <!-- View Toggle -->
             <div class="mb-4 flex justify-between items-center">
@@ -132,8 +131,8 @@
                             Add Class
                         </button>
                     </div>
-                    <!-- List div uses flex-1, overflow, and min-h-0 -->
-                    <div id="col-1-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0">
+                    <!-- ADDED pb-16 -->
+                    <div id="col-1-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0 pb-16 md:pb-0">
                         <!-- Items will be injected here -->
                     </div>
                 </section>
@@ -153,7 +152,8 @@
                             </button>
                         </div>
                     </div>
-                    <div id="col-2-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0">
+                     <!-- ADDED pb-16 -->
+                    <div id="col-2-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0 pb-16 md:pb-0">
                         <!-- Items will be injected here -->
                     </div>
                 </section>
@@ -168,7 +168,8 @@
                             Add Contact
                         </button>
                     </div>
-                    <div id="contact-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0">
+                     <!-- ADDED pb-16 -->
+                    <div id="contact-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0 pb-16 md:pb-0">
                         <!-- Contacts will be injected here -->
                     </div>
                 </section>
