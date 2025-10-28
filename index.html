@@ -12,6 +12,7 @@
     <!-- Add Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        html { scroll-behavior: smooth; } /* Added for smoother scrollIntoView */
         body { font-family: 'Inter', sans-serif; }
         .modal { display: none; }
         .modal.flex { display: flex; }
@@ -744,11 +745,9 @@
             resetCol3(); 
             showCol('col-2-section'); 
             setActiveNav('nav-col-2'); 
-            // Auto-scroll Col 2 using setTimeout
-            setTimeout(() => {
-                const listEl = document.getElementById('col-2-list');
-                if (listEl) listEl.scrollTop = 0;
-            }, 0);
+            // Auto-scroll Col 2 using scrollIntoView
+            const listEl = document.getElementById('col-2-list');
+            if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
         const selectStudent = (studentId, studentName) => {
             console.log("Selected student:", studentId, studentName);
@@ -760,19 +759,15 @@
             if (currentView === 'student') { 
                 document.getElementById('col-2-subtitle').textContent = `For: ${studentName}`; 
                 renderCol2ClassList(studentId); 
-                // Auto-scroll Col 2 using setTimeout
-                setTimeout(() => {
-                    const listEl = document.getElementById('col-2-list');
-                    if (listEl) listEl.scrollTop = 0;
-                }, 0);
+                // Auto-scroll Col 2 using scrollIntoView
+                const listEl = document.getElementById('col-2-list');
+                if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
             showCol('col-3-section'); 
             setActiveNav('nav-contacts');
-            // Auto-scroll Col 3 using setTimeout
-            setTimeout(() => {
-                 const listEl = document.getElementById('contact-list');
-                 if (listEl) listEl.scrollTop = 0;
-            }, 0);
+            // Auto-scroll Col 3 using scrollIntoView
+            const listEl = document.getElementById('contact-list');
+            if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         // --- Open Edit Modals ---
