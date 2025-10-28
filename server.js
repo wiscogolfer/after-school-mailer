@@ -103,7 +103,7 @@ app.get('/', (req, res) => {
 // --- Email Sending Route ---
 app.post('/send-email', async (req, res) => {
     // Basic validation
-    // 'replyTo' is now an object: { email: '...', name: '...' }
+    // 'replyTo' is an object: { email: '...', name: '...' }
     const { to, bcc, subject, text, replyTo } = req.body;
     
     // ---
@@ -139,8 +139,12 @@ app.post('/send-email', async (req, res) => {
     const resendPayload = {
         to: recipient,
         bcc: bcc || undefined,
-        from: formattedFrom,        // Use formatted 'from'
-        reply_to: formattedReplyTo, // Use formatted 'reply_to'
+        from: formattedFrom,        
+        
+        // --- THIS IS THE FIX (Based on Resend Support) ---
+        replyTo: formattedReplyTo, // Changed from reply_to
+        // ------------------------------------------------
+
         subject: subject,
         text: text,
     };
