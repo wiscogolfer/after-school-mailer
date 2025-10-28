@@ -122,7 +122,7 @@ app.post('/send-email', async (req, res) => {
 
     // --- NEW: Format From and Reply-To ---
     // Format the 'From' address (e.g., "State 48 Theatre <contact@state48theatre.com>")
-    const formattedFrom = `State 48 Theatre <${senderEmail}>`;
+    const formattedFrom = `State 48 Arts and Academics <${senderEmail}>`;
 
     // Format the 'Reply-To' address. Default to sender if no user is logged in.
     let formattedReplyTo;
