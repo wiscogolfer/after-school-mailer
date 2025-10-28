@@ -2,22 +2,22 @@
 import express from 'express';
 import cors from 'cors'; // Import CORS
 import admin from 'firebase-admin';
-import sgMail from '@sendgrid/mail'; // Import SendGrid Mail
+import { Resend } from 'resend'; // <-- CHANGED: Import Resend
 import { Buffer } from 'buffer'; // Import Buffer for base64 decoding
 
 // --- Configuration ---
 // Load environment variables securely (Render handles this)
 const serviceAccountKeyBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-const sendgridApiKey = process.env.SENDGRID_API_KEY;
-const senderEmail = process.env.SENDER_EMAIL; // Verified sender in SendGrid
+const resendApiKey = process.env.RESEND_API_KEY; // <-- CHANGED
+const senderEmail = process.env.SENDER_EMAIL; // Verified sender in Resend
 
 // Validate critical environment variables
 if (!serviceAccountKeyBase64) {
     console.error('FATAL ERROR: FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
     process.exit(1);
 }
-if (!sendgridApiKey) {
-    console.error('FATAL ERROR: SENDGRID_API_KEY environment variable is not set.');
+if (!resendApiKey) { // <-- CHANGED
+    console.error('FATAL ERROR: RESEND_API_KEY environment variable is not set.'); // <-- CHANGED
     process.exit(1);
 }
 if (!senderEmail) {
@@ -47,9 +47,9 @@ try {
     process.exit(1);
 }
 
-// --- SendGrid Initialization ---
-sgMail.setApiKey(sendgridApiKey);
-console.log("SendGrid Mail configured.");
+// --- Resend Initialization ---
+const resend = new Resend(resendApiKey); // <-- CHANGED
+console.log("Resend configured."); // <-- CHANGED
 
 
 // --- Express App Setup ---
@@ -103,12 +103,13 @@ app.get('/', (req, res) => {
 });
 
 // --- Email Sending Route ---
+// vvv THIS ENTIRE ROUTE IS UPDATED FOR RESEND vvv
 app.post('/send-email', async (req, res) => {
     // Basic validation
     const { to, bcc, subject, text, replyTo } = req.body;
-    console.log(`Received /send-email request. To: ${to}, BCC count: ${bcc ? bcc.length : 0}, ReplyTo: ${replyTo}, Subject: ${subject}`); // Log request details
+    console.log(`Received /send-email request. To: ${to}, BCC count: ${bcc ? bcc.length : 0}, ReplyTo: ${replyTo}, Subject: ${subject}`);
 
-    // SendGrid requires 'to' even if using 'bcc' only. We'll use the sender's email as 'to' in that case.
+    // Resend requires 'to' even if using 'bcc' only. We'll use the sender's email as 'to' in that case.
     const recipient = to || (bcc && bcc.length > 0 ? senderEmail : null);
 
     if (!recipient || !subject || !text) {
@@ -116,27 +117,35 @@ app.post('/send-email', async (req, res) => {
         return res.status(400).json({ error: 'Missing required fields: to/bcc, subject, text' });
     }
 
-    const msg = {
-        to: recipient, // Use calculated recipient
-        bcc: bcc || undefined, // SendGrid handles null/empty arrays fine, but undefined is cleaner
-        from: senderEmail, // Must be your verified SendGrid sender
-        replyTo: replyTo || senderEmail, // Use provided replyTo or default to sender
-        subject: subject,
-        text: text,
-        // html: '<strong>Optional HTML content</strong>', // You can add HTML content too
-    };
-
     try {
-        console.log("Attempting to send email via SendGrid...");
-        await sgMail.send(msg);
-        console.log(`Email sent successfully. Subject: ${subject}`);
+        console.log("Attempting to send email via Resend...");
+        // This is the new Resend API call
+        const { data, error } = await resend.emails.send({
+            to: recipient,
+            bcc: bcc || undefined,
+            from: senderEmail, // Must be your verified Resend sender
+            reply_to: replyTo || senderEmail, // Use provided replyTo or default to sender
+            subject: subject,
+            text: text,
+            // html: '<strong>Optional HTML content</strong>',
+        });
+
+        // Resend returns an error object on failure
+        if (error) {
+            console.error('Resend Error:', error);
+            return res.status(500).json({ error: 'Failed to send email. Check server logs.' });
+        }
+
+        console.log(`Email sent successfully. ID: ${data.id}, Subject: ${subject}`);
         res.status(200).json({ message: 'Email sent successfully!' });
+
     } catch (error) {
-        console.error('SendGrid Error:', error.response ? error.response.body : error);
-        // Provide a more generic error message to the client for security
+        // Catch any other network/unexpected errors
+        console.error('Server Error:', error);
         res.status(500).json({ error: 'Failed to send email. Check server logs.' });
     }
 });
+// ^^^ THIS ENTIRE ROUTE IS UPDATED FOR RESEND ^^^
 
 
 // --- User Management Routes (Protected by Auth and Admin) ---
@@ -247,7 +256,7 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
 
         if (!canSetAdmin) {
              console.log("Set admin permission denied.");
-             return res.status(403).json({ error: 'Admin privileges required or bootstrap condition not met.' });
+             return res.status(4S03).json({ error: 'Admin privileges required or bootstrap condition not met.' });
         }
 
         // Proceed with setting the claim
@@ -261,7 +270,7 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
         if (error.code === 'auth/user-not-found') {
             errorMessage = 'Target user not found.';
         }
-        res.status(500).json({ error: errorMessage });
+        res.status(5M00).json({ error: errorMessage });
     }
 });
 
@@ -270,4 +279,3 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
 });
-
