@@ -745,9 +745,7 @@
             resetCol3(); 
             showCol('col-2-section'); 
             setActiveNav('nav-col-2'); 
-            // Auto-scroll Col 2 using scrollIntoView
-            const listEl = document.getElementById('col-2-list');
-            if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // REMOVED Auto-scroll for Col 2
         }
         const selectStudent = (studentId, studentName) => {
             console.log("Selected student:", studentId, studentName);
@@ -759,9 +757,7 @@
             if (currentView === 'student') { 
                 document.getElementById('col-2-subtitle').textContent = `For: ${studentName}`; 
                 renderCol2ClassList(studentId); 
-                // Auto-scroll Col 2 using scrollIntoView
-                const listEl = document.getElementById('col-2-list');
-                if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // REMOVED Auto-scroll for Col 2
             }
             showCol('col-3-section'); 
             setActiveNav('nav-contacts');
