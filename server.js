@@ -103,7 +103,6 @@ app.get('/', (req, res) => {
 });
 
 // --- Email Sending Route ---
-// vvv THIS ENTIRE ROUTE IS UPDATED FOR RESEND vvv
 app.post('/send-email', async (req, res) => {
     // Basic validation
     const { to, bcc, subject, text, replyTo } = req.body;
@@ -119,15 +118,19 @@ app.post('/send-email', async (req, res) => {
 
     try {
         console.log("Attempting to send email via Resend...");
-        // This is the new Resend API call
+        
         const { data, error } = await resend.emails.send({
             to: recipient,
             bcc: bcc || undefined,
             from: senderEmail, // Must be your verified Resend sender
-            reply_to: replyTo || senderEmail, // Use provided replyTo or default to sender
+            
+            // --- THIS IS THE FIX ---
+            // It's 'reply_to' (with an underscore) not 'replyTo'
+            reply_to: replyTo || senderEmail, 
+            // ---------------------
+
             subject: subject,
             text: text,
-            // html: '<strong>Optional HTML content</strong>',
         });
 
         // Resend returns an error object on failure
