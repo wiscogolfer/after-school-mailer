@@ -744,8 +744,11 @@
             resetCol3(); 
             showCol('col-2-section'); 
             setActiveNav('nav-col-2'); 
-            // Auto-scroll Col 2
-            document.getElementById('col-2-list').scrollTop = 0;
+            // Auto-scroll Col 2 using setTimeout
+            setTimeout(() => {
+                const listEl = document.getElementById('col-2-list');
+                if (listEl) listEl.scrollTop = 0;
+            }, 0);
         }
         const selectStudent = (studentId, studentName) => {
             console.log("Selected student:", studentId, studentName);
@@ -757,13 +760,19 @@
             if (currentView === 'student') { 
                 document.getElementById('col-2-subtitle').textContent = `For: ${studentName}`; 
                 renderCol2ClassList(studentId); 
-                // Auto-scroll Col 2
-                document.getElementById('col-2-list').scrollTop = 0;
+                // Auto-scroll Col 2 using setTimeout
+                setTimeout(() => {
+                    const listEl = document.getElementById('col-2-list');
+                    if (listEl) listEl.scrollTop = 0;
+                }, 0);
             }
             showCol('col-3-section'); 
             setActiveNav('nav-contacts');
-            // Auto-scroll Col 3
-            document.getElementById('contact-list').scrollTop = 0;
+            // Auto-scroll Col 3 using setTimeout
+            setTimeout(() => {
+                 const listEl = document.getElementById('contact-list');
+                 if (listEl) listEl.scrollTop = 0;
+            }, 0);
         }
 
         // --- Open Edit Modals ---
