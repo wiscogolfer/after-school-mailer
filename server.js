@@ -103,12 +103,13 @@ app.get('/', (req, res) => {
 // --- Email Sending Route ---
 app.post('/send-email', async (req, res) => {
     // Basic validation
+    // 'replyTo' is now an object: { email: '...', name: '...' }
     const { to, bcc, subject, text, replyTo } = req.body;
-
+    
     // ---
-    // --- NEW DEBUG LOG ---
+    // --- DEBUG LOG ---
     console.log("--------------------");
-    console.log("DEBUG: Data from frontend (replyTo):", replyTo);
+    console.log("DEBUG: Data from frontend (replyTo object):", replyTo);
     console.log("--------------------");
     // ---
 
@@ -119,18 +120,33 @@ app.post('/send-email', async (req, res) => {
         return res.status(400).json({ error: 'Missing required fields: to/bcc, subject, text' });
     }
 
+    // --- NEW: Format From and Reply-To ---
+    // Format the 'From' address (e.g., "State 48 Theatre <contact@state48theatre.com>")
+    const formattedFrom = `State 48 Theatre <${senderEmail}>`;
+
+    // Format the 'Reply-To' address. Default to sender if no user is logged in.
+    let formattedReplyTo;
+    if (replyTo && replyTo.email && replyTo.name) {
+        // e.g., "Justin <justin@state48theatre.com>"
+        formattedReplyTo = `${replyTo.name} <${replyTo.email}>`;
+    } else {
+        // Default fallback
+        formattedReplyTo = formattedFrom;
+    }
+    // --- END NEW ---
+
     // This is the final object we will send to Resend
     const resendPayload = {
         to: recipient,
         bcc: bcc || undefined,
-        from: senderEmail, 
-        reply_to: replyTo || senderEmail, // The critical fix
+        from: formattedFrom,        // Use formatted 'from'
+        reply_to: formattedReplyTo, // Use formatted 'reply_to'
         subject: subject,
         text: text,
     };
 
     // ---
-    // --- NEW DEBUG LOG ---
+    // --- DEBUG LOG ---
     console.log("DEBUG: Final payload for Resend:", JSON.stringify(resendPayload, null, 2));
     console.log("--------------------");
     // ---

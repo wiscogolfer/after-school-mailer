@@ -826,8 +826,18 @@
             const to = document.getElementById('email-to').value; 
             const bccVal = document.getElementById('email-bcc').value; 
             
-            // Include Reply-To address
-            const replyTo = currentUser?.email || null; 
+            // --- MODIFICATION: Get user's name and email ---
+            // Get the user's email
+            const replyToEmail = currentUser?.email || null;
+            // Get the user's name, or create one from their email (e.g., 'justin' from 'justin@...')
+            let replyToName = 'User'; // Default
+            if (currentUser?.displayName) {
+                replyToName = currentUser.displayName;
+            } else if (replyToEmail) {
+                const namePart = replyToEmail.split('@')[0];
+                replyToName = namePart.charAt(0).toUpperCase() + namePart.slice(1); // Capitalize it
+            }
+            // --- END MODIFICATION ---
             
             let bccList = null; 
             if (bccVal) { 
@@ -853,6 +863,43 @@
                     return; 
                 } 
             } 
+            
+            // --- MODIFICATION: Update the payload object ---
+            const payload = { 
+                to: to || null, 
+                bcc: bccList, 
+                // Instead of just an email string, send an object
+                replyTo: {
+                    email: replyToEmail,
+                    name: replyToName
+                },
+                subject: document.getElementById('email-subject').value, 
+                text: document.getElementById('email-body').value 
+            }; 
+            // --- END MODIFICATION ---
+
+            console.log("Sending email payload:", payload); 
+            try { 
+                const response = await fetch(`${serverUrl}/send-email`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload) 
+                }); 
+                if (!response.ok) { 
+                    const res = await response.json(); 
+                    throw new Error(res.error || `Server ${response.status}`); 
+                } 
+                toast('Email sent!', 'success'); 
+                status.textContent = 'Sent!'; 
+                setTimeout(() => closeModal('email-modal'), 1000); 
+            } catch (error) { 
+                console.error("Send Email Error:", error); 
+                toast(`Failed: ${error.message}`, 'error'); 
+                status.textContent = 'Failed.'; 
+            } finally { 
+                btn.disabled = false; 
+            } 
+        }
             const payload = { 
                 to: to || null, 
                 bcc: bccList, 
