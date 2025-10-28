@@ -104,7 +104,13 @@ app.get('/', (req, res) => {
 app.post('/send-email', async (req, res) => {
     // Basic validation
     const { to, bcc, subject, text, replyTo } = req.body;
-    console.log(`Received /send-email request. To: ${to}, BCC count: ${bcc ? bcc.length : 0}, ReplyTo: ${replyTo}, Subject: ${subject}`);
+
+    // ---
+    // --- NEW DEBUG LOG ---
+    console.log("--------------------");
+    console.log("DEBUG: Data from frontend (replyTo):", replyTo);
+    console.log("--------------------");
+    // ---
 
     const recipient = to || (bcc && bcc.length > 0 ? senderEmail : null);
 
@@ -113,21 +119,26 @@ app.post('/send-email', async (req, res) => {
         return res.status(400).json({ error: 'Missing required fields: to/bcc, subject, text' });
     }
 
+    // This is the final object we will send to Resend
+    const resendPayload = {
+        to: recipient,
+        bcc: bcc || undefined,
+        from: senderEmail, 
+        reply_to: replyTo || senderEmail, // The critical fix
+        subject: subject,
+        text: text,
+    };
+
+    // ---
+    // --- NEW DEBUG LOG ---
+    console.log("DEBUG: Final payload for Resend:", JSON.stringify(resendPayload, null, 2));
+    console.log("--------------------");
+    // ---
+
     try {
         console.log("Attempting to send email via Resend...");
         
-        const { data, error } = await resend.emails.send({
-            to: recipient,
-            bcc: bcc || undefined,
-            from: senderEmail, 
-            
-            // --- THIS IS THE FIX ---
-            reply_to: replyTo || senderEmail, 
-            // ---------------------
-
-            subject: subject,
-            text: text,
-        });
+        const { data, error } = await resend.emails.send(resendPayload); // Send the payload
 
         if (error) {
             console.error('Resend Error:', error);
@@ -139,11 +150,9 @@ app.post('/send-email', async (req, res) => {
 
     } catch (error) {
         console.error('Server Error:', error);
-        // --- THIS IS THE 3rd TYPO FIX ---
         res.status(500).json({ error: 'Failed to send email. Check server logs.' });
     }
 });
-
 
 // --- User Management Routes (Protected by Auth and Admin) ---
 
