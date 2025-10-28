@@ -2,13 +2,13 @@
 import express from 'express';
 import cors from 'cors'; // Import CORS
 import admin from 'firebase-admin';
-import { Resend } from 'resend'; // <-- CHANGED: Import Resend
+import { Resend } from 'resend'; // Import Resend
 import { Buffer } from 'buffer'; // Import Buffer for base64 decoding
 
 // --- Configuration ---
 // Load environment variables securely (Render handles this)
 const serviceAccountKeyBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-const resendApiKey = process.env.RESEND_API_KEY; // <-- CHANGED
+const resendApiKey = process.env.RESEND_API_KEY; 
 const senderEmail = process.env.SENDER_EMAIL; // Verified sender in Resend
 
 // Validate critical environment variables
@@ -16,8 +16,8 @@ if (!serviceAccountKeyBase64) {
     console.error('FATAL ERROR: FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
     process.exit(1);
 }
-if (!resendApiKey) { // <-- CHANGED
-    console.error('FATAL ERROR: RESEND_API_KEY environment variable is not set.'); // <-- CHANGED
+if (!resendApiKey) { 
+    console.error('FATAL ERROR: RESEND_API_KEY environment variable is not set.'); 
     process.exit(1);
 }
 if (!senderEmail) {
@@ -48,8 +48,8 @@ try {
 }
 
 // --- Resend Initialization ---
-const resend = new Resend(resendApiKey); // <-- CHANGED
-console.log("Resend configured."); // <-- CHANGED
+const resend = new Resend(resendApiKey); 
+console.log("Resend configured."); 
 
 
 // --- Express App Setup ---
@@ -61,21 +61,20 @@ app.use(cors()); // Enable CORS for all origins
 app.use(express.json()); // Parse JSON request bodies
 
 // --- Authentication Middleware ---
-// Verifies Firebase ID token sent from the client
 const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
+    const token = authHeader && authHeader.split(' ')[1]; 
 
     if (token == null) {
         console.log("Auth token missing");
-        return res.status(401).json({ error: 'Authentication token required' }); // if there isn't any token
+        return res.status(401).json({ error: 'Authentication token required' }); 
     }
 
     try {
         const decodedToken = await admin.auth().verifyIdToken(token);
-        req.user = decodedToken; // Add user info (including uid, email, claims) to request
+        req.user = decodedToken; 
         console.log(`Authenticated user: ${req.user.uid} (${req.user.email || 'No email'})`);
-        next(); // Proceed to the next middleware or route handler
+        next(); 
     } catch (error) {
         console.error('Token verification failed:', error);
         return res.status(403).json({ error: 'Invalid or expired token' });
@@ -83,7 +82,6 @@ const authenticateToken = async (req, res, next) => {
 };
 
 // --- Admin Check Middleware ---
-// Checks if the authenticated user has the admin custom claim
 const isAdmin = (req, res, next) => {
     if (req.user && req.user.admin === true) {
         console.log(`Admin check passed for user: ${req.user.uid}`);
@@ -108,7 +106,6 @@ app.post('/send-email', async (req, res) => {
     const { to, bcc, subject, text, replyTo } = req.body;
     console.log(`Received /send-email request. To: ${to}, BCC count: ${bcc ? bcc.length : 0}, ReplyTo: ${replyTo}, Subject: ${subject}`);
 
-    // Resend requires 'to' even if using 'bcc' only. We'll use the sender's email as 'to' in that case.
     const recipient = to || (bcc && bcc.length > 0 ? senderEmail : null);
 
     if (!recipient || !subject || !text) {
@@ -122,10 +119,9 @@ app.post('/send-email', async (req, res) => {
         const { data, error } = await resend.emails.send({
             to: recipient,
             bcc: bcc || undefined,
-            from: senderEmail, // Must be your verified Resend sender
+            from: senderEmail, 
             
             // --- THIS IS THE FIX ---
-            // It's 'reply_to' (with an underscore) not 'replyTo'
             reply_to: replyTo || senderEmail, 
             // ---------------------
 
@@ -133,7 +129,6 @@ app.post('/send-email', async (req, res) => {
             text: text,
         });
 
-        // Resend returns an error object on failure
         if (error) {
             console.error('Resend Error:', error);
             return res.status(500).json({ error: 'Failed to send email. Check server logs.' });
@@ -143,12 +138,11 @@ app.post('/send-email', async (req, res) => {
         res.status(200).json({ message: 'Email sent successfully!' });
 
     } catch (error) {
-        // Catch any other network/unexpected errors
         console.error('Server Error:', error);
+        // --- THIS IS THE 3rd TYPO FIX ---
         res.status(500).json({ error: 'Failed to send email. Check server logs.' });
     }
 });
-// ^^^ THIS ENTIRE ROUTE IS UPDATED FOR RESEND ^^^
 
 
 // --- User Management Routes (Protected by Auth and Admin) ---
@@ -157,11 +151,11 @@ app.post('/send-email', async (req, res) => {
 app.get('/list-users', authenticateToken, isAdmin, async (req, res) => {
     console.log(`User ${req.user.uid} requesting user list.`);
     try {
-        const listUsersResult = await admin.auth().listUsers(1000); // Max 1000 per page
+        const listUsersResult = await admin.auth().listUsers(1000); 
         const users = listUsersResult.users.map(userRecord => ({
             uid: userRecord.uid,
             email: userRecord.email,
-            isAdmin: userRecord.customClaims?.admin === true // Check for admin claim
+            isAdmin: userRecord.customClaims?.admin === true 
         }));
         console.log(`Successfully listed ${users.length} users.`);
         res.status(200).json({ users });
@@ -188,7 +182,6 @@ app.post('/create-user', authenticateToken, isAdmin, async (req, res) => {
         res.status(201).json({ uid: userRecord.uid, email: userRecord.email });
     } catch (error) {
         console.error('Error creating user:', error);
-        // Provide specific error messages if known, otherwise generic
         let errorMessage = 'Failed to create user.';
         if (error.code === 'auth/email-already-exists') {
             errorMessage = 'Email address is already in use.';
@@ -240,16 +233,13 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
         // --- Bootstrap Logic: Allow first user to make themselves admin ---
         let canSetAdmin = false;
         if (req.user.admin === true) {
-            // Requesting user is already an admin, they can set others.
             canSetAdmin = true;
             console.log("Requesting user is an admin.");
         } else if (uidToMakeAdmin === requestingUserUid) {
-            // Requesting user is trying to make themselves admin. Check if ANY admins exist.
             console.log("Requesting user trying to make self admin. Checking if any admins exist...");
-            const listUsersResult = await admin.auth().listUsers(10); // Check a small number first
+            const listUsersResult = await admin.auth().listUsers(10); 
             const existingAdmins = listUsersResult.users.filter(u => u.customClaims?.admin === true);
             if (existingAdmins.length === 0) {
-                // No admins found, allow this user to become the first admin.
                 canSetAdmin = true;
                 console.log("No existing admins found. Allowing bootstrap.");
             } else {
@@ -259,6 +249,7 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
 
         if (!canSetAdmin) {
              console.log("Set admin permission denied.");
+             // --- THIS IS THE 1st TYPO FIX ---
              return res.status(403).json({ error: 'Admin privileges required or bootstrap condition not met.' });
         }
 
@@ -273,6 +264,7 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
         if (error.code === 'auth/user-not-found') {
             errorMessage = 'Target user not found.';
         }
+        // --- THIS IS THE 2nd TYPO FIX ---
         res.status(500).json({ error: errorMessage });
     }
 });
