@@ -41,7 +41,8 @@
     </style>
 </head>
 
-<body class="h-full flex flex-col">
+<!-- ADDED pb-20 md:pb-0 to body for mobile bottom nav spacing -->
+<body class="h-full flex flex-col pb-20 md:pb-0">
 
     <!-- Auth Screen (Login Only) -->
     <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-100 p-4">
@@ -107,8 +108,8 @@
         </div>
 
         <!-- Main Content -->
-        <!-- Container now has bottom padding for mobile -->
-        <div class="flex-1 container mx-auto p-4 h-full pb-20 md:pb-4"> 
+        <!-- REMOVED bottom padding -->
+        <div class="flex-1 container mx-auto p-4 h-full"> 
             <!-- View Toggle -->
             <div class="mb-4 flex justify-between items-center">
                 <div class="flex p-1 bg-gray-200 rounded-lg">
