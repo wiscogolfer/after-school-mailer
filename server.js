@@ -256,7 +256,7 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
 
         if (!canSetAdmin) {
              console.log("Set admin permission denied.");
-             return res.status(4S03).json({ error: 'Admin privileges required or bootstrap condition not met.' });
+             return res.status(403).json({ error: 'Admin privileges required or bootstrap condition not met.' });
         }
 
         // Proceed with setting the claim
@@ -270,7 +270,7 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
         if (error.code === 'auth/user-not-found') {
             errorMessage = 'Target user not found.';
         }
-        res.status(5M00).json({ error: errorMessage });
+        res.status(500).json({ error: errorMessage });
     }
 });
 
