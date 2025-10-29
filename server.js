@@ -12,6 +12,7 @@ const serviceAccountKeyBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 const resendApiKey = process.env.RESEND_API_KEY;
 const senderEmail = process.env.SENDER_EMAIL; // Verified sender in Resend
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY; // Stripe Secret Key
+const organizationId = process.env.ORGANIZATION_ID || "State-48-Dance"; // Get Org ID or use default
 
 // Validate critical environment variables
 if (!serviceAccountKeyBase64) {
@@ -30,6 +31,11 @@ if (!stripeSecretKey) {
     console.error('FATAL ERROR: STRIPE_SECRET_KEY environment variable is not set.');
     process.exit(1);
 }
+if (!organizationId) {
+    console.error('FATAL ERROR: ORGANIZATION_ID environment variable is not set.');
+    process.exit(1);
+}
+
 
 // Decode the base64 service account key
 let serviceAccount;
@@ -69,16 +75,6 @@ const port = process.env.PORT || 3000; // Render provides the PORT env var
 // --- Middleware ---
 app.use(cors()); // Enable CORS for all origins
 app.use(express.json()); // Parse JSON request bodies
-
-// --- Helper function to get Firestore collection paths ---
-const getParentsCol = () => {
-    // Assuming organizationId is available in this scope
-    const path = `organizations/${organizationId}/parents`;
-    console.log("Accessing path:", path);
-    return admin.firestore().collection(path);
-}
-// Assuming organizationId is defined globally or passed appropriately
-const organizationId = process.env.ORGANIZATION_ID || "State-48-Dance"; // Example: Get from env or hardcode
 
 // --- Authentication Middleware ---
 const authenticateToken = async (req, res, next) => {
@@ -121,29 +117,28 @@ app.get('/', (req, res) => {
 });
 
 // --- Email Sending Route ---
-app.post('/send-email', async (req, res) => {
+app.post('/send-email', authenticateToken, async (req, res) => { // Added authenticateToken middleware
     // 'replyTo' is an object: { email: '...', name: '...' }
     const { to, bcc, subject, text, replyTo } = req.body;
 
     // --- DEBUG LOG ---
     console.log("--------------------");
-    console.log("DEBUG: Data from frontend (replyTo object):", replyTo);
+    console.log("DEBUG /send-email: Data from frontend (replyTo object):", replyTo);
     console.log("--------------------");
     // ---
 
     const recipient = to || (bcc && bcc.length > 0 ? senderEmail : null);
 
     if (!recipient || !subject || !text) {
-        console.error("Validation failed: Missing fields.");
+        console.error("Validation failed: Missing fields for /send-email.");
         return res.status(400).json({ error: 'Missing required fields: to/bcc, subject, text' });
-    } // <-- *** THE MISSING BRACE IS ADDED HERE ***
+    }
 
     // --- Format From and Reply-To ---
-    const formattedFrom = `State 48 Theatre <${senderEmail}>`; // Corrected name
+    const formattedFrom = `State 48 Theatre <${senderEmail}>`;
 
     let formattedReplyTo;
     if (replyTo && replyTo.email && replyTo.name) {
-        // e.g., "Justin <justin@state48theatre.com>" or "justin@state48theatre.com <justin@state48theatre.com>"
         formattedReplyTo = `${replyTo.name} <${replyTo.email}>`;
     } else {
         formattedReplyTo = formattedFrom;
@@ -160,14 +155,14 @@ app.post('/send-email', async (req, res) => {
     };
 
     // --- DEBUG LOG ---
-    console.log("DEBUG: Final payload for Resend:", JSON.stringify(resendPayload, null, 2));
+    console.log("DEBUG /send-email: Final payload for Resend:", JSON.stringify(resendPayload, null, 2));
     console.log("--------------------");
     // ---
 
     try {
         console.log("Attempting to send email via Resend...");
 
-        const { data, error } = await resend.emails.send(resendPayload); // Send the payload
+        const { data, error } = await resend.emails.send(resendPayload);
 
         if (error) {
             console.error('Resend Error:', error);
@@ -178,16 +173,20 @@ app.post('/send-email', async (req, res) => {
         res.status(200).json({ message: 'Email sent successfully!' });
 
     } catch (error) {
-        console.error('Server Error:', error);
+        console.error('Server Error during email send:', error);
         res.status(500).json({ error: 'Failed to send email. Check server logs.' });
     }
 }); // <-- End of /send-email route
 
-// --- NEW ROUTE: Create Stripe Invoice ---
-// *** MOVED OUTSIDE of /send-email route ***
+// --- Create Stripe Invoice Route ---
 app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
-    const { parentId, studentName, amount, description } = req.body; // Data from frontend
+    const { parentId, studentName, amount, description } = req.body;
     const adminUid = req.user.uid;
+
+    // --- ADDED LOGGING ---
+    console.log("--------------------");
+    console.log("DEBUG /create-invoice: Received data:", { parentId, studentName, amount, description });
+    // ---
 
     console.log(`Admin ${adminUid} attempting to create invoice for parent ID: ${parentId}`);
 
@@ -196,11 +195,23 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
         return res.status(400).json({ error: 'Parent ID, Description, and a valid positive Amount required.' });
     }
 
+    // Convert amount to cents (Stripe requires integers)
     const amountInCents = Math.round(parseFloat(amount) * 100);
+
+    // --- ADDED LOGGING ---
+    console.log(`DEBUG /create-invoice: Calculated amountInCents: ${amountInCents}`);
+    console.log("--------------------");
+    // ---
+
+    // Double check amountInCents calculation before proceeding
+    if (amountInCents === 0 && parseFloat(amount) > 0) {
+         console.error(`CRITICAL ERROR: amountInCents calculated as 0 for input amount ${amount}. Aborting.`);
+         return res.status(500).json({ error: 'Internal server error: Failed to calculate invoice amount correctly.'});
+    }
+
 
     try {
         // --- 1. Get Parent Info from Firestore ---
-        // Use admin.firestore() to access Firestore via Admin SDK
         const parentRef = admin.firestore().doc(`organizations/${organizationId}/parents/${parentId}`);
         const parentSnap = await parentRef.get();
         if (!parentSnap.exists) {
@@ -240,7 +251,7 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
         console.log(`Creating invoice item for customer ${stripeCustomerId}, amount: ${amountInCents}`);
         const invoiceItem = await stripe.invoiceItems.create({
             customer: stripeCustomerId,
-            amount: amountInCents,
+            amount: amountInCents, // Ensure this is correct
             currency: 'usd',
             description: description,
              metadata: {
@@ -255,7 +266,7 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
             customer: stripeCustomerId,
             collection_method: 'send_invoice',
             days_until_due: 30,
-            auto_advance: false,
+            auto_advance: false, // Keep as draft initially
              description: `Invoice for ${studentName || parentName}`,
              metadata: {
                  firestoreParentId: parentId,
@@ -356,7 +367,7 @@ app.post('/delete-user', authenticateToken, isAdmin, async (req, res) => {
         if (error.code === 'auth/user-not-found') {
             errorMessage = 'User not found.';
         }
-        res.status(500).json({ error: errorMessage }); // Corrected status code
+        res.status(500).json({ error: errorMessage });
     }
 });
 

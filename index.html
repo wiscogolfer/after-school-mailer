@@ -37,6 +37,8 @@
         .icon-btn { background: none; border: none; padding: 0.25rem; cursor: pointer; color: #9ca3af; /* gray-400 */ }
         .icon-btn:hover { color: #dc2626; /* red-600 for delete */ }
         .icon-btn.edit:hover { color: #2563eb; /* blue-600 for edit */ }
+        /* Add hover color for invoice icon */
+        .icon-btn .fa-file-invoice-dollar:hover { color: #16a34a; /* green-600 */ }
     </style>
 </head>
 
@@ -430,16 +432,23 @@
                 <h3 class="text-lg font-medium leading-6 text-gray-900">Create Invoice</h3>
                 <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="invoice-modal">&times;</button>
             </div>
-            <p id="invoice-subtitle" class="text-sm text-gray-600 mb-4">Creating invoice for: <span class="font-medium"></span></p>
+            <p id="invoice-subtitle" class="text-sm text-gray-600 mb-4">Creating invoice for student: <span class="font-medium"></span></p>
             <form id="create-invoice-form">
-                <input type="hidden" id="invoice-parent-id"> <div class="space-y-4">
+                <input type="hidden" id="invoice-student-id"> 
+                <div class="space-y-4">
+                    <div>
+                         <label for="invoice-parent-select" class="block text-sm font-medium text-gray-700">Invoice To (Parent/Contact):</label>
+                         <select id="invoice-parent-select" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                             <option value="">Loading contacts...</option>
+                         </select>
+                    </div>
                     <div>
                         <label for="invoice-amount" class="block text-sm font-medium text-gray-700">Amount (e.g., 25.00)</label>
                         <input type="number" id="invoice-amount" step="0.01" min="0.01" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
                     </div>
                     <div>
                         <label for="invoice-description" class="block text-sm font-medium text-gray-700">Description</label>
-                        <input type="text" id="invoice-description" placeholder="e.g., October Class Fee" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                        <input type="text" id="invoice-description" placeholder="e.g., October Class Fee - [Student Name]" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
                     </div>
                 </div>
                  <p id="invoice-status" class="text-xs mt-4 h-4"></p>
@@ -587,47 +596,75 @@
             });
         }
 
-        // Render Col 1 (Students) - ADDED EDIT ICON
+        // --- UPDATED: Render Col 1 (Students) - Added Invoice Button ---
         const renderCol1StudentList = () => {
-            const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
-            if (allStudentsCache.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No students found. Add one!</p>'; return; }
-            const sortedStudents = [...allStudentsCache].sort((a, b) => a.name.localeCompare(b.name));
-            sortedStudents.forEach(s => {
-                const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; el.dataset.id = s.id;
-                el.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="font-medium text-gray-800">${s.name}</span>
-                        <div class="flex items-center space-x-2">
-                             <button class="edit-student-btn icon-btn edit" data-id="${s.id}" title="Edit Student"><i class="fas fa-pencil-alt fa-xs"></i></button>
-                            <button class="delete-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Delete Student"><i class="fas fa-times fa-sm"></i></button>
-                        </div>
-                    </div>`;
-                el.addEventListener('click', () => selectStudent(s.id, s.name));
-                 el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
+           const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
+           if (allStudentsCache.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No students found. Add one!</p>'; return; }
+           const sortedStudents = [...allStudentsCache].sort((a, b) => a.name.localeCompare(b.name));
+            
+           sortedStudents.forEach(s => {
+               const el = document.createElement('div'); 
+               el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; 
+               el.dataset.id = s.id;
+
+               // Added Invoice Button
+               el.innerHTML = `
+                   <div class="flex justify-between items-center">
+                       <span class="font-medium text-gray-800">${s.name}</span>
+                       <div class="flex items-center space-x-2">
+                            <button class="edit-student-btn icon-btn edit" data-id="${s.id}" title="Edit Student"><i class="fas fa-pencil-alt fa-xs"></i></button>
+                            <button class="invoice-student-btn icon-btn" data-student-id="${s.id}" data-student-name="${s.name}" title="Invoice Student"><i class="fas fa-file-invoice-dollar fa-xs text-green-600"></i></button> 
+                           <button class="delete-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Delete Student"><i class="fas fa-times fa-sm"></i></button>
+                       </div>
+                   </div>`;
+                
+               el.addEventListener('click', () => selectStudent(s.id, s.name));
+                el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
                 el.querySelector('.delete-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteStudent(s.id, s.name); });
-                listEl.appendChild(el);
-            });
+                
+                // Added Event Listener
+                el.querySelector('.invoice-student-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    promptInvoiceParentSelection(s.id, s.name); 
+                });
+                
+               listEl.appendChild(el);
+           });
         }
 
-        // Render Col 2 (Students in a Class) - ADDED EDIT ICON
+        // --- UPDATED: Render Col 2 (Students in a Class) - Added Invoice Button ---
         const renderCol2StudentList = (classId) => {
             const listEl = document.getElementById('col-2-list'); const classData = allClassCache.find(c => c.id === classId);
             if (!classData || !classData.students || classData.students.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No students in this class.</p>'; return; }
             const studentIds = classData.students; const studentsInClass = allStudentsCache.filter(s => studentIds.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name));
             listEl.innerHTML = '';
+
             studentsInClass.forEach(s => {
-                const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; el.dataset.id = s.id;
+                const el = document.createElement('div'); 
+                el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; 
+                el.dataset.id = s.id;
+                
+                // Added Invoice Button
                 el.innerHTML = `
                     <div class="flex justify-between items-center">
                         <span class="font-medium text-gray-800">${s.name}</span>
                         <div class="flex items-center space-x-2">
                              <button class="edit-student-btn icon-btn edit" data-id="${s.id}" title="Edit Student"><i class="fas fa-pencil-alt fa-xs"></i></button>
+                             <button class="invoice-student-btn icon-btn" data-student-id="${s.id}" data-student-name="${s.name}" title="Invoice Student"><i class="fas fa-file-invoice-dollar fa-xs text-green-600"></i></button> 
                             <button class="remove-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Remove from class"><i class="fas fa-times fa-sm"></i></button>
                         </div>
                     </div>`;
+
                 el.addEventListener('click', () => selectStudent(s.id, s.name));
                  el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
-                el.querySelector('.remove-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleRemoveStudent(s.id, s.name); });
+                 el.querySelector('.remove-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleRemoveStudent(s.id, s.name); });
+                 
+                 // Added Event Listener
+                 el.querySelector('.invoice-student-btn').addEventListener('click', (e) => {
+                     e.stopPropagation();
+                     promptInvoiceParentSelection(s.id, s.name); 
+                 });
+                 
                 listEl.appendChild(el);
             });
         }
@@ -658,7 +695,7 @@
             }); 
         }
         
-        // --- UPDATED: Render Col 3 (Contacts) - Added Invoice Button ---
+        // --- UPDATED: Render Col 3 (Contacts) - Removed Invoice Button ---
         const renderContactList = (contacts) => {
             const listEl = document.getElementById('contact-list'); 
             listEl.innerHTML = ''; 
@@ -673,7 +710,7 @@
                 const el = document.createElement('div'); 
                 el.className = 'p-3 rounded-lg border border-gray-200';
                 
-                // Added "Invoice" button
+                // Invoice button removed
                 el.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div>
@@ -682,8 +719,7 @@
                             <p class="text-sm text-gray-600">${c.phone || ''}</p>
                             <div class="mt-2 space-x-3"> 
                                 <button class="email-contact-btn text-sm text-blue-600 hover:underline" data-email="${c.email}" data-name="${c.name}">Email</button>
-                                <button class="invoice-contact-btn text-sm text-green-600 hover:underline" data-parent-id="${c.id}" data-parent-name="${c.name}">Invoice</button>
-                            </div>
+                                </div>
                         </div>
                          <div class="flex items-center space-x-2 flex-shrink-0">
                              <button class="edit-contact-btn icon-btn edit" data-id="${c.id}" title="Edit Contact"><i class="fas fa-pencil-alt fa-xs"></i></button>
@@ -694,12 +730,8 @@
                 el.querySelector('.edit-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditContactModal(c.id); });
                 el.querySelector('.delete-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteContact(c.id, c.name); });
                 el.querySelector('.email-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); openEmailModal({ to: c.email }); });
-                
-                // Add event listener for the new invoice button
-                el.querySelector('.invoice-contact-btn').addEventListener('click', (e) => { 
-                    e.stopPropagation(); 
-                    openInvoiceModal(c.id, c.name); // Pass parent ID and name
-                });
+
+                // Invoice button listener removed
                 
                 listEl.appendChild(el);
             });
@@ -824,7 +856,6 @@
             resetCol3(); 
             showCol('col-2-section'); 
             setActiveNav('nav-col-2'); 
-            // REMOVED auto-scroll for col-2
         }
         const selectStudent = (studentId, studentName) => {
             console.log("Selected student:", studentId, studentName);
@@ -836,11 +867,9 @@
             if (currentView === 'student') { 
                 document.getElementById('col-2-subtitle').textContent = `For: ${studentName}`; 
                 renderCol2ClassList(studentId); 
-                 // REMOVED auto-scroll for col-2
             }
             showCol('col-3-section'); 
             setActiveNav('nav-contacts');
-            // Auto-scroll Col 3 using scrollIntoView
             const listEl = document.getElementById('contact-list');
             if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -871,7 +900,6 @@
             const bccEl = document.getElementById('email-bcc'); 
             const replyToEl = document.getElementById('reply-to-email');
             
-            // Set Reply-To display
             replyToEl.textContent = currentUser?.displayName || currentUser?.email || 'Unknown';
             
             if (to) { 
@@ -953,7 +981,7 @@
             try { 
                 const response = await fetch(`${serverUrl}/send-email`, { 
                     method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await getIdToken(currentUser)}` }, // Added Auth header 
                     body: JSON.stringify(payload) 
                 }); 
                 if (!response.ok) { 
@@ -1030,7 +1058,6 @@
         const handleDeleteUser = async (uidToDelete, emailToDelete) => { console.log("Attempting delete user:", uidToDelete, emailToDelete); if (!confirm(`Delete user: ${emailToDelete}? Permanent.`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Deleting ${emailToDelete}...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/delete-user`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uid: uidToDelete }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`User ${emailToDelete} deleted.`, 'success'); statusEl.textContent = `Deleted ${emailToDelete}.`; statusEl.classList.add('text-green-600'); await fetchUsers(); } catch (error) { console.error("Delete User Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed delete user.', 'error'); } };
         const handleMakeAdmin = async (uidToMakeAdmin, emailToMakeAdmin) => { console.log("Attempting make admin:", uidToMakeAdmin, emailToMakeAdmin); if (!confirm(`Grant admin to ${emailToMakeAdmin}?`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Making ${emailToMakeAdmin} admin...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/set-admin`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uidToMakeAdmin: uidToMakeAdmin }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`${emailToMakeAdmin} is now admin. Needs re-login.`, 'success'); statusEl.textContent = `Admin granted.`; statusEl.classList.add('text-green-600'); await fetchUsers(); if (uidToMakeAdmin === userId) { isAdmin = true; document.getElementById('manage-users-btn').classList.remove('hidden'); document.getElementById('user-admin-status').classList.remove('hidden'); await getIdToken(currentUser, true); } } catch (error) { console.error("Make Admin Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed set admin.', 'error'); } };
         
-        // --- NEW FUNCTION: Handle Update User Name ---
         const handleUpdateUserName = async (uidToUpdate, currentName) => {
             const newName = prompt(`Enter the new name for this user (UID: ${uidToUpdate}):`, currentName);
 
@@ -1081,10 +1108,10 @@
                 statusEl.classList.add('text-green-600');
 
                 if (result.updatedSelf) {
-                    currentUser = auth.currentUser; // Get the refreshed user object
-                    if(currentUser) { // Check again in case of race condition
+                    currentUser = auth.currentUser; 
+                    if(currentUser) { 
                          document.getElementById('user-email-display').textContent = currentUser.displayName || currentUser.email; 
-                         await getIdToken(currentUser, true); // Force refresh token
+                         await getIdToken(currentUser, true); 
                     }
                 }
 
@@ -1101,8 +1128,11 @@
         // --- NEW FUNCTION: Open Invoice Modal ---
         const openInvoiceModal = (parentId, parentName) => {
             console.log(`Opening invoice modal for parent: ${parentName} (${parentId})`);
-            document.getElementById('invoice-parent-id').value = parentId;
-            document.querySelector('#invoice-subtitle span').textContent = parentName;
+             // NOTE: This assumes we are invoicing a PARENT directly.
+             // If invoicing via STUDENT, this needs to change.
+            document.getElementById('invoice-parent-id').value = parentId; // Set parent ID
+            document.querySelector('#invoice-subtitle span').textContent = parentName; // Show parent name
+             // Clear form
             document.getElementById('invoice-amount').value = '';
             document.getElementById('invoice-description').value = '';
             document.getElementById('invoice-status').textContent = '';
@@ -1110,7 +1140,83 @@
             openModal('invoice-modal');
         }
 
-        // --- NEW FUNCTION: Handle Create Invoice ---
+         // --- NEW Helper Function to Fetch Parents and Open Invoice Modal ---
+         const promptInvoiceParentSelection = async (studentId, studentName) => {
+             console.log(`Invoice requested for student: ${studentName} (${studentId})`);
+            
+             // Set student info in modal immediately
+             document.getElementById('invoice-student-id').value = studentId;
+             document.querySelector('#invoice-subtitle span').textContent = studentName;
+              // Suggest a description
+             document.getElementById('invoice-description').value = `Class Fee - ${studentName}`; 
+            
+             const parentSelect = document.getElementById('invoice-parent-select');
+             parentSelect.innerHTML = '<option value="">Loading contacts...</option>'; // Show loading state
+             parentSelect.disabled = true;
+             document.getElementById('create-invoice-btn').disabled = true; // Disable submit until parent loaded
+              document.getElementById('invoice-amount').value = '';
+             document.getElementById('invoice-status').textContent = '';
+
+             openModal('invoice-modal'); // Open modal while loading
+
+             try {
+                 // Fetch the student document to get parent IDs
+                 const studentRef = doc(getStudentsCol(), studentId);
+                 const studentSnap = await getDoc(studentRef);
+                 if (!studentSnap.exists()) {
+                     throw new Error("Student not found");
+                 }
+                 const parentIds = studentSnap.data().parents || [];
+
+                 if (parentIds.length === 0) {
+                      parentSelect.innerHTML = '<option value="">No contacts found for this student</option>';
+                      toast('No contacts found for this student.', 'error');
+                      document.getElementById('invoice-status').textContent = 'Cannot create invoice: No contacts linked.';
+                      document.getElementById('invoice-status').classList.add('text-red-600');
+                     return; 
+                 }
+
+                 // Fetch parent details using the IDs
+                  const contacts = [];
+                  for (let i = 0; i < parentIds.length; i += 30) {
+                      const chunk = parentIds.slice(i, i + 30);
+                      if (chunk.length === 0) continue;
+                      const q = query(getParentsCol(), where('__name__', 'in', chunk));
+                      const querySnapshot = await getDocs(q);
+                      querySnapshot.docs.forEach(doc => {
+                          contacts.push({ id: doc.id, ...doc.data() });
+                      });
+                  }
+
+                 if (contacts.length === 0) {
+                      parentSelect.innerHTML = '<option value="">No contacts found (details fetch failed)</option>';
+                      toast('Could not fetch contact details.', 'error');
+                      document.getElementById('invoice-status').textContent = 'Cannot create invoice: Failed to fetch contacts.';
+                      document.getElementById('invoice-status').classList.add('text-red-600');
+                     return;
+                 }
+
+                 // Populate the dropdown
+                 parentSelect.innerHTML = '<option value="">-- Select Contact to Invoice --</option>';
+                 contacts.sort((a,b) => a.name.localeCompare(b.name)).forEach(contact => {
+                     const option = document.createElement('option');
+                     option.value = contact.id;
+                     option.textContent = `${contact.name} (${contact.email})`;
+                     parentSelect.appendChild(option);
+                 });
+                 parentSelect.disabled = false;
+                 document.getElementById('create-invoice-btn').disabled = false; // Enable submit
+
+             } catch (error) {
+                 console.error("Error fetching parents for invoice:", error);
+                 parentSelect.innerHTML = '<option value="">Error loading contacts</option>';
+                 toast('Error loading contacts.', 'error');
+                 document.getElementById('invoice-status').textContent = 'Error loading contacts.';
+                 document.getElementById('invoice-status').classList.add('text-red-600');
+             }
+         };
+
+        // --- UPDATED FUNCTION: Handle Create Invoice ---
         const handleCreateInvoice = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('create-invoice-btn');
@@ -1119,14 +1225,16 @@
             statusEl.textContent = 'Creating invoice...';
             statusEl.classList.remove('text-red-600', 'text-green-600');
 
-            const parentId = document.getElementById('invoice-parent-id').value;
+            // Get parentId from the SELECT dropdown
+            const parentId = document.getElementById('invoice-parent-select').value; 
             const amount = document.getElementById('invoice-amount').value;
             const description = document.getElementById('invoice-description').value;
-            // Get student name for context (optional, but nice to have)
-            const studentName = allStudentsCache.find(s => s.id === currentStudentId)?.name || null;
+            const studentId = document.getElementById('invoice-student-id').value; // Get student ID too
+            const studentName = allStudentsCache.find(s => s.id === studentId)?.name || null; // Get student name from cache
 
-            if (!parentId || !amount || !description) {
-                statusEl.textContent = 'Missing required fields.';
+            // Updated Validation
+            if (!parentId || !amount || !description) { 
+                statusEl.textContent = 'Please select a parent and fill all fields.';
                 statusEl.classList.add('text-red-600');
                 btn.disabled = false;
                 return;
@@ -1139,7 +1247,7 @@
                 return;
             }
 
-            console.log(`Sending create invoice request for parent ${parentId}`);
+            console.log(`Sending create invoice request for parent ${parentId} (Student: ${studentName})`);
             try {
                 const idToken = await getIdToken(currentUser);
                 const serverUrl = HARDCODED_CONFIG.serverUrl;
@@ -1151,8 +1259,8 @@
                         'Authorization': `Bearer ${idToken}`
                     },
                     body: JSON.stringify({
-                        parentId: parentId,
-                        studentName: studentName, // Send student name if available
+                        parentId: parentId, // Send selected parentId
+                        studentName: studentName, // Send student name for context
                         amount: amount,
                         description: description
                     })
@@ -1168,24 +1276,26 @@
                 statusEl.textContent = `Invoice ${result.invoiceId} created (${result.invoiceStatus}).`;
                 statusEl.classList.add('text-green-600');
                 
-                // Optionally show the Stripe hosted URL
                 if (result.invoiceUrl) {
                     statusEl.innerHTML += ` <a href="${result.invoiceUrl}" target="_blank" class="text-blue-600 hover:underline">View Invoice</a>`;
                 }
+                
+                // Reset form slightly
+                document.getElementById('invoice-amount').value = '';
+                document.getElementById('invoice-description').value = '';
+                // Keep button disabled after success to prevent duplicates easily
+                // btn.disabled = false; 
 
                 // Optionally close modal after a delay
-                setTimeout(() => closeModal('invoice-modal'), 3000);
+                setTimeout(() => closeModal('invoice-modal'), 4000); 
 
             } catch (error) {
                 console.error("Create Invoice Error:", error);
                 statusEl.textContent = `Error: ${error.message}`;
                 statusEl.classList.add('text-red-600');
                 toast('Failed to create invoice.', 'error');
-            } finally {
-                 // Keep button disabled on success? Or re-enable? Depends on desired flow.
-                 // For now, let's keep it disabled on success to prevent duplicates.
-                 // btn.disabled = false; // Re-enable if you want them to create another immediately
-            }
+                btn.disabled = false; // Re-enable button on error
+            } 
         }
 
         // --- App Start ---
@@ -1264,7 +1374,7 @@
             document.getElementById('edit-student-form').addEventListener('submit', handleUpdateStudent);
             document.getElementById('edit-contact-form').addEventListener('submit', handleUpdateContact);
             
-            // --- ADDED: Stripe Invoice Form Listener ---
+            // Stripe Invoice Form Listener
             document.getElementById('create-invoice-form').addEventListener('submit', handleCreateInvoice);
 
             document.getElementById('col-1-add-btn').addEventListener('click', () => openModal(currentView === 'class' ? 'add-class-modal' : 'add-new-student-modal'));
@@ -1277,7 +1387,7 @@
 
             // --- Expose functions to window for console access ---
             window.auth = auth; // Expose auth for getting UID
-            window.handleMakeAdmin = handleMakeAdmin; // Expose for bootstrapping
+            window.handleMakeAdmin = handleMakeAdmin; // Expose for bootstrapping         
             console.log("App setup complete.");
         });
     </script>
