@@ -194,6 +194,7 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
 
     let parentRef;
     let createdInvoiceItemId = null; // Variable to hold the ID
+    let draftInvoiceId = null; // Variable to hold draft invoice ID for cleanup
 
     try {
         // --- 1. Get Parent Info ---
@@ -226,19 +227,7 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
             console.log(`Using existing Stripe customer ID: ${stripeCustomerId} for parent ${parentId}`);
         }
 
-        // --- 3. Create Invoice Item ---
-        console.log(`Creating invoice item for customer ${stripeCustomerId}, amount: ${amountInCents}`);
-        const invoiceItem = await stripe.invoiceItems.create({
-            customer: stripeCustomerId,
-            amount: amountInCents,
-            currency: 'usd',
-            description: description,
-            metadata: { studentName: studentName || 'N/A' }
-        });
-        createdInvoiceItemId = invoiceItem.id; // Store the ID
-        console.log(`Created invoice item: ${createdInvoiceItemId}`);
-
-        // --- 4. Create Draft Invoice ---
+        // --- 3. Create Draft Invoice --- (MOVED UP)
         console.log(`Creating draft invoice for customer ${stripeCustomerId}`);
         const draftInvoice = await stripe.invoices.create({
             customer: stripeCustomerId,
@@ -246,11 +235,31 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
             days_until_due: 30,
             auto_advance: false, // Keep as draft
             description: `Invoice for ${studentName || parentName}`,
-            metadata: { firestoreParentId: parentId, createdByAdminUid: adminUid, createdInvoiceItemId: createdInvoiceItemId } // Add item ID to metadata
+            metadata: { firestoreParentId: parentId, createdByAdminUid: adminUid }
         });
+        draftInvoiceId = draftInvoice.id; // Store for potential cleanup
         console.log(`Created draft invoice: ${draftInvoice.id}`);
 
-        // --- *** PRE-FINALIZATION CHECK & LOG LINES *** ---
+
+        // --- 4. Create Invoice Item *and Attach* --- (THE FIX)
+        console.log(`Creating invoice item and attaching to ${draftInvoice.id}, amount: ${amountInCents}`);
+        const invoiceItem = await stripe.invoiceItems.create({
+            customer: stripeCustomerId,
+            amount: amountInCents,
+            currency: 'usd',
+            description: description,
+            metadata: { studentName: studentName || 'N/A' },
+            invoice: draftInvoice.id // <-- THIS IS THE FIX
+        });
+        createdInvoiceItemId = invoiceItem.id; // Store the ID
+        console.log(`Created invoice item: ${createdInvoiceItemId}`);
+
+        // (Optional) Update draft invoice metadata to include the item ID for reference
+        await stripe.invoices.update(draftInvoice.id, {
+            metadata: { ...draftInvoice.metadata, createdInvoiceItemId: createdInvoiceItemId }
+        });
+
+        // --- 5. PRE-FINALIZATION CHECK & LOG LINES ---
         const retrievedDraft = await stripe.invoices.retrieve(draftInvoice.id, {
             expand: ['lines'], // Explicitly request line item details
         });
@@ -261,7 +270,6 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
             console.log(`DEBUG: Lines attached to draft invoice: ${retrievedDraft.lines.data.length}`);
             retrievedDraft.lines.data.forEach((line, index) => {
                 console.log(`  Line ${index + 1}: ID=${line.id}, Amount=${line.amount}, Desc=${line.description}, Type=${line.type}`);
-                // Check if our created invoice item ID is present (Stripe line items have IDs like 'il_...' and might refer back to 'invoice_item' like 'ii_...')
                 if (line.invoice_item === createdInvoiceItemId) {
                     console.log(`  -> This line corresponds to our created item ${createdInvoiceItemId}`);
                 }
@@ -270,17 +278,16 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
             console.log(`DEBUG: No lines data found on retrieved draft invoice.`);
         }
 
+        // This warning should no longer trigger, but it's a good safety check
         if (retrievedDraft.total === 0 && amountInCents > 0) {
-             console.warn(`WARNING: Draft invoice total is 0 even though item ${createdInvoiceItemId} was created for ${amountInCents}. Item likely did not attach.`);
-             // Potential Action: Delete invoice item and invoice, then throw error
-             // await stripe.invoiceItems.del(createdInvoiceItemId);
-             // await stripe.invoices.del(draftInvoice.id);
-             // throw new Error("Invoice item did not attach to the draft invoice.");
+             console.warn(`WARNING: Draft invoice total is 0 even though item ${createdInvoiceItemId} was created for ${amountInCents}.`);
+             // You could throw an error here to prevent finalizing a $0 invoice
+             throw new Error("Invoice item did not attach to the draft invoice. Aborting finalization.");
         }
         // --- *** END CHECK *** ---
 
 
-        // --- 5. Finalize the Invoice ---
+        // --- 6. Finalize the Invoice ---
         console.log(`Finalizing invoice: ${draftInvoice.id}`);
         const finalizedInvoice = await stripe.invoices.finalizeInvoice(draftInvoice.id, {
           idempotencyKey: `finalize-${draftInvoice.id}-${Date.now()}`
@@ -306,16 +313,31 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
 
     } catch (error) {
         console.error('Stripe Invoice Creation Error:', error);
-        // Clean up orphaned invoice item if it was created and error occurred after
-        if (createdInvoiceItemId && !res.headersSent) {
+
+        // --- Enhanced Cleanup Logic ---
+        // If an error happened, try to delete any artifacts we created
+        if (createdInvoiceItemId) {
              try {
                  console.log(`Error occurred, attempting to delete orphaned invoice item: ${createdInvoiceItemId}`);
                  await stripe.invoiceItems.del(createdInvoiceItemId);
                  console.log(`Deleted orphaned invoice item: ${createdInvoiceItemId}`);
              } catch (deleteError) {
-                 console.error(`Failed to delete orphaned invoice item ${createdInvoiceItemId}:`, deleteError);
+                 console.error(`Failed to delete orphaned invoice item ${createdInvoiceItemId}:`, deleteError.message);
              }
         }
+        
+        // If the draft invoice was created but not finalized, delete it too
+        if (draftInvoiceId) {
+             try {
+                 console.log(`Error occurred, attempting to delete draft invoice: ${draftInvoiceId}`);
+                 await stripe.invoices.del(draftInvoiceId);
+                 console.log(`Deleted draft invoice: ${draftInvoiceId}`);
+             } catch (deleteError) {
+                 console.error(`Failed to delete draft invoice ${draftInvoiceId}:`, deleteError.message);
+                 // Note: You can only delete 'draft' invoices. If it was finalized, this will fail.
+             }
+        }
+
         if (!res.headersSent) {
              res.status(500).json({ error: `Failed to create invoice. ${error.message}` });
         }
@@ -465,7 +487,7 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
 
         if (!canSetAdmin) {
              console.log("Set admin permission denied.");
-             return res.status(403).json({ error: 'Admin privileges required or bootstrap condition not met.' });
+             return res.status(4G03).json({ error: 'Admin privileges required or bootstrap condition not met.' });
         }
 
         await admin.auth().setCustomUserClaims(uidToMakeAdmin, { admin: true });
