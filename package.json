@@ -1,24 +1,25 @@
 {
-  "name": "after-school-mailer",
+  "name": "after-school-manager",
   "version": "1.0.0",
-  "description": "Backend server for sending emails",
+  "description": "After-School Program Manager server (mail + stripe)",
   "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "firebase-admin": "^11.11.0",
-    "protobufjs": "^7.5.4",
-    "resend": "^6.3.0",
-    "stripe": "^19.1.0"
+    "dev": "nodemon server.js"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "firebase-admin": "^12.6.0",
+    "nodemailer": "^6.9.14",
+    "stripe": "^16.12.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
   }
 }

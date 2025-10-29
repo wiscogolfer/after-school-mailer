@@ -122,7 +122,7 @@
 
     <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-100 p-4">
         <div class="w-full max-w-md p-8 bg-white rounded-lg shadow-xl">
-             <form id="login-form">
+             <form id="login-form" onsubmit="return false;">
                 <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Sign In</h2>
                 <div class="space-y-4">
                     <div>
@@ -574,7 +574,11 @@
     
     
     <script type="module">
-document.addEventListener('DOMContentLoaded',()=>{ if(window.location.search){ window.history.replaceState({},document.title,window.location.pathname); } });
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.location.search === '?' || window.location.search.length > 0) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+});
 
         
         // --- HARDCODED CONFIGURATION ---
@@ -630,183 +634,35 @@ document.addEventListener('DOMContentLoaded',()=>{ if(window.location.search){ w
         const getParentsCol = () => collection(db, `organizations/${organizationId}/parents`);
 
         // --- Toast Notification ---
-        const toast = (message, type = 'success', duration = 3000) => { /* ... unchanged ... */ }
+const toast = (message, type = 'success', duration = 3000) => {
+  const toastEl = document.getElementById('toast');
+  const iconEl = document.getElementById('toast-icon');
+  const msgEl = document.getElementById('toast-message');
+  if (!toastEl || !iconEl || !msgEl) return;
 
-        // --- Modal Controls ---
-        const openModal = (modalId) => document.getElementById(modalId)?.classList.add('flex');
-        const closeModal = (modalId) => document.getElementById(modalId)?.classList.remove('flex');
+  // Reset icon classes
+  iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg';
 
-        // --- Render Functions ---
-        const renderViewByClass = () => { currentView = 'class'; document.getElementById('col-1-title').textContent = 'Classes'; document.getElementById('col-1-add-btn').textContent = 'Add Class'; document.getElementById('col-2-title').textContent = 'Students'; document.getElementById('col-2-btn-group').classList.remove('hidden'); document.getElementById('email-class-btn').classList.remove('hidden'); document.getElementById('nav-col-1-title').textContent = 'Classes'; document.getElementById('nav-col-2-title').textContent = 'Students'; document.getElementById('view-by-class').classList.add('bg-white', 'text-blue-700', 'shadow-sm'); document.getElementById('view-by-student').classList.remove('bg-white', 'text-blue-700', 'shadow-sm'); currentClassId = null; currentStudentId = null; resetCol2(); resetCol3(); renderCol1ClassList(); }
-        const renderViewByStudent = () => { currentView = 'student'; document.getElementById('col-1-title').textContent = 'All Students'; document.getElementById('col-1-add-btn').textContent = 'Add Student'; document.getElementById('col-2-title').textContent = 'Enrolled In'; document.getElementById('col-2-btn-group').classList.add('hidden'); document.getElementById('email-class-btn').classList.add('hidden'); document.getElementById('nav-col-1-title').textContent = 'Students'; document.getElementById('nav-col-2-title').textContent = 'Classes'; document.getElementById('view-by-student').classList.add('bg-white', 'text-blue-700', 'shadow-sm'); document.getElementById('view-by-class').classList.remove('bg-white', 'text-blue-700', 'shadow-sm'); currentClassId = null; currentStudentId = null; resetCol2(); resetCol3(); renderCol1StudentList(); }
-        
-        const renderCol1ClassList = () => {
-             const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
-             if (allClassCache.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No classes found. Add one!</p>'; return; }
-             const sortedClasses = [...allClassCache].sort((a, b) => a.name.localeCompare(b.name));
-             sortedClasses.forEach(c => {
-                 const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentClassId === c.id ? 'bg-blue-50 border-blue-300' : ''}`; el.dataset.id = c.id;
-                 el.innerHTML = `
-                     <div class="flex justify-between items-center">
-                         <span class="font-medium text-gray-800">${c.name}</span>
-                         <div class="flex items-center space-x-2">
-                             <button class="edit-class-btn icon-btn edit" data-id="${c.id}" title="Edit Class"><i class="fas fa-pencil-alt fa-xs"></i></button>
-                             <button class="delete-class-btn icon-btn" data-id="${c.id}" title="Delete Class"><i class="fas fa-times fa-sm"></i></button>
-                         </div>
-                     </div>
-                     <p class="text-sm text-gray-600">${c.teacher}</p>`;
-                 el.addEventListener('click', () => selectClass(c.id, c.name));
-                 el.querySelector('.edit-class-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditClassModal(c.id); });
-                 el.querySelector('.delete-class-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteClass(c.id, c.name); });
-                 listEl.appendChild(el);
-             });
-        }
+  // Color by type
+  if (type === 'error') {
+    iconEl.classList.add('text-red-600', 'bg-red-100');
+  } else if (type === 'warning') {
+    iconEl.classList.add('text-yellow-600', 'bg-yellow-100');
+  } else {
+    iconEl.classList.add('text-green-600', 'bg-green-100');
+  }
 
-        // --- UPDATED: Render Col 1 (Students) - Check stripeInfo map ---
-        const renderCol1StudentList = () => {
-           const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
-           if (allStudentsCache.length === 0) { /* ... no students message ... */ return; }
-           const sortedStudents = [...allStudentsCache].sort((a, b) => a.name.localeCompare(b.name));
-            
-           sortedStudents.forEach(s => {
-               const el = document.createElement('div'); 
-               el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; 
-               el.dataset.id = s.id;
+  msgEl.textContent = message || '';
+  toastEl.classList.remove('hidden');
+  toastEl.classList.add('flex');
 
-               // --- UPDATED: Manual Map & Display Existing IDs ---
-               let stripeSectionHtml = '';
-               const hasHalleId = s.stripeInfo?.[ACCOUNT_ID_HALLE];
-               const hasState48Id = s.stripeInfo?.[ACCOUNT_ID_STATE48];
-
-               // Display existing IDs
-                if (hasHalleId || hasState48Id) {
-                    stripeSectionHtml += '<div class="stripe-id-display">';
-                    if (hasHalleId) stripeSectionHtml += `<div><span class="stripe-id-label">Halle:</span> ${hasHalleId}</div>`;
-                    if (hasState48Id) stripeSectionHtml += `<div><span class="stripe-id-label">State48:</span> ${hasState48Id}</div>`;
-                    stripeSectionHtml += '</div>';
-                }
-               
-               // Show manual map input if EITHER ID is missing (adjust condition if needed)
-               if (!hasHalleId || !hasState48Id) {
-                   stripeSectionHtml += `
-                       <div class="manual-map-section">
-                           <label for="map-${s.id}" class="text-xs text-gray-500 block mb-1">Add Missing Stripe ID:</label>
-                           <div class="flex gap-1">
-                               <input type="text" id="map-${s.id}" placeholder="cus_..." class="flex-grow border border-gray-300 rounded px-1 py-0.5 text-xs">
-                               <button class="map-stripe-btn bg-gray-200 hover:bg-gray-300 px-2 rounded text-xs" data-student-id="${s.id}">Save</button>
-                           </div>
-                       </div>`;
-               }
-               
-               el.innerHTML = `
-                   <div class="flex justify-between items-center">
-                       <span class="font-medium text-gray-800">${s.name}</span>
-                       <div class="flex items-center space-x-2">
-                            <button class="edit-student-btn icon-btn edit" data-id="${s.id}" title="Edit Student"><i class="fas fa-pencil-alt fa-xs"></i></button>
-                            <button class="invoice-student-btn icon-btn" data-student-id="${s.id}" data-student-name="${s.name}" title="Invoice Student"><i class="fas fa-file-invoice-dollar fa-xs text-green-600"></i></button> 
-                           <button class="delete-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Delete Student"><i class="fas fa-times fa-sm"></i></button>
-                       </div>
-                   </div>
-                   ${stripeSectionHtml}`; // Add the Stripe section
-                
-               el.addEventListener('click', () => selectStudent(s.id, s.name));
-               el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
-               el.querySelector('.delete-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteStudent(s.id, s.name); });
-               el.querySelector('.invoice-student-btn').addEventListener('click', (e) => { e.stopPropagation(); promptInvoiceParentSelection(s.id, s.name); });
-               
-               listEl.appendChild(el);
-           });
-        }
-
-        // --- UPDATED: Render Col 2 (Students in a Class) - Check stripeInfo map ---
-        const renderCol2StudentList = (classId) => {
-            const listEl = document.getElementById('col-2-list'); const classData = allClassCache.find(c => c.id === classId);
-            if (!classData || !classData.students || classData.students.length === 0) { /* ... no students message ... */ return; }
-            const studentIds = classData.students; const studentsInClass = allStudentsCache.filter(s => studentIds.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name));
-            listEl.innerHTML = '';
-
-            studentsInClass.forEach(s => {
-                const el = document.createElement('div'); 
-                el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; 
-                el.dataset.id = s.id;
-
-                // --- UPDATED: Manual Map & Display Existing IDs ---
-                let stripeSectionHtml = '';
-                const hasHalleId = s.stripeInfo?.[ACCOUNT_ID_HALLE];
-                const hasState48Id = s.stripeInfo?.[ACCOUNT_ID_STATE48];
-
-                if (hasHalleId || hasState48Id) {
-                    stripeSectionHtml += '<div class="stripe-id-display">';
-                    if (hasHalleId) stripeSectionHtml += `<div><span class="stripe-id-label">Halle:</span> ${hasHalleId}</div>`;
-                    if (hasState48Id) stripeSectionHtml += `<div><span class="stripe-id-label">State48:</span> ${hasState48Id}</div>`;
-                    stripeSectionHtml += '</div>';
-                }
-               
-                if (!hasHalleId || !hasState48Id) {
-                    stripeSectionHtml += `
-                       <div class="manual-map-section">
-                           <label for="map-${s.id}" class="text-xs text-gray-500 block mb-1">Add Missing Stripe ID:</label>
-                           <div class="flex gap-1">
-                               <input type="text" id="map-${s.id}" placeholder="cus_..." class="flex-grow border border-gray-300 rounded px-1 py-0.5 text-xs">
-                               <button class="map-stripe-btn bg-gray-200 hover:bg-gray-300 px-2 rounded text-xs" data-student-id="${s.id}">Save</button>
-                           </div>
-                       </div>`;
-                }
-                
-                el.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="font-medium text-gray-800">${s.name}</span>
-                        <div class="flex items-center space-x-2">
-                             <button class="edit-student-btn icon-btn edit" data-id="${s.id}" title="Edit Student"><i class="fas fa-pencil-alt fa-xs"></i></button>
-                             <button class="invoice-student-btn icon-btn" data-student-id="${s.id}" data-student-name="${s.name}" title="Invoice Student"><i class="fas fa-file-invoice-dollar fa-xs text-green-600"></i></button> 
-                            <button class="remove-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Remove from class"><i class="fas fa-times fa-sm"></i></button>
-                        </div>
-                    </div>
-                    ${stripeSectionHtml}`; // Add the Stripe section
-
-                el.addEventListener('click', () => selectStudent(s.id, s.name));
-                 el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
-                 el.querySelector('.remove-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleRemoveStudent(s.id, s.name); });
-                 el.querySelector('.invoice-student-btn').addEventListener('click', (e) => { e.stopPropagation(); promptInvoiceParentSelection(s.id, s.name); });
-                 
-                listEl.appendChild(el);
-            });
-        }
-        
-        const renderCol2ClassList = (studentId) => { /* ... unchanged ... */ }
-        const renderStudentDropdown = () => { /* ... unchanged ... */ }
-        const renderContactList = (contacts) => { /* ... unchanged ... */ }
-        const renderUserList = (users) => { /* ... unchanged ... */ }
-        const resetCol2 = () => { /* ... unchanged ... */ }
-        const resetCol3 = () => { /* ... unchanged ... */ }
-        
-        // --- Data Listeners ---
-        const listenForClasses = () => { /* ... unchanged ... */ }
-        const listenForAllStudents = () => { /* ... unchanged ... */ }
-        const listenForContacts = (studentId) => { /* ... unchanged ... */ }
-
-        // --- UI Selectors ---
-        const selectClass = (classId, className) => { /* ... unchanged ... */ }
-        const selectStudent = (studentId, studentName) => { 
-            console.log("Selected student:", studentId, studentName); 
-            currentStudentId = studentId; 
-            document.querySelectorAll('#col-1-list > div, #col-2-list > div').forEach(el => { el.classList.toggle('bg-blue-50', el.dataset.id === studentId); el.classList.toggle('border-blue-300', el.dataset.id === studentId); }); 
-            document.getElementById('contact-student-subtitle').textContent = `For: ${studentName}`; 
-            document.getElementById('add-contact-btn').disabled = false; 
-            listenForContacts(studentId); 
-            loadStudentBillingData(studentId); // Now fetches based on account selector
-            if (currentView === 'student') { 
-                document.getElementById('col-2-subtitle').textContent = `For: ${studentName}`; 
-                renderCol2ClassList(studentId); 
-            } 
-            showCol('col-3-section'); 
-            setActiveNav('nav-contacts'); 
-            const listEl = document.getElementById('contact-list'); 
-            if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
-        }
-
-        // --- Open Edit Modals ---
-        const openEditClassModal = (classId) => { /* ... unchanged ... */ };
+  window.clearTimeout(window.__toastTimer);
+  window.__toastTimer = window.setTimeout(() => {
+    toastEl.classList.add('hidden');
+    toastEl.classList.remove('flex');
+    iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg'; // reset
+  }, duration || 3000);
+};
         const openEditStudentModal = (studentId) => { /* ... unchanged ... */ };
         const openEditContactModal = (contactId) => { /* ... unchanged ... */ };
 
@@ -851,7 +707,7 @@ document.addEventListener('DOMContentLoaded',()=>{ if(window.location.search){ w
                         if(chunk.length === 0) continue; 
                         const q = query(getParentsCol(), where('__name__', 'in', chunk)); 
                         const querySnapshot = await getDocs(q); 
-                        querySnapshot.docs.forEach(doc => contacts.push(doc.data())); 
+                        querySnapshot.docs.forEach(doc => contacts.push(doc.data()); 
                     } 
                     bccList = contacts.map(c => c.email).filter(Boolean); 
                 } catch(err) { /* ... handle BCC error ... */ return; } 
@@ -882,24 +738,31 @@ document.addEventListener('DOMContentLoaded',()=>{ if(window.location.search){ w
         // --- Authentication ---
         const handleLogin = async (e) => {
   e.preventDefault();
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
+  const email = document.getElementById('login-email')?.value || '';
+  const password = document.getElementById('login-password')?.value || '';
   const errorEl = document.getElementById('login-error');
   const btn = document.getElementById('login-btn');
-  errorEl.textContent = '';
-  btn.disabled = true;
+  if (errorEl) errorEl.textContent = '';
+  if (btn) btn.disabled = true;
+
   try {
     await signInWithEmailAndPassword(auth, email, password);
+    // strip any query string like '?'
     if (window.location.search) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('app-shell').style.display = 'flex';
+    // show app shell (onAuthStateChanged will also manage this)
+    const authScreen = document.getElementById('auth-screen');
+    const appShell = document.getElementById('app-shell');
+    if (authScreen) authScreen.style.display = 'none';
+    if (appShell) appShell.style.display = 'flex';
+    toast('Signed in!', 'success');
   } catch (err) {
     console.error('Login error:', err);
-    errorEl.textContent = err.message || 'Login failed';
+    if (errorEl) errorEl.textContent = err.message || 'Login failed';
+    toast('Login failed', 'error');
   } finally {
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
   }
 };
 // --- END MANUAL MAP FUNCTION ---
@@ -1006,8 +869,7 @@ document.addEventListener('DOMContentLoaded',()=>{ if(window.location.search){ w
             document.getElementById('view-by-class').addEventListener('click', renderViewByClass);
             document.getElementById('view-by-student').addEventListener('click', renderViewByStudent);
             document.getElementById('email-class-btn').addEventListener('click', handleEmailClass);
-            document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.modal)));
-            document.getElementById('add-class-form').addEventListener('submit', handleAddClass);
+            document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.modal));document.getElementById('add-class-form').addEventListener('submit', handleAddClass);
             document.getElementById('add-new-student-form').addEventListener('submit', handleAddNewStudent);
             document.getElementById('add-existing-student-form').addEventListener('submit', handleAddExistingStudent);
             document.getElementById('add-contact-form').addEventListener('submit', handleAddContact);
