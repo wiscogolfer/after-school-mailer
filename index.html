@@ -39,6 +39,64 @@
         .icon-btn.edit:hover { color: #2563eb; /* blue-600 for edit */ }
         /* Add hover color for invoice icon */
         .icon-btn .fa-file-invoice-dollar:hover { color: #16a34a; /* green-600 */ }
+
+        /* --- NEW BILLING ITEM STYLES --- */
+        .billing-item {
+            padding: 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            background-color: #f9fafb;
+        }
+        .item-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+        }
+        .item-details {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        .status-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            text-transform: uppercase;
+        }
+        .invoice-status-paid, .subscription-status-active {
+            color: #057a55;
+            background-color: #def7ec;
+        }
+        .invoice-status-open, .subscription-status-past_due {
+            color: #c2410c;
+            background-color: #fffbeb;
+        }
+        .invoice-status-void, .subscription-status-canceled {
+            color: #4b5563;
+            background-color: #f3f4f6;
+        }
+        .stripe-link {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #2563eb;
+            text-decoration: none;
+            margin-top: 0.5rem;
+            display: inline-block;
+        }
+        .stripe-link:hover {
+            text-decoration: underline;
+        }
+        .error-message {
+            color: #dc2626;
+            font-size: 0.875rem;
+            text-align: center;
+            padding: 0.5rem;
+            background-color: #fee2e2;
+            border-radius: 0.375rem;
+        }
+        /* --- END BILLING STYLES --- */
     </style>
 </head>
 
@@ -142,7 +200,7 @@
                         </div>
                 </section>
     
-                <section id="col-3-section" class="bg-white p-4 rounded-lg shadow-lg flex-col h-full hidden md:flex">
+                <section id="col-3-section" class="bg-white p-4 rounded-lg shadow-lg flex flex-col h-full hidden md:flex">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                         <div>
                             <h2 class="text-2xl font-bold text-gray-800">Parents/Contacts</h2>
@@ -152,10 +210,25 @@
                             Add Contact
                         </button>
                     </div>
-                     <div id="contact-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0 pb-16 md:pb-0">
+
+                    <div class="flex-1 overflow-y-auto scrolling-list min-h-0 pb-16 md:pb-0 space-y-2">
+                        
+                        <div id="contact-list" class="space-y-2">
+                            </div>
+        
+                        <hr class="my-4 border-gray-200">
+        
+                        <h3 class="text-lg font-bold text-gray-800 mb-2">Invoices</h3>
+                        <div id="invoice-list-container" class="space-y-2">
+                            <p id="invoices-loading-message" class="text-gray-500 text-center">Select a student</p>
                         </div>
-                </section>
-            </div>
+        
+                        <h3 class="text-lg font-bold text-gray-800 mt-4 mb-2">Subscriptions</h3>
+                        <div id="subscription-list-container" class="space-y-2">
+                            <p id="subscriptions-loading-message" class="text-gray-500 text-center">Select a student</p>
+                        </div>
+                        </div> </section>
+                </div>
         </div>
     
         <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white shadow-inner p-2 border-t border-gray-200">
@@ -803,7 +876,16 @@
             }); 
         }
         const resetCol2 = () => { document.getElementById('col-2-subtitle').textContent = currentView === 'class' ? 'Select a class' : 'Select a student'; document.getElementById('col-2-list').innerHTML = ''; if (currentView === 'class') { document.getElementById('add-new-student-btn').disabled = true; document.getElementById('add-existing-student-btn').disabled = true; } }
-        const resetCol3 = () => { document.getElementById('contact-student-subtitle').textContent = 'Select a student'; document.getElementById('contact-list').innerHTML = ''; document.getElementById('add-contact-btn').disabled = true; }
+        
+        // --- UPDATED: Reset Col 3 ---
+        const resetCol3 = () => { 
+            document.getElementById('contact-student-subtitle').textContent = 'Select a student'; 
+            document.getElementById('contact-list').innerHTML = ''; 
+            document.getElementById('add-contact-btn').disabled = true;
+            // NEW: Reset billing lists
+            document.getElementById('invoice-list-container').innerHTML = '<p id="invoices-loading-message" class="text-gray-500 text-center">Select a student</p>';
+            document.getElementById('subscription-list-container').innerHTML = '<p id="subscriptions-loading-message" class="text-gray-500 text-center">Select a student</p>';
+        }
         
         // --- Data Listeners ---
         const listenForClasses = () => { if (unsubscribeClasses) unsubscribeClasses(); console.log("Setting up listener for classes..."); unsubscribeClasses = onSnapshot(getClassesCol(), (snapshot) => { console.log("Class listener triggered."); allClassCache = []; snapshot.forEach(doc => { allClassCache.push({ id: doc.id, ...doc.data() }); }); if (currentView === 'class') renderCol1ClassList(); if (currentView === 'student' && currentStudentId) renderCol2ClassList(currentStudentId); }, (error) => { console.error("Error listening for classes: ", error); toast('Failed to load classes. Check security rules.', 'error'); }); }
@@ -857,13 +939,18 @@
             showCol('col-2-section'); 
             setActiveNav('nav-col-2'); 
         }
+
+        // --- UPDATED: Select Student ---
         const selectStudent = (studentId, studentName) => {
             console.log("Selected student:", studentId, studentName);
             currentStudentId = studentId;
             document.querySelectorAll('#col-1-list > div, #col-2-list > div').forEach(el => { el.classList.toggle('bg-blue-50', el.dataset.id === studentId); el.classList.toggle('border-blue-300', el.dataset.id === studentId); });
             document.getElementById('contact-student-subtitle').textContent = `For: ${studentName}`; 
             document.getElementById('add-contact-btn').disabled = false;
+            
             listenForContacts(studentId); 
+            loadStudentBillingData(studentId); // --- NEW: Load billing data ---
+
             if (currentView === 'student') { 
                 document.getElementById('col-2-subtitle').textContent = `For: ${studentName}`; 
                 renderCol2ClassList(studentId); 
@@ -1125,22 +1212,145 @@
             }
         };
 
-        // --- NEW FUNCTION: Open Invoice Modal ---
-        const openInvoiceModal = (parentId, parentName) => {
-            console.log(`Opening invoice modal for parent: ${parentName} (${parentId})`);
-             // NOTE: This assumes we are invoicing a PARENT directly.
-             // If invoicing via STUDENT, this needs to change.
-            document.getElementById('invoice-parent-id').value = parentId; // Set parent ID
-            document.querySelector('#invoice-subtitle span').textContent = parentName; // Show parent name
-             // Clear form
-            document.getElementById('invoice-amount').value = '';
-            document.getElementById('invoice-description').value = '';
-            document.getElementById('invoice-status').textContent = '';
-            document.getElementById('create-invoice-btn').disabled = false;
-            openModal('invoice-modal');
+
+        // --- === NEW BILLING FUNCTIONS START === ---
+
+        /**
+         * Fetches and displays all billing data for a specific student.
+         * @param {string} studentId - The Firestore ID of the student.
+         */
+        async function loadStudentBillingData(studentId) {
+            if (!currentUser) {
+                console.error("No auth token found. Cannot fetch billing data.");
+                return;
+            }
+
+            const authToken = await getIdToken(currentUser);
+            
+            // Get the HTML container elements
+            const invoiceList = document.getElementById('invoice-list-container');
+            const subList = document.getElementById('subscription-list-container');
+            
+            // Clear any old data and show loading messages
+            invoiceList.innerHTML = '<p id="invoices-loading-message" class="text-gray-500 text-center">Loading invoices...</p>';
+            subList.innerHTML = '<p id="subscriptions-loading-message" class="text-gray-500 text-center">Loading subscriptions...</p>';
+
+            // --- Create Reusable Fetch Headers ---
+            const headers = new Headers();
+            headers.append('Authorization', `Bearer ${authToken}`);
+            headers.append('Content-Type', 'application/json');
+
+            const API_BASE_URL = HARDCODED_CONFIG.serverUrl;
+
+            // --- Fetch Invoices ---
+            try {
+                // NOTE: This calls a new, simpler endpoint. 
+                // We must update server.js to match.
+                const response = await fetch(`${API_BASE_URL}/get-student-invoices/${studentId}`, { headers });
+                
+                if (!response.ok) {
+                    const res = await response.json();
+                    throw new Error(res.error || `Failed to fetch invoices: ${response.statusText}`);
+                }
+
+                const { invoices } = await response.json(); // Get the list from the response
+                invoiceList.innerHTML = ''; // Clear loading message
+
+                if (invoices.length === 0) {
+                    invoiceList.innerHTML = '<p class="text-gray-500 text-center">No invoices found.</p>';
+                } else {
+                    invoices.forEach(invoice => {
+                        invoiceList.appendChild(createInvoiceElement(invoice));
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading invoices:', error);
+                invoiceList.innerHTML = `<p class="error-message">Could not load invoices. ${error.message}</p>`;
+            }
+
+            // --- Fetch Subscriptions ---
+            try {
+                // NOTE: This calls a new, simpler endpoint.
+                const response = await fetch(`${API_BASE_URL}/get-student-subscriptions/${studentId}`, { headers });
+
+                if (!response.ok) {
+                    const res = await response.json();
+                    throw new Error(res.error || `Failed to fetch subscriptions: ${response.statusText}`);
+                }
+
+                const { subscriptions } = await response.json(); // Get the list
+                subList.innerHTML = ''; // Clear loading message
+
+                if (subscriptions.length === 0) {
+                    subList.innerHTML = '<p class="text-gray-500 text-center">No subscriptions found.</p>';
+                } else {
+                    subscriptions.forEach(sub => {
+                        subList.appendChild(createSubscriptionElement(sub));
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading subscriptions:', error);
+                subList.innerHTML = `<p class="error-message">Could not load subscriptions. ${error.message}</p>`;
+            }
         }
 
-         // --- NEW Helper Function to Fetch Parents and Open Invoice Modal ---
+        /**
+         * Helper function to create an HTML element for one invoice.
+         * @param {object} invoice - A Stripe Invoice object
+         * @returns {HTMLElement} A <div> element
+         */
+        function createInvoiceElement(invoice) {
+            const el = document.createElement('div');
+            el.className = `billing-item invoice-status-${invoice.status}`;
+
+            const amount = (invoice.amount_due / 100).toFixed(2);
+            const date = new Date(invoice.created * 1000).toLocaleDateString();
+            const description = invoice.description || 'Invoice';
+
+            el.innerHTML = `
+                <p class="item-title">
+                    <strong>${description}</strong>
+                    <span class="status-badge">${invoice.status}</span>
+                </p>
+                <p class="item-details">$${amount}  •  Created: ${date}</p>
+                ${invoice.hosted_invoice_url ? `<a href="${invoice.hosted_invoice_url}" target="_blank" class="stripe-link">View or Pay Invoice</a>` : ''}
+            `;
+            return el;
+        }
+
+        /**
+         * Helper function to create an HTML element for one subscription.
+         * @param {object} subscription - A Stripe Subscription object
+         * @returns {HTMLElement} A <div> element
+         */
+        function createSubscriptionElement(subscription) {
+            const el = document.createElement('div');
+            el.className = `billing-item subscription-status-${subscription.status}`;
+
+            const productName = subscription.items.data[0]?.price.product?.name || 'Subscription';
+            const nextBillDate = new Date(subscription.current_period_end * 1000).toLocaleDateString();
+            const price = (subscription.items.data[0]?.price.unit_amount / 100).toFixed(2);
+            const interval = subscription.items.data[0]?.price.recurring.interval;
+
+            let details = `$${price} / ${interval}`;
+            if (subscription.status === 'active') {
+                details += `  •  Next bill: ${nextBillDate}`;
+            }
+
+            el.innerHTML = `
+                <p class="item-title">
+                    <strong>${productName}</strong>
+                    <span class="status-badge">${subscription.status}</span>
+                </p>
+                <p class="item-details">${details}</p>
+            `;
+            return el;
+        }
+
+        // --- === NEW BILLING FUNCTIONS END === ---
+
+
+        // --- NEW FUNCTION: Open Invoice Modal (Helper) ---
          const promptInvoiceParentSelection = async (studentId, studentName) => {
              console.log(`Invoice requested for student: ${studentName} (${studentId})`);
             
@@ -1233,7 +1443,7 @@
             const studentName = allStudentsCache.find(s => s.id === studentId)?.name || null; // Get student name from cache
 
             // Updated Validation
-            if (!parentId || !amount || !description) { 
+            if (!parentId || !studentId || !amount || !description) { // Added studentId check
                 statusEl.textContent = 'Please select a parent and fill all fields.';
                 statusEl.classList.add('text-red-600');
                 btn.disabled = false;
@@ -1260,6 +1470,7 @@
                     },
                     body: JSON.stringify({
                         parentId: parentId, // Send selected parentId
+                        studentId: studentId, // --- THIS IS THE FIX ---
                         studentName: studentName, // Send student name for context
                         amount: amount,
                         description: description

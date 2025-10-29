@@ -103,6 +103,7 @@ const isAdmin = (req, res, next) => {
         next(); // User is admin, proceed
     } else {
         console.log(`Admin check failed for user: ${req.user.uid}`);
+        // --- TYPO FIX: 4D03 -> 403 ---
         return res.status(403).json({ error: 'Admin privileges required' });
     }
 };
@@ -117,70 +118,55 @@ app.get('/', (req, res) => {
 
 // --- Email Sending Route ---
 app.post('/send-email', authenticateToken, async (req, res) => {
-    // 'replyTo' is an object: { email: '...', name: '...' }
     const { to, bcc, subject, text, replyTo } = req.body;
-
     console.log("--------------------");
     console.log("DEBUG /send-email: Data from frontend (replyTo object):", replyTo);
     console.log("--------------------");
-
     const recipient = to || (bcc && bcc.length > 0 ? senderEmail : null);
-
     if (!recipient || !subject || !text) {
         console.error("Validation failed: Missing fields for /send-email.");
         return res.status(400).json({ error: 'Missing required fields: to/bcc, subject, text' });
     }
-
     const formattedFrom = `State 48 Theatre <${senderEmail}>`;
-
     let formattedReplyTo;
     if (replyTo && replyTo.email && replyTo.name) {
         formattedReplyTo = `${replyTo.name} <${replyTo.email}>`;
     } else {
         formattedReplyTo = formattedFrom;
     }
-
     const resendPayload = {
-        to: recipient,
-        bcc: bcc || undefined,
-        from: formattedFrom,
-        replyTo: formattedReplyTo, // Use camelCase
-        subject: subject,
-        text: text,
+        to: recipient, bcc: bcc || undefined, from: formattedFrom,
+        replyTo: formattedReplyTo, subject: subject, text: text,
     };
-
     console.log("DEBUG /send-email: Final payload for Resend:", JSON.stringify(resendPayload, null, 2));
     console.log("--------------------");
-
     try {
         console.log("Attempting to send email via Resend...");
         const { data, error } = await resend.emails.send(resendPayload);
-
         if (error) {
             console.error('Resend Error:', error);
             return res.status(500).json({ error: 'Failed to send email. Check server logs.' });
         }
-
         console.log(`Email sent successfully. ID: ${data.id}, Subject: ${subject}`);
         res.status(200).json({ message: 'Email sent successfully!' });
-
     } catch (error) {
         console.error('Server Error during email send:', error);
         res.status(500).json({ error: 'Failed to send email. Check server logs.' });
     }
 }); // <-- End of /send-email route
 
-// --- Create Stripe Invoice Route (Log Invoice Lines) ---
+// --- *** REWRITTEN *** Create Stripe Invoice Route (Student-Centric) ---
 app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
-    const { parentId, studentName, amount, description } = req.body;
+    // FRONTEND MUST NOW SEND studentId and parentId
+    const { parentId, studentId, studentName, amount, description } = req.body;
     const adminUid = req.user.uid;
 
     console.log("--------------------");
-    console.log("DEBUG /create-invoice: Received data:", { parentId, studentName, amount, description });
+    console.log("DEBUG /create-invoice: Received data:", { parentId, studentId, studentName, amount, description });
 
-    if (!parentId || !amount || !description || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+    if (!parentId || !studentId || !studentName || !amount || !description || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
         console.error("Create invoice validation failed: Missing fields or invalid amount.");
-        return res.status(400).json({ error: 'Parent ID, Description, and a valid positive Amount required.' });
+        return res.status(400).json({ error: 'Parent ID, Student ID, Student Name, Description, and a valid positive Amount required.' });
     }
 
     const amountInCents = Math.round(parseFloat(amount) * 100);
@@ -192,100 +178,96 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
          return res.status(500).json({ error: 'Internal server error: Failed to calculate invoice amount correctly.'});
     }
 
-    let parentRef;
-    let createdInvoiceItemId = null; // Variable to hold the ID
-    let draftInvoiceId = null; // Variable to hold draft invoice ID for cleanup
+    let studentRef;
+    let createdInvoiceItemId = null;
+    let draftInvoiceId = null;
 
     try {
-        // --- 1. Get Parent Info ---
-        parentRef = admin.firestore().doc(`organizations/${organizationId}/parents/${parentId}`);
+        // --- 1. Get Student AND Parent Info ---
+        // (Assuming students are in a root collection)
+        studentRef = admin.firestore().doc(`organizations/${organizationId}/students/${studentId}`);
+        const studentSnap = await studentRef.get();
+        if (!studentSnap.exists) throw new Error(`Student ${studentId} not found.`);
+        
+        const parentRef = admin.firestore().doc(`organizations/${organizationId}/parents/${parentId}`);
         const parentSnap = await parentRef.get();
         if (!parentSnap.exists) throw new Error(`Parent ${parentId} not found.`);
+        
+        const studentData = studentSnap.data();
         const parentData = parentSnap.data();
-        const parentEmail = parentData.email;
-        const parentName = parentData.name;
-        let stripeCustomerId = parentData.stripeCustomerId;
+        
+        // Use Parent's email for billing, but Student's name for customer
+        const billingEmail = parentData.email;
+        const customerName = studentData.name || studentName; // Use name from DB or from request
+        let stripeCustomerId = studentData.stripeCustomerId;
 
-        // --- 2. Find or Create Stripe Customer ---
+        // --- 2. Find or Create Stripe Customer (for the STUDENT) ---
         if (!stripeCustomerId) {
-            console.log(`No Stripe customer ID found for parent ${parentId}. Creating/Finding...`);
-            const existingCustomers = await stripe.customers.list({ email: parentEmail, limit: 1 });
-            if (existingCustomers.data.length > 0) {
-                 stripeCustomerId = existingCustomers.data[0].id;
-                 console.log(`Found existing Stripe customer by email: ${stripeCustomerId}`);
+            console.log(`No Stripe customer ID found for student ${studentId}. Creating/Finding...`);
+            
+            let customer;
+            const existingCustomers = await stripe.customers.list({ email: billingEmail, limit: 10 });
+            
+            // Do any existing customers match this student's name?
+            const matchingCustomer = existingCustomers.data.find(c => c.name === customerName);
+
+            if (matchingCustomer) {
+                 stripeCustomerId = matchingCustomer.id;
+                 console.log(`Found existing Stripe customer by name/email: ${stripeCustomerId}`);
             } else {
-                 const customer = await stripe.customers.create({
-                     name: parentName, email: parentEmail,
-                     metadata: { firestoreParentId: parentId, organizationId: organizationId }
+                 console.log(`Creating new Stripe customer for student ${customerName} with email ${billingEmail}`);
+                 customer = await stripe.customers.create({
+                     name: customerName, // STUDENT'S NAME
+                     email: billingEmail, // PARENT'S EMAIL
+                     metadata: { 
+                         firestoreStudentId: studentId, 
+                         firestoreParentId: parentId, 
+                         organizationId: organizationId 
+                     }
                  });
                  stripeCustomerId = customer.id;
                  console.log(`Created new Stripe customer: ${stripeCustomerId}`);
             }
-            await parentRef.update({ stripeCustomerId: stripeCustomerId });
-            console.log(`Saved Stripe ID ${stripeCustomerId} to Firestore parent ${parentId}`);
+            
+            // Save the Stripe ID to the STUDENT'S document
+            await studentRef.update({ stripeCustomerId: stripeCustomerId });
+            console.log(`Saved Stripe ID ${stripeCustomerId} to Firestore STUDENT ${studentId}`);
         } else {
-            console.log(`Using existing Stripe customer ID: ${stripeCustomerId} for parent ${parentId}`);
+            console.log(`Using existing Stripe customer ID: ${stripeCustomerId} for student ${studentId}`);
         }
 
-        // --- 3. Create Draft Invoice --- (MOVED UP)
+        // --- 3. Create Draft Invoice ---
         console.log(`Creating draft invoice for customer ${stripeCustomerId}`);
         const draftInvoice = await stripe.invoices.create({
             customer: stripeCustomerId,
             collection_method: 'send_invoice',
             days_until_due: 30,
             auto_advance: false, // Keep as draft
-            description: `Invoice for ${studentName || parentName}`,
-            metadata: { firestoreParentId: parentId, createdByAdminUid: adminUid }
+            description: `Invoice for ${customerName}`,
+            metadata: { firestoreStudentId: studentId, firestoreParentId: parentId, createdByAdminUid: adminUid }
         });
-        draftInvoiceId = draftInvoice.id; // Store for potential cleanup
+        draftInvoiceId = draftInvoice.id;
         console.log(`Created draft invoice: ${draftInvoice.id}`);
 
-
-        // --- 4. Create Invoice Item *and Attach* --- (THE FIX)
+        // --- 4. Create Invoice Item *and Attach* ---
         console.log(`Creating invoice item and attaching to ${draftInvoice.id}, amount: ${amountInCents}`);
         const invoiceItem = await stripe.invoiceItems.create({
             customer: stripeCustomerId,
             amount: amountInCents,
             currency: 'usd',
             description: description,
-            metadata: { studentName: studentName || 'N/A' },
-            invoice: draftInvoice.id // <-- THIS IS THE FIX
+            metadata: { studentName: customerName },
+            invoice: draftInvoice.id // <-- THE FIX
         });
-        createdInvoiceItemId = invoiceItem.id; // Store the ID
+        createdInvoiceItemId = invoiceItem.id;
         console.log(`Created invoice item: ${createdInvoiceItemId}`);
 
-        // (Optional) Update draft invoice metadata to include the item ID for reference
-        await stripe.invoices.update(draftInvoice.id, {
-            metadata: { ...draftInvoice.metadata, createdInvoiceItemId: createdInvoiceItemId }
-        });
-
-        // --- 5. PRE-FINALIZATION CHECK & LOG LINES ---
-        const retrievedDraft = await stripe.invoices.retrieve(draftInvoice.id, {
-            expand: ['lines'], // Explicitly request line item details
-        });
+        // --- 5. PRE-FINALIZATION CHECK ---
+        const retrievedDraft = await stripe.invoices.retrieve(draftInvoice.id);
         console.log(`DEBUG: Retrieved draft invoice ${retrievedDraft.id}. Status: ${retrievedDraft.status}, Total: ${retrievedDraft.total}`);
-
-        // Log the actual lines attached
-        if (retrievedDraft.lines && retrievedDraft.lines.data) {
-            console.log(`DEBUG: Lines attached to draft invoice: ${retrievedDraft.lines.data.length}`);
-            retrievedDraft.lines.data.forEach((line, index) => {
-                console.log(`  Line ${index + 1}: ID=${line.id}, Amount=${line.amount}, Desc=${line.description}, Type=${line.type}`);
-                if (line.invoice_item === createdInvoiceItemId) {
-                    console.log(`  -> This line corresponds to our created item ${createdInvoiceItemId}`);
-                }
-            });
-        } else {
-            console.log(`DEBUG: No lines data found on retrieved draft invoice.`);
-        }
-
-        // This warning should no longer trigger, but it's a good safety check
         if (retrievedDraft.total === 0 && amountInCents > 0) {
-             console.warn(`WARNING: Draft invoice total is 0 even though item ${createdInvoiceItemId} was created for ${amountInCents}.`);
-             // You could throw an error here to prevent finalizing a $0 invoice
              throw new Error("Invoice item did not attach to the draft invoice. Aborting finalization.");
         }
-        // --- *** END CHECK *** ---
-
 
         // --- 6. Finalize the Invoice ---
         console.log(`Finalizing invoice: ${draftInvoice.id}`);
@@ -293,15 +275,6 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
           idempotencyKey: `finalize-${draftInvoice.id}-${Date.now()}`
         });
         console.log(`Finalized invoice: ${finalizedInvoice.id}, Status: ${finalizedInvoice.status}, Final Amount Due: ${finalizedInvoice.amount_due}`);
-
-        // --- Check Final Status ---
-        if (finalizedInvoice.status === 'paid' && finalizedInvoice.amount_due === 0 && amountInCents > 0) {
-             console.warn(`WARNING: Invoice ${finalizedInvoice.id} finalized as paid with $0 due. Check Stripe Dashboard for credits.`);
-        } else if (finalizedInvoice.status === 'open') {
-             console.log(`Invoice ${finalizedInvoice.id} finalized correctly with status 'open'.`);
-        } else {
-             console.log(`Invoice ${finalizedInvoice.id} finalized with status ${finalizedInvoice.status}.`);
-        }
 
         // --- Respond to Frontend ---
         res.status(200).json({
@@ -313,31 +286,15 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
 
     } catch (error) {
         console.error('Stripe Invoice Creation Error:', error);
-
-        // --- Enhanced Cleanup Logic ---
-        // If an error happened, try to delete any artifacts we created
+        // Cleanup logic
         if (createdInvoiceItemId) {
-             try {
-                 console.log(`Error occurred, attempting to delete orphaned invoice item: ${createdInvoiceItemId}`);
-                 await stripe.invoiceItems.del(createdInvoiceItemId);
-                 console.log(`Deleted orphaned invoice item: ${createdInvoiceItemId}`);
-             } catch (deleteError) {
-                 console.error(`Failed to delete orphaned invoice item ${createdInvoiceItemId}:`, deleteError.message);
-             }
+             try { await stripe.invoiceItems.del(createdInvoiceItemId); console.log(`Deleted orphaned item ${createdInvoiceItemId}`); } 
+             catch (e) { console.error(`Failed to delete orphaned item ${createdInvoiceItemId}:`, e.message); }
         }
-        
-        // If the draft invoice was created but not finalized, delete it too
         if (draftInvoiceId) {
-             try {
-                 console.log(`Error occurred, attempting to delete draft invoice: ${draftInvoiceId}`);
-                 await stripe.invoices.del(draftInvoiceId);
-                 console.log(`Deleted draft invoice: ${draftInvoiceId}`);
-             } catch (deleteError) {
-                 console.error(`Failed to delete draft invoice ${draftInvoiceId}:`, deleteError.message);
-                 // Note: You can only delete 'draft' invoices. If it was finalized, this will fail.
-             }
+             try { await stripe.invoices.del(draftInvoiceId); console.log(`Deleted draft invoice ${draftInvoiceId}`); } 
+             catch (e) { console.error(`Failed to delete draft invoice ${draftInvoiceId}:`, e.message); }
         }
-
         if (!res.headersSent) {
              res.status(500).json({ error: `Failed to create invoice. ${error.message}` });
         }
@@ -345,28 +302,26 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
 }); // <-- End of /create-invoice route
 
 
-// --- *** NEW *** Get Parent's Stripe Invoices ---
-app.get('/get-parent-invoices/:parentId', authenticateToken, async (req, res) => {
-    // This can be called by any authenticated user (admin or parent)
-    // to see their own invoices. If you want only admins to see all, add 'isAdmin'
-    const { parentId } = req.params;
-    console.log(`Fetching invoices for parent: ${parentId}`);
+// --- *** REWRITTEN *** Get Student's Stripe Invoices (Corrected) ---
+app.get('/get-student-invoices/:studentId', authenticateToken, async (req, res) => {
+    const { studentId } = req.params;
+    console.log(`Fetching invoices for student: ${studentId}`);
 
     try {
-        // 1. Get the parent document from Firestore
-        const parentRef = admin.firestore().doc(`organizations/${organizationId}/parents/${parentId}`);
-        const parentSnap = await parentRef.get();
+        // 1. Get the student document from Firestore (from the root collection)
+        const studentRef = admin.firestore().doc(`organizations/${organizationId}/students/${studentId}`);
+        const studentSnap = await studentRef.get();
 
-        if (!parentSnap.exists) {
-            console.warn(`Parent not found: ${parentId}`);
-            return res.status(404).json({ error: 'Parent not found.' });
+        if (!studentSnap.exists()) {
+            console.warn(`Student not found: ${studentId}`);
+            return res.status(404).json({ error: 'Student not found.' });
         }
 
-        const stripeCustomerId = parentSnap.data().stripeCustomerId;
+        const stripeCustomerId = studentSnap.data().stripeCustomerId;
 
-        // 2. Check if the parent is mapped to Stripe
+        // 2. Check if the student is mapped to Stripe
         if (!stripeCustomerId) {
-            console.log(`Parent ${parentId} has no stripeCustomerId. Returning empty list.`);
+            console.log(`Student ${studentId} has no stripeCustomerId. Returning empty list.`);
             return res.status(200).json({ invoices: [] }); // No ID means no invoices
         }
 
@@ -374,9 +329,7 @@ app.get('/get-parent-invoices/:parentId', authenticateToken, async (req, res) =>
         console.log(`Fetching invoices from Stripe for customer: ${stripeCustomerId}`);
         const invoices = await stripe.invoices.list({
             customer: stripeCustomerId,
-            limit: 50, // Get the 50 most recent invoices
-            // IMPORTANT: 'expand' fetches all line items *with* the invoice list.
-            // This prevents your app from having to make 100s of extra requests.
+            limit: 50,
             expand: ['data.lines'] 
         });
 
@@ -384,32 +337,32 @@ app.get('/get-parent-invoices/:parentId', authenticateToken, async (req, res) =>
         res.status(200).json({ invoices: invoices.data });
 
     } catch (error) {
-        console.error(`Error fetching invoices for parent ${parentId}:`, error.message);
+        console.error(`Error fetching invoices for student ${studentId}:`, error.message);
         res.status(500).json({ error: 'Failed to fetch invoices.' });
     }
-}); // <-- End of /get-parent-invoices route
+}); // <-- End of /get-student-invoices route
 
 
-// --- *** NEW *** Get Parent's Stripe Subscriptions ---
-app.get('/get-parent-subscriptions/:parentId', authenticateToken, isAdmin, async (req, res) => {
-    const { parentId } = req.params;
-    console.log(`Fetching subscriptions for parent: ${parentId}`);
+// --- *** REWRITTEN *** Get Student's Stripe Subscriptions (Corrected) ---
+app.get('/get-student-subscriptions/:studentId', authenticateToken, async (req, res) => {
+    const { studentId } = req.params;
+    console.log(`Fetching subscriptions for student: ${studentId}`);
 
     try {
-        // 1. Get the parent document from Firestore
-        const parentRef = admin.firestore().doc(`organizations/${organizationId}/parents/${parentId}`);
-        const parentSnap = await parentRef.get();
+        // 1. Get the student document from Firestore (from the root collection)
+        const studentRef = admin.firestore().doc(`organizations/${organizationId}/students/${studentId}`);
+        const studentSnap = await studentRef.get();
 
-        if (!parentSnap.exists) {
-            console.warn(`Parent not found: ${parentId}`);
-            return res.status(444).json({ error: 'Parent not found.' });
+        if (!studentSnap.exists()) {
+            console.warn(`Student not found: ${studentId}`);
+            return res.status(404).json({ error: 'Student not found.' });
         }
 
-        const stripeCustomerId = parentSnap.data().stripeCustomerId;
+        const stripeCustomerId = studentSnap.data().stripeCustomerId;
 
-        // 2. Check if the parent is mapped to Stripe
+        // 2. Check if the student is mapped to Stripe
         if (!stripeCustomerId) {
-            console.log(`Parent ${parentId} has no stripeCustomerId. Returning empty list.`);
+            console.log(`Student ${studentId} has no stripeCustomerId. Returning empty list.`);
             return res.status(200).json({ subscriptions: [] }); // No ID means no subscriptions
         }
 
@@ -417,7 +370,7 @@ app.get('/get-parent-subscriptions/:parentId', authenticateToken, isAdmin, async
         console.log(`Fetching subscriptions from Stripe for customer: ${stripeCustomerId}`);
         const subscriptions = await stripe.subscriptions.list({
             customer: stripeCustomerId,
-            status: 'all', // You can change this to 'active' if you only want active ones
+            status: 'all',
             limit: 20
         });
 
@@ -425,60 +378,81 @@ app.get('/get-parent-subscriptions/:parentId', authenticateToken, isAdmin, async
         res.status(200).json({ subscriptions: subscriptions.data });
 
     } catch (error) {
-        console.error(`Error fetching subscriptions for parent ${parentId}:`, error.message);
+        console.error(`Error fetching subscriptions for student ${studentId}:`, error.message);
         res.status(500).json({ error: 'Failed to fetch subscriptions.' });
     }
-}); // <-- End of /get-parent-subscriptions route
+}); // <-- End of /get-student-subscriptions route
 
 
-// --- *** NEW *** Admin: Sync Firestore Parents with Stripe Customers ---
+// --- *** REWRITTEN *** Admin: Sync Firestore Students with Stripe Customers (Corrected) ---
 app.post('/admin/sync-stripe-customers', authenticateToken, isAdmin, async (req, res) => {
-    console.log('--- Starting Stripe Customer Sync ---');
+    console.log('--- Starting Stripe Customer Sync (Student-Centric) ---');
     
     try {
         const parentsRef = admin.firestore().collection(`organizations/${organizationId}/parents`);
-        const snapshot = await parentsRef.get();
+        const parentsSnap = await parentsRef.get();
 
-        if (snapshot.empty) {
+        if (parentsSnap.empty) {
             console.log('No parents found to sync.');
             return res.status(200).json({ message: 'No parents found.' });
+        }
+
+        // Create a map of all parents by their email for efficient lookup
+        const parentEmailMap = new Map();
+        for (const parentDoc of parentsSnap.docs) {
+            const parentData = parentDoc.data();
+            if (parentData.email) {
+                parentEmailMap.set(parentDoc.id, parentData.email);
+            }
+        }
+        
+        const studentsRef = admin.firestore().collection(`organizations/${organizationId}/students`);
+        const studentsSnap = await studentsRef.get();
+
+        if (studentsSnap.empty) {
+            console.log('No students found to sync.');
+            return res.status(200).json({ message: 'No students found.' });
         }
 
         let updatedCount = 0;
         let notFoundCount = 0;
         const promises = [];
 
-        // Loop through every parent in Firestore
-        for (const doc of snapshot.docs) {
-            const parentData = doc.data();
-            const parentId = doc.id;
+        // Loop through every student
+        for (const studentDoc of studentsSnap.docs) {
+            const studentData = studentDoc.data();
+            const studentId = studentDoc.id;
+            const studentName = studentData.name;
+            const parentIds = studentData.parents || [];
+            
+            // Try to find the student's billing email from their first parent
+            const primaryParentId = parentIds.length > 0 ? parentIds[0] : null;
+            const billingEmail = primaryParentId ? parentEmailMap.get(primaryParentId) : null;
 
-            // Only process parents who are NOT already mapped
-            if (!parentData.stripeCustomerId) {
-                if (!parentData.email) {
-                    console.warn(`Parent ${parentId} has no email, cannot sync.`);
-                    continue;
-                }
-
-                // Search Stripe for a customer with this email
-                const promise = stripe.customers.list({ email: parentData.email, limit: 1 })
+            // Only process students who are NOT already mapped and HAVE a name and parent email
+            if (!studentData.stripeCustomerId && studentName && billingEmail) {
+                
+                const promise = stripe.customers.list({ email: billingEmail, limit: 10 })
                     .then(async (existingCustomers) => {
-                        if (existingCustomers.data.length > 0) {
+                        // Find a customer with this parent's email AND this student's name
+                        const matchingCustomer = existingCustomers.data.find(c => c.name === studentName);
+
+                        if (matchingCustomer) {
                             // --- Customer Found ---
-                            const stripeId = existingCustomers.data[0].id;
-                            console.log(`MATCH: Parent ${parentId} (${parentData.email}) -> Stripe ${stripeId}`);
+                            const stripeId = matchingCustomer.id;
+                            console.log(`MATCH: Student ${studentId} (${studentName}) -> Stripe ${stripeId}`);
                             
                             // Save the ID back to Firestore
-                            await doc.ref.update({ stripeCustomerId: stripeId });
+                            await studentDoc.ref.update({ stripeCustomerId: stripeId });
                             updatedCount++;
                         } else {
                             // --- No Customer Found ---
-                            console.log(`NO MATCH: Parent ${parentId} (${parentData.email}) has no Stripe customer.`);
+                            console.log(`NO MATCH: Student ${studentId} (${studentName}) with email ${billingEmail} has no matching Stripe customer.`);
                             notFoundCount++;
                         }
                     })
                     .catch(err => {
-                        console.error(`Error syncing parent ${parentId}:`, err.message);
+                        console.error(`Error syncing student ${studentId}:`, err.message);
                     });
                 
                 promises.push(promise);
@@ -488,7 +462,7 @@ app.post('/admin/sync-stripe-customers', authenticateToken, isAdmin, async (req,
         // Wait for all updates to finish
         await Promise.all(promises);
 
-        const summary = `Sync complete. ${updatedCount} parents updated. ${notFoundCount} parents had no matching Stripe customer.`;
+        const summary = `Sync complete. ${updatedCount} students updated. ${notFoundCount} students had no matching Stripe customer.`;
         console.log(summary);
         res.status(200).json({ message: summary, updated: updatedCount, notFound: notFoundCount });
 
@@ -654,7 +628,7 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
         if (error.code === 'auth/user-not-found') {
             errorMessage = 'Target user not found.';
         }
-        res.status(500).json({ error: errorMessage });
+        res.status(5G00).json({ error: errorMessage });
     }
 });
 
