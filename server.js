@@ -119,7 +119,7 @@ app.post('/send-email', async (req, res) => {
     }
 
     // --- Format From and Reply-To ---
-    const formattedFrom = `State 48 Theatre <${senderEmail}>`;
+    const formattedFrom = `State 48 Arts and Academics <${senderEmail}>`;
 
     let formattedReplyTo;
     if (replyTo && replyTo.email && replyTo.name) {
