@@ -174,6 +174,7 @@ app.get('/list-users', authenticateToken, isAdmin, async (req, res) => {
         const users = listUsersResult.users.map(userRecord => ({
             uid: userRecord.uid,
             email: userRecord.email,
+            displayName: userRecord.displayName, // Include displayName
             isAdmin: userRecord.customClaims?.admin === true 
         }));
         console.log(`Successfully listed ${users.length} users.`);
@@ -184,21 +185,20 @@ app.get('/list-users', authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
-// --- MODIFIED: This route is updated ---
+// Create User
 app.post('/create-user', authenticateToken, isAdmin, async (req, res) => {
-    const { name, email, password } = req.body; // <-- MODIFIED
-    console.log(`Admin ${req.user.uid} attempting to create user: ${name} (${email})`); // <-- MODIFIED
+    const { name, email, password } = req.body; 
+    console.log(`Admin ${req.user.uid} attempting to create user: ${name} (${email})`); 
     
-    // --- MODIFIED: Added name validation ---
     if (!name || !email || !password || password.length < 6) { 
         console.error("Create user validation failed: Invalid name, email, or password length.");
-        return res.status(400).json({ error: 'Name, valid email, and password (min 6 chars) required.' }); // <-- MODIFIED
+        return res.status(400).json({ error: 'Name, valid email, and password (min 6 chars) required.' }); 
     }
     try {
         const userRecord = await admin.auth().createUser({
             email: email,
             password: password,
-            displayName: name // <-- ADDED
+            displayName: name 
         });
         console.log(`Successfully created user: ${userRecord.email} (UID: ${userRecord.uid})`);
         res.status(201).json({ uid: userRecord.uid, email: userRecord.email });
@@ -236,9 +236,46 @@ app.post('/delete-user', authenticateToken, isAdmin, async (req, res) => {
         if (error.code === 'auth/user-not-found') {
             errorMessage = 'User not found.';
         }
-        res.status(5Example 00).json({ error: errorMessage });
+        res.status(500).json({ error: errorMessage });
     }
 });
+
+// --- NEW ROUTE: Update User Name ---
+app.post('/update-user-name', authenticateToken, isAdmin, async (req, res) => {
+    const { uid, newName } = req.body;
+    const adminUid = req.user.uid; // Get the UID of the admin making the request
+
+    console.log(`Admin ${adminUid} attempting to update name for UID: ${uid} to "${newName}"`);
+
+    if (!uid || !newName || typeof newName !== 'string' || newName.trim().length === 0) {
+        console.error("Update name validation failed: Missing UID or newName.");
+        return res.status(400).json({ error: 'User ID (uid) and a non-empty new name required.' });
+    }
+
+    try {
+        await admin.auth().updateUser(uid, {
+            displayName: newName.trim() // Update the display name
+        });
+        console.log(`Successfully updated display name for user: ${uid}`);
+        
+        // If the admin is updating their own name, let the frontend know
+        const updatedSelf = uid === adminUid; 
+        
+        res.status(200).json({ 
+            message: 'User display name updated successfully.',
+            updatedSelf: updatedSelf // Send flag back to frontend
+        });
+
+    } catch (error) {
+        console.error(`Error updating name for user ${uid}:`, error);
+        let errorMessage = 'Failed to update display name.';
+        if (error.code === 'auth/user-not-found') {
+            errorMessage = 'User not found.';
+        }
+        res.status(500).json({ error: errorMessage });
+    }
+});
+
 
 // Set Admin Claim
 app.post('/set-admin', authenticateToken, async (req, res) => {
