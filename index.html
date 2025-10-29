@@ -958,65 +958,64 @@
         function createSubscriptionElement(subscription) { /* ... unchanged ... */ }
         
         // --- UPDATED MANUAL MAP FUNCTION (Asks for Account) ---
-        const handleMapStripeId = async (studentId, stripeCustomerIdInput) => {
-            if (!studentId || !stripeCustomerIdInput || !stripeCustomerIdInput.startsWith('cus_')) {
-                toast('Please enter a valid Stripe Customer ID (starts with cus_).', 'error');
-                return;
+const handleMapStripeId = async (studentId, stripeCustomerIdInput) => {
+    if (!studentId || !stripeCustomerIdInput || !stripeCustomerIdInput.startsWith('cus_')) {
+        toast('Please enter a valid Stripe Customer ID (starts with cus_).', 'error');
+        return;
+    }
+    if (!currentUser) { toast('Not authenticated.', 'error'); return; }
+
+    // --- Ask user which account this ID is for ---
+    const accountIdentifier = prompt(`Which account does this ID belong to? Enter '${ACCOUNT_ID_HALLE}' or '${ACCOUNT_ID_STATE48}':`);
+    if (accountIdentifier !== ACCOUNT_ID_HALLE && accountIdentifier !== ACCOUNT_ID_STATE48) {
+        toast('Invalid account identifier entered. Mapping cancelled.', 'error');
+        return;
+    }
+    // ------------------------------------------
+
+    console.log(`Attempting manual map: Student ${studentId} -> Stripe ${stripeCustomerIdInput} on account ${accountIdentifier}`);
+    const mapButton = document.querySelector(`.map-stripe-btn[data-student-id="${studentId}"]`);
+    if (mapButton) mapButton.textContent = 'Saving...'; // Basic loading state
+
+    try {
+        const idToken = await getIdToken(currentUser);
+        const serverUrl = HARDCODED_CONFIG.serverUrl;
+
+        // NOTE: Ensure NO TRAILING COMMAS inside this object {}
+        const response = await fetch(`${serverUrl}/map-stripe-customer`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ studentId, stripeCustomerId: stripeCustomerIdInput, accountIdentifier }) 
+        });
+
+        const result = await response.json();
+        if (!response.ok) { throw new Error(result.error || `Server error: ${response.status}`); }
+
+        toast(result.message, 'success');
+        
+        // Update local cache
+        const studentIndex = allStudentsCache.findIndex(s => s.id === studentId);
+        if (studentIndex !== -1) {
+            if (!allStudentsCache[studentIndex].stripeInfo) {
+                 allStudentsCache[studentIndex].stripeInfo = {};
             }
-            if (!currentUser) { toast('Not authenticated.', 'error'); return; }
+            allStudentsCache[studentIndex].stripeInfo[accountIdentifier] = stripeCustomerIdInput;
+        }
+        
+        // Re-render relevant list
+        if (currentView === 'student') renderCol1StudentList(); 
+        else if (currentView === 'class' && currentClassId) renderCol2StudentList(currentClassId); 
+        
+        if (currentStudentId === studentId) loadStudentBillingData(studentId);
 
-            // --- Ask user which account this ID is for ---
-            const accountIdentifier = prompt(`Which account does this ID belong to? Enter '${ACCOUNT_ID_HALLE}' or '${ACCOUNT_ID_STATE48}':`);
-            if (accountIdentifier !== ACCOUNT_ID_HALLE && accountIdentifier !== ACCOUNT_ID_STATE48) {
-                toast('Invalid account identifier entered. Mapping cancelled.', 'error');
-                return;
-            }
-            // ------------------------------------------
-
-            console.log(`Attempting manual map: Student ${studentId} -> Stripe ${stripeCustomerIdInput} on account ${accountIdentifier}`);
-            const mapButton = document.querySelector(`.map-stripe-btn[data-student-id="${studentId}"]`);
-            if (mapButton) mapButton.textContent = 'Saving...'; // Basic loading state
-
-            try {
-                const idToken = await getIdToken(currentUser);
-                const serverUrl = HARDCODED_CONFIG.serverUrl;
-
-                const response = await fetch(`${serverUrl}/map-stripe-customer`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, // NOTE: Comma added here.
-                    // --- Send accountIdentifier in body ---
-                    body: JSON.stringify({ studentId, stripeCustomerId: stripeCustomerIdInput, accountIdentifier }) 
-                });
-
-                const result = await response.json();
-                if (!response.ok) { throw new Error(result.error || `Server error: ${response.status}`); }
-
-                toast(result.message, 'success');
-                
-                // Update local cache
-                const studentIndex = allStudentsCache.findIndex(s => s.id === studentId);
-                if (studentIndex !== -1) {
-                    // Ensure stripeInfo exists
-                    if (!allStudentsCache[studentIndex].stripeInfo) {
-                         allStudentsCache[studentIndex].stripeInfo = {};
-                    }
-                    allStudentsCache[studentIndex].stripeInfo[accountIdentifier] = stripeCustomerIdInput;
-                }
-                
-                // Re-render relevant list
-                if (currentView === 'student') renderCol1StudentList(); 
-                else if (currentView === 'class' && currentClassId) renderCol2StudentList(currentClassId); 
-                
-                if (currentStudentId === studentId) loadStudentBillingData(studentId);
-
-            } catch (error) {
-                console.error("Manual Map Error:", error);
-                toast(`Mapping failed: ${error.message}`, 'error');
-            } finally {
-                 if (mapButton) mapButton.textContent = 'Save'; // Reset button text
-            }
-        };
-        // --- END MANUAL MAP FUNCTION ---
+    } catch (error) {
+        console.error("Manual Map Error:", error);
+        toast(`Mapping failed: ${error.message}`, 'error');
+    } finally {
+         if (mapButton) mapButton.textContent = 'Save'; // Reset button text
+    }
+};
+// --- END MANUAL MAP FUNCTION ---
 
         const promptInvoiceParentSelection = async (studentId, studentName) => {
              document.getElementById('invoice-student-id').value = studentId; 
