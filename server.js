@@ -11,22 +11,29 @@ import Stripe from 'stripe'; // Import Stripe
 const serviceAccountKeyBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 const resendApiKey = process.env.RESEND_API_KEY;
 const senderEmail = process.env.SENDER_EMAIL; // Verified sender in Resend
-// --- REMOVED single stripeSecretKey reference ---
 const organizationId = process.env.ORGANIZATION_ID || "State-48-Dance"; // Get Org ID or use default
 
-// --- NEW: Stripe Secret Keys ---
+// --- NEW: Stripe Secret Keys (Must be set in Render environment variables) ---
 const stripeSecretKeyHalleDance = process.env.STRIPE_SECRET_KEY_HALLE_DANCE;
 const stripeSecretKeyState48Arts = process.env.STRIPE_SECRET_KEY_STATE48ARTS_ORG; // Use _ORG for env var
 
-// --- NEW: Stripe Account Identifiers (Match Firestore keys) ---
+// --- NEW: Stripe Account Identifiers (Match Firestore keys and Frontend) ---
 const ACCOUNT_ID_HALLE = 'halle_dance';
 const ACCOUNT_ID_STATE48 = 'state48arts.org';
 
 // Validate critical environment variables
-if (!serviceAccountKeyBase64) { /* ... */ }
-if (!resendApiKey) { /* ... */ }
-if (!senderEmail) { /* ... */ }
-// --- NEW: Validate BOTH Stripe keys ---
+if (!serviceAccountKeyBase64) { 
+    console.error('FATAL ERROR: FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set.');
+    process.exit(1);
+}
+if (!resendApiKey) { 
+    console.error('FATAL ERROR: RESEND_API_KEY environment variable is not set.');
+    process.exit(1);
+}
+if (!senderEmail) { 
+    console.error('FATAL ERROR: SENDER_EMAIL environment variable is not set.');
+    process.exit(1);
+}
 if (!stripeSecretKeyHalleDance) {
     console.error('FATAL ERROR: STRIPE_SECRET_KEY_HALLE_DANCE environment variable is not set.');
     process.exit(1);
@@ -35,14 +42,19 @@ if (!stripeSecretKeyState48Arts) {
     console.error('FATAL ERROR: STRIPE_SECRET_KEY_STATE48ARTS_ORG environment variable is not set.');
     process.exit(1);
 }
-if (!organizationId) { /* ... */ }
+if (!organizationId) { 
+    console.warn('WARNING: ORGANIZATION_ID environment variable not set. Using default:', organizationId);
+}
 
 // Decode the base64 service account key
 let serviceAccount;
 try {
     const serviceAccountJson = Buffer.from(serviceAccountKeyBase64, 'base64').toString('utf8');
     serviceAccount = JSON.parse(serviceAccountJson);
-} catch (error) { /* ... */ }
+} catch (error) { 
+    console.error('FATAL ERROR: Could not parse FIREBASE_SERVICE_ACCOUNT_KEY. Ensure it is a valid base64 encoded JSON string.', error);
+    process.exit(1);
+}
 
 
 // --- Firebase Admin Initialization ---
@@ -51,14 +63,15 @@ try {
         credential: admin.credential.cert(serviceAccount)
     });
     console.log("Firebase Admin SDK initialized successfully.");
-} catch (error) { /* ... */ }
+} catch (error) { 
+    console.error("Firebase Admin SDK initialization failed:", error);
+    process.exit(1);
+}
 
 // --- Resend Initialization ---
 const resend = new Resend(resendApiKey);
 console.log("Resend configured.");
 
-// --- Stripe Initialization (No longer needed globally for requests) ---
-// const stripe = Stripe(stripeSecretKey); // REMOVED
 console.log("Stripe library loaded. Instances will be created dynamically.");
 
 
@@ -71,10 +84,36 @@ app.use(cors()); // Enable CORS for all origins
 app.use(express.json()); // Parse JSON request bodies
 
 // --- Authentication Middleware ---
-const authenticateToken = async (req, res, next) => { /* ... */ };
+const authenticateToken = async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token == null) {
+        console.log("Auth token missing");
+        return res.status(401).json({ error: 'Authentication token required' });
+    }
+
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        req.user = decodedToken;
+        console.log(`Authenticated user: ${req.user.uid} (${req.user.email || 'No email'})`);
+        next();
+    } catch (error) {
+        console.error('Token verification failed:', error);
+        return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+};
 
 // --- Admin Check Middleware ---
-const isAdmin = (req, res, next) => { /* ... */ };
+const isAdmin = (req, res, next) => {
+    if (req.user && req.user.admin === true) {
+        console.log(`Admin check passed for user: ${req.user.uid}`);
+        next(); // User is admin, proceed
+    } else {
+        console.log(`Admin check failed for user: ${req.user.uid}`);
+        return res.status(403).json({ error: 'Admin privileges required' });
+    }
+};
 
 // --- Helper Function to Get Stripe Instance ---
 const getStripeInstance = (accountIdentifier) => {
@@ -98,14 +137,41 @@ const getStripeInstance = (accountIdentifier) => {
 // --- API Routes ---
 
 // Test Route (Optional)
-app.get('/', (req, res) => { /* ... */ });
+app.get('/', (req, res) => {
+    res.send('After School Mailer Server is running!');
+});
 
 // --- Email Sending Route ---
-app.post('/send-email', authenticateToken, async (req, res) => { /* ... */ });
+app.post('/send-email', authenticateToken, async (req, res) => {
+    const { to, bcc, subject, text, replyTo } = req.body;
+    const recipient = to || (bcc && bcc.length > 0 ? senderEmail : null);
+    if (!recipient || !subject || !text) {
+        return res.status(400).json({ error: 'Missing required fields: to/bcc, subject, text' });
+    }
+    const formattedFrom = `State 48 Theatre <${senderEmail}>`;
+    let formattedReplyTo;
+    if (replyTo && replyTo.email && replyTo.name) {
+        formattedReplyTo = `${replyTo.name} <${replyTo.email}>`;
+    } else {
+        formattedReplyTo = formattedFrom;
+    }
+    const resendPayload = {
+        to: recipient, bcc: bcc || undefined, from: formattedFrom,
+        replyTo: formattedReplyTo, subject: subject, text: text,
+    };
+    try {
+        const { data, error } = await resend.emails.send(resendPayload);
+        if (error) {
+            return res.status(500).json({ error: 'Failed to send email. Check server logs.' });
+        }
+        res.status(200).json({ message: 'Email sent successfully!' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to send email. Check server logs.' });
+    }
+}); // <-- End of /send-email route
 
-// --- *** UPDATED *** Create Stripe Invoice Route (Multi-Account) ---
+// --- Create Stripe Invoice Route (Multi-Account) ---
 app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
-    // Frontend MUST send accountIdentifier
     const { parentId, studentId, studentName, amount, description, accountIdentifier } = req.body;
     const adminUid = req.user.uid;
 
@@ -114,16 +180,16 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
 
     // Validate accountIdentifier
     if (accountIdentifier !== ACCOUNT_ID_HALLE && accountIdentifier !== ACCOUNT_ID_STATE48) {
-        console.error("Create invoice validation failed: Invalid accountIdentifier.");
         return res.status(400).json({ error: 'Invalid business account specified.' });
     }
     // Basic validation for other fields
     if (!parentId || !studentId || !studentName || !amount || !description || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-         console.error("Create invoice validation failed: Missing fields or invalid amount.");
          return res.status(400).json({ error: 'Parent ID, Student ID, Student Name, Description, Account, and a valid positive Amount required.' });
     }
     const amountInCents = Math.round(parseFloat(amount) * 100);
-    if (amountInCents === 0 && parseFloat(amount) > 0) { /* ... handle zero amount error ... */ }
+    if (amountInCents === 0 && parseFloat(amount) > 0) {
+         return res.status(500).json({ error: 'Internal server error: Failed to calculate invoice amount correctly.'});
+    }
 
     let studentRef;
     let createdInvoiceItemId = null;
@@ -149,22 +215,18 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
         const customerName = studentData.name || studentName;
 
         // --- 2. Get/Create Stripe Customer ID *for this account* ---
-        let stripeCustomerId = studentData.stripeInfo?.[accountIdentifier]; // Get ID specific to this account
-        let isNewCustomer = false;
-
+        // Ensure stripeInfo is initialized to an empty object if undefined
+        const stripeInfo = studentData.stripeInfo || {};
+        let stripeCustomerId = stripeInfo[accountIdentifier]; 
+        
         if (!stripeCustomerId) {
-            console.log(`No Stripe customer ID found for student ${studentId} on account ${accountIdentifier}. Creating/Finding...`);
-            isNewCustomer = true;
             let customer;
-            // Use the account-specific Stripe instance
             const existingCustomers = await stripeForAccount.customers.list({ email: billingEmail, limit: 10 });
             const matchingCustomer = existingCustomers.data.find(c => c.name === customerName);
 
             if (matchingCustomer) {
                 stripeCustomerId = matchingCustomer.id;
-                console.log(`Found existing Stripe customer by name/email: ${stripeCustomerId} on account ${accountIdentifier}`);
             } else {
-                console.log(`Creating new Stripe customer for student ${customerName} with email ${billingEmail} on account ${accountIdentifier}`);
                 customer = await stripeForAccount.customers.create({
                     name: customerName,
                     email: billingEmail,
@@ -175,22 +237,15 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
                     }
                 });
                 stripeCustomerId = customer.id;
-                console.log(`Created new Stripe customer: ${stripeCustomerId}`);
             }
 
             // --- IMPORTANT: Update Firestore map ---
-            // Use Field Path notation or template literal to update nested map field
             const updateData = {};
-            updateData[`stripeInfo.${accountIdentifier}`] = stripeCustomerId; // e.g., stripeInfo.halle_dance = "cus_..."
+            updateData[`stripeInfo.${accountIdentifier}`] = stripeCustomerId;
             await studentRef.update(updateData);
-            console.log(`Saved Stripe ID ${stripeCustomerId} to Firestore STUDENT ${studentId} for account ${accountIdentifier}`);
-
-        } else {
-            console.log(`Using existing Stripe customer ID: ${stripeCustomerId} for student ${studentId} on account ${accountIdentifier}`);
         }
 
         // --- 3. Create Draft Invoice (using specific Stripe instance) ---
-        console.log(`Creating draft invoice for customer ${stripeCustomerId} on account ${accountIdentifier}`);
         const draftInvoice = await stripeForAccount.invoices.create({
             customer: stripeCustomerId,
             collection_method: 'send_invoice',
@@ -200,10 +255,8 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
             metadata: { firestoreStudentId: studentId, firestoreParentId: parentId, createdByAdminUid: adminUid, account: accountIdentifier }
         });
         draftInvoiceId = draftInvoice.id;
-        console.log(`Created draft invoice: ${draftInvoice.id}`);
 
         // --- 4. Create Invoice Item *and Attach* (using specific Stripe instance) ---
-        console.log(`Creating invoice item and attaching to ${draftInvoice.id}, amount: ${amountInCents}`);
         const invoiceItem = await stripeForAccount.invoiceItems.create({
             customer: stripeCustomerId,
             amount: amountInCents,
@@ -213,33 +266,34 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
             invoice: draftInvoice.id
         });
         createdInvoiceItemId = invoiceItem.id;
-        console.log(`Created invoice item: ${createdInvoiceItemId}`);
 
         // --- 5. PRE-FINALIZATION CHECK (using specific Stripe instance) ---
         const retrievedDraft = await stripeForAccount.invoices.retrieve(draftInvoice.id);
-        console.log(`DEBUG: Retrieved draft invoice ${retrievedDraft.id}. Status: ${retrievedDraft.status}, Total: ${retrievedDraft.total}`);
         if (retrievedDraft.total === 0 && amountInCents > 0) {
             throw new Error("Invoice item did not attach. Aborting finalization.");
         }
 
         // --- 6. Finalize the Invoice (using specific Stripe instance) ---
-        console.log(`Finalizing invoice: ${draftInvoice.id}`);
         const finalizedInvoice = await stripeForAccount.invoices.finalizeInvoice(draftInvoice.id, {
           idempotencyKey: `finalize-${draftInvoice.id}-${Date.now()}`
         });
-        console.log(`Finalized invoice: ${finalizedInvoice.id}, Status: ${finalizedInvoice.status}, Final Amount Due: ${finalizedInvoice.amount_due}`);
 
-        res.status(200).json({ /* ... response ... */ });
+        res.status(200).json({ 
+            message: 'Invoice created successfully!',
+            invoiceId: finalizedInvoice.id,
+            invoiceStatus: finalizedInvoice.status,
+            invoiceUrl: finalizedInvoice.hosted_invoice_url
+        });
 
     } catch (error) {
         console.error(`Stripe Invoice Creation Error on account ${accountIdentifier || 'unknown'}:`, error);
         // --- Cleanup Logic (Needs account-specific Stripe instance!) ---
         if (stripeForAccount && createdInvoiceItemId) {
-             try { await stripeForAccount.invoiceItems.del(createdInvoiceItemId); console.log(`Deleted item ${createdInvoiceItemId}`); }
+             try { await stripeForAccount.invoiceItems.del(createdInvoiceItemId); }
              catch (e) { console.error(`Failed delete item ${createdInvoiceItemId}:`, e.message); }
         }
         if (stripeForAccount && draftInvoiceId) {
-             try { await stripeForAccount.invoices.del(draftInvoiceId); console.log(`Deleted draft ${draftInvoiceId}`); }
+             try { await stripeForAccount.invoices.del(draftInvoiceId); }
              catch (e) { console.error(`Failed delete draft ${draftInvoiceId}:`, e.message); }
         }
         if (!res.headersSent) {
@@ -249,40 +303,31 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
 }); // <-- End of /create-invoice route
 
 
-// --- *** UPDATED *** Get Student's Stripe Invoices (Multi-Account) ---
-// Frontend MUST call: GET /get-student-invoices/:studentId/:accountIdentifier
+// --- Get Student's Stripe Invoices (Multi-Account) ---
 app.get('/get-student-invoices/:studentId/:accountIdentifier', authenticateToken, async (req, res) => {
-    const { studentId, accountIdentifier } = req.params; // Get both IDs
+    const { studentId, accountIdentifier } = req.params; 
 
-    console.log(`Fetching invoices for student: ${studentId} on account: ${accountIdentifier}`);
-
-    // Validate accountIdentifier
     if (accountIdentifier !== ACCOUNT_ID_HALLE && accountIdentifier !== ACCOUNT_ID_STATE48) {
         return res.status(400).json({ error: 'Invalid account identifier specified.' });
     }
 
     try {
-        // --- Get Stripe instance ---
         const stripeForAccount = getStripeInstance(accountIdentifier);
 
-        // 1. Get student data
         const studentRef = admin.firestore().doc(`organizations/${organizationId}/students/${studentId}`);
         const studentSnap = await studentRef.get();
-        if (!studentSnap.exists) {
+        // --- FIX: Use .exists property ---
+        if (!studentSnap.exists) { 
             return res.status(404).json({ error: 'Student not found.' });
         }
         const studentData = studentSnap.data();
 
-        // 2. Get the correct Stripe Customer ID from the map
         const stripeCustomerId = studentData.stripeInfo?.[accountIdentifier];
 
         if (!stripeCustomerId) {
-            console.log(`Student ${studentId} has no Stripe Customer ID for account ${accountIdentifier}.`);
             return res.status(200).json({ invoices: [] });
         }
 
-        // 3. Make the API call using the specific Stripe instance
-        console.log(`Fetching invoices for customer ${stripeCustomerId} using key for ${accountIdentifier}`);
         const invoices = await stripeForAccount.invoices.list({
             customer: stripeCustomerId,
             limit: 50,
@@ -293,7 +338,6 @@ app.get('/get-student-invoices/:studentId/:accountIdentifier', authenticateToken
 
     } catch (error) {
         console.error(`Error fetching invoices for student ${studentId} on account ${accountIdentifier}:`, error.message);
-        // Distinguish config errors from other errors
         if (error.message.startsWith('Missing Stripe secret key')) {
              res.status(500).json({ error: 'Server configuration error.' });
         } else if (error.message.startsWith('Invalid account identifier')) {
@@ -305,39 +349,31 @@ app.get('/get-student-invoices/:studentId/:accountIdentifier', authenticateToken
 }); // <-- End of /get-student-invoices route
 
 
-// --- *** UPDATED *** Get Student's Stripe Subscriptions (Multi-Account) ---
-// Frontend MUST call: GET /get-student-subscriptions/:studentId/:accountIdentifier
+// --- Get Student's Stripe Subscriptions (Multi-Account) ---
 app.get('/get-student-subscriptions/:studentId/:accountIdentifier', authenticateToken, async (req, res) => {
     const { studentId, accountIdentifier } = req.params;
-
-    console.log(`Fetching subscriptions for student: ${studentId} on account: ${accountIdentifier}`);
 
     if (accountIdentifier !== ACCOUNT_ID_HALLE && accountIdentifier !== ACCOUNT_ID_STATE48) {
         return res.status(400).json({ error: 'Invalid account identifier specified.' });
     }
 
     try {
-        // --- Get Stripe instance ---
         const stripeForAccount = getStripeInstance(accountIdentifier);
 
-        // 1. Get student data
         const studentRef = admin.firestore().doc(`organizations/${organizationId}/students/${studentId}`);
         const studentSnap = await studentRef.get();
+        // --- FIX: Use .exists property ---
         if (!studentSnap.exists) {
             return res.status(404).json({ error: 'Student not found.' });
         }
         const studentData = studentSnap.data();
 
-        // 2. Get the correct Stripe Customer ID
         const stripeCustomerId = studentData.stripeInfo?.[accountIdentifier];
 
         if (!stripeCustomerId) {
-            console.log(`Student ${studentId} has no Stripe Customer ID for account ${accountIdentifier}.`);
             return res.status(200).json({ subscriptions: [] });
         }
 
-        // 3. Make the API call
-        console.log(`Fetching subscriptions for customer ${stripeCustomerId} using key for ${accountIdentifier}`);
         const subscriptions = await stripeForAccount.subscriptions.list({
             customer: stripeCustomerId,
             status: 'all',
@@ -359,14 +395,13 @@ app.get('/get-student-subscriptions/:studentId/:accountIdentifier', authenticate
 }); // <-- End of /get-student-subscriptions route
 
 
-// --- *** UPDATED *** Admin: Sync Firestore Students with Stripe Customers (Multi-Account) ---
+// --- Admin: Sync Firestore Students with Stripe Customers (Multi-Account) ---
 app.post('/admin/sync-stripe-customers', authenticateToken, isAdmin, async (req, res) => {
     console.log('--- Starting Stripe Customer Sync (Multi-Account) ---');
 
     try {
         const parentsRef = admin.firestore().collection(`organizations/${organizationId}/parents`);
         const parentsSnap = await parentsRef.get();
-        if (parentsSnap.empty) { /* ... handle no parents ... */ }
 
         const parentEmailMap = new Map();
         parentsSnap.docs.forEach(doc => {
@@ -375,7 +410,6 @@ app.post('/admin/sync-stripe-customers', authenticateToken, isAdmin, async (req,
 
         const studentsRef = admin.firestore().collection(`organizations/${organizationId}/students`);
         const studentsSnap = await studentsRef.get();
-        if (studentsSnap.empty) { /* ... handle no students ... */ }
 
         let updatedCount = 0;
         let notFoundCount = 0;
@@ -395,7 +429,6 @@ app.post('/admin/sync-stripe-customers', authenticateToken, isAdmin, async (req,
             const billingEmail = primaryParentId ? parentEmailMap.get(primaryParentId) : null;
 
             if (!studentName || !billingEmail) {
-                console.warn(`Skipping student ${studentId}: Missing name or parent email.`);
                 continue; // Skip if essential info is missing
             }
 
@@ -403,9 +436,9 @@ app.post('/admin/sync-stripe-customers', authenticateToken, isAdmin, async (req,
             for (const account of accountsToSync) {
                 const accountIdentifier = account.id;
 
-                // Only sync if this student IS NOT already mapped for THIS account
-                if (!studentData.stripeInfo?.[accountIdentifier]) {
-                    console.log(`Checking account ${accountIdentifier} for student ${studentId} (${studentName})...`);
+                // Check if already mapped for this account
+                if (!(studentData.stripeInfo?.[accountIdentifier])) {
+                    
                     try {
                         const stripeForAccount = Stripe(account.key); // Use specific key
                         const promise = stripeForAccount.customers.list({ email: billingEmail, limit: 10 })
@@ -413,13 +446,11 @@ app.post('/admin/sync-stripe-customers', authenticateToken, isAdmin, async (req,
                                 const matchingCustomer = existingCustomers.data.find(c => c.name === studentName);
                                 if (matchingCustomer) {
                                     const stripeId = matchingCustomer.id;
-                                    console.log(`MATCH: Student ${studentId} -> Stripe ${stripeId} ON ACCOUNT ${accountIdentifier}`);
                                     const updateData = {};
                                     updateData[`stripeInfo.${accountIdentifier}`] = stripeId;
                                     await studentDoc.ref.update(updateData);
                                     updatedCount++;
                                 } else {
-                                    console.log(`NO MATCH: Student ${studentId} (${studentName}) on account ${accountIdentifier}.`);
                                     notFoundCount++; // Increment per account check
                                 }
                             })
@@ -436,9 +467,8 @@ app.post('/admin/sync-stripe-customers', authenticateToken, isAdmin, async (req,
 
         await Promise.all(promises);
 
-        const summary = `Sync complete. ${updatedCount} mappings updated/created. ${notFoundCount} potential matches not found (across all account checks).`;
-        console.log(summary);
-        res.status(200).json({ message: summary, updated: updatedCount, notFound: notFoundCount });
+        const summary = `Sync complete. ${updatedCount} mappings updated/created.`;
+        res.status(200).json({ message: summary, updated: updatedCount });
 
     } catch (error) {
         console.error('Error during Stripe customer sync:', error.message);
@@ -446,14 +476,10 @@ app.post('/admin/sync-stripe-customers', authenticateToken, isAdmin, async (req,
     }
 }); // <-- End of /admin/sync-stripe-customers route
 
-// --- *** UPDATED *** Manually Map Stripe Customer ID (Multi-Account) ---
+// --- Manually Map Stripe Customer ID (Multi-Account) ---
 app.post('/map-stripe-customer', authenticateToken, isAdmin, async (req, res) => {
-    // Frontend MUST send accountIdentifier
     const { studentId, stripeCustomerId, accountIdentifier } = req.body;
 
-    console.log(`Manual map request: Student ${studentId} -> Stripe ${stripeCustomerId} on account ${accountIdentifier}`);
-
-    // Validate accountIdentifier
     if (accountIdentifier !== ACCOUNT_ID_HALLE && accountIdentifier !== ACCOUNT_ID_STATE48) {
         return res.status(400).json({ error: 'Invalid business account specified.' });
     }
@@ -462,30 +488,30 @@ app.post('/map-stripe-customer', authenticateToken, isAdmin, async (req, res) =>
     }
 
     try {
-        // --- Get Stripe instance ---
         const stripeForAccount = getStripeInstance(accountIdentifier);
         const studentRef = admin.firestore().doc(`organizations/${organizationId}/students/${studentId}`);
 
         // Verify the Stripe Customer ID exists in the SPECIFIED Stripe account
         try {
             await stripeForAccount.customers.retrieve(stripeCustomerId);
-            console.log(`Stripe customer ${stripeCustomerId} verified on account ${accountIdentifier}.`);
-        } catch (stripeError) { /* ... handle Stripe not found error ... */ }
+        } catch (stripeError) {
+            if (stripeError.type === 'StripeInvalidRequestError') {
+                 return res.status(400).json({ error: `Stripe Customer ID "${stripeCustomerId}" not found in ${accountIdentifier}.` });
+            }
+             throw stripeError;
+        }
 
         // Update Firestore map using Field Path notation
         const updateData = {};
         updateData[`stripeInfo.${accountIdentifier}`] = stripeCustomerId;
         await studentRef.update(updateData);
 
-        console.log(`Successfully mapped student ${studentId} to ${stripeCustomerId} for account ${accountIdentifier}`);
         res.status(200).json({ message: 'Stripe Customer ID mapped successfully!' });
 
     } catch (error) {
         console.error(`Error mapping Stripe ID for student ${studentId} on account ${accountIdentifier}:`, error.message);
         if (error.message.startsWith('Missing Stripe secret key')) {
              res.status(500).json({ error: 'Server configuration error.' });
-        } else if (error.message.startsWith('Invalid account identifier')) {
-            res.status(400).json({ error: 'Invalid account identifier.' });
         } else {
              res.status(500).json({ error: 'Failed to map Stripe Customer ID.' });
         }
@@ -493,11 +519,115 @@ app.post('/map-stripe-customer', authenticateToken, isAdmin, async (req, res) =>
 }); // <-- End of /map-stripe-customer route
 
 // --- User Management Routes ---
-app.get('/list-users', authenticateToken, isAdmin, async (req, res) => { /* ... unchanged ... */ });
-app.post('/create-user', authenticateToken, isAdmin, async (req, res) => { /* ... unchanged ... */ });
-app.post('/delete-user', authenticateToken, isAdmin, async (req, res) => { /* ... unchanged ... */ });
-app.post('/update-user-name', authenticateToken, isAdmin, async (req, res) => { /* ... unchanged ... */ });
-app.post('/set-admin', authenticateToken, async (req, res) => { /* ... unchanged (already had 500 error fix) ... */ });
+app.get('/list-users', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const listUsersResult = await admin.auth().listUsers(1000);
+        const users = listUsersResult.users.map(userRecord => ({
+            uid: userRecord.uid, email: userRecord.email, displayName: userRecord.displayName, isAdmin: userRecord.customClaims?.admin === true
+        }));
+        res.status(200).json({ users });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to list users.' });
+    }
+});
+
+app.post('/create-user', authenticateToken, isAdmin, async (req, res) => {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password || password.length < 6) {
+        return res.status(400).json({ error: 'Name, valid email, and password (min 6 chars) required.' });
+    }
+    try {
+        const userRecord = await admin.auth().createUser({ email: email, password: password, displayName: name });
+        res.status(201).json({ uid: userRecord.uid, email: userRecord.email });
+    } catch (error) {
+        let errorMessage = 'Failed to create user.';
+        if (error.code === 'auth/email-already-exists') {
+            errorMessage = 'Email address is already in use.';
+        } else if (error.code === 'auth/invalid-password') {
+             errorMessage = 'Password must be at least 6 characters long.';
+        }
+        res.status(500).json({ error: errorMessage });
+    }
+});
+
+app.post('/delete-user', authenticateToken, isAdmin, async (req, res) => {
+    const { uid } = req.body;
+    if (!uid) {
+        return res.status(400).json({ error: 'User ID (uid) required.' });
+    }
+    if (uid === req.user.uid) {
+        return res.status(400).json({ error: 'Admin cannot delete their own account.' });
+    }
+    try {
+        await admin.auth().deleteUser(uid);
+        res.status(200).json({ message: 'User deleted successfully.' });
+    } catch (error) {
+        let errorMessage = 'Failed to delete user.';
+        if (error.code === 'auth/user-not-found') {
+            errorMessage = 'User not found.';
+        }
+        res.status(500).json({ error: errorMessage });
+    }
+});
+
+app.post('/update-user-name', authenticateToken, isAdmin, async (req, res) => {
+    const { uid, newName } = req.body;
+    const adminUid = req.user.uid;
+
+    if (!uid || !newName || typeof newName !== 'string' || newName.trim().length === 0) {
+        return res.status(400).json({ error: 'User ID (uid) and a non-empty new name required.' });
+    }
+
+    try {
+        await admin.auth().updateUser(uid, {
+            displayName: newName.trim()
+        });
+        const updatedSelf = uid === adminUid;
+        res.status(200).json({ message: 'User display name updated successfully.', updatedSelf: updatedSelf });
+    } catch (error) {
+        let errorMessage = 'Failed to update display name.';
+        if (error.code === 'auth/user-not-found') {
+            errorMessage = 'User not found.';
+        }
+        res.status(500).json({ error: errorMessage });
+    }
+});
+
+app.post('/set-admin', authenticateToken, async (req, res) => {
+    const { uidToMakeAdmin } = req.body;
+    const requestingUserUid = req.user.uid;
+
+    if (!uidToMakeAdmin) {
+        return res.status(400).json({ error: 'Target User ID (uidToMakeAdmin) required.' });
+    }
+
+    try {
+        let canSetAdmin = false;
+        if (req.user.admin === true) {
+            canSetAdmin = true;
+        } else if (uidToMakeAdmin === requestingUserUid) {
+            const listUsersResult = await admin.auth().listUsers(10);
+            const existingAdmins = listUsersResult.users.filter(u => u.customClaims?.admin === true);
+            if (existingAdmins.length === 0) {
+                canSetAdmin = true;
+            }
+        }
+
+        if (!canSetAdmin) {
+             return res.status(403).json({ error: 'Admin privileges required or bootstrap condition not met.' });
+        }
+
+        await admin.auth().setCustomUserClaims(uidToMakeAdmin, { admin: true });
+        res.status(200).json({ message: 'Admin privileges granted. User must sign out and back in for changes to take effect.' });
+
+    } catch (error) {
+        let errorMessage = 'Failed to set admin privileges.';
+        if (error.code === 'auth/user-not-found') {
+            errorMessage = 'Target user not found.';
+        }
+        res.status(500).json({ error: errorMessage });
+    }
+});
 
 // --- Start Server ---
 app.listen(port, () => {
