@@ -983,7 +983,7 @@
 
                 const response = await fetch(`${serverUrl}/map-stripe-customer`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, // NOTE: Comma added here.
                     // --- Send accountIdentifier in body ---
                     body: JSON.stringify({ studentId, stripeCustomerId: stripeCustomerIdInput, accountIdentifier }) 
                 });
@@ -1048,7 +1048,7 @@
              } catch (error) { /* ... handle error loading contacts ... */ }
          };
 
-        // --- UPDATED: Handle Create Invoice (Sends Account Identifier) ---
+        /// --- UPDATED: Handle Create Invoice (Sends Account Identifier) ---
         const handleCreateInvoice = async (e) => {
             e.preventDefault(); 
             const btn = document.getElementById('create-invoice-btn'); 
@@ -1061,7 +1061,6 @@
             const description = document.getElementById('invoice-description').value; 
             const studentId = document.getElementById('invoice-student-id').value; 
             const studentName = allStudentsCache.find(s => s.id === studentId)?.name || null; 
-            // --- Get Selected Account ---
             const accountIdentifier = determineAccountContextForInvoice(); 
             
             if (!parentId || !studentId || !amount || !description || !accountIdentifier) { 
@@ -1069,15 +1068,18 @@
                 statusEl.classList.add('text-red-600'); 
                 btn.disabled = false; return; 
             }
-            if (!currentUser) { /* ... handle not authenticated ... */ return; }
+            if (!currentUser) { 
+                 statusEl.textContent = 'Not authenticated.'; 
+                 statusEl.classList.add('text-red-600'); 
+                 btn.disabled = false; return;
+            }
             
             try {
                 const idToken = await getIdToken(currentUser); 
                 const serverUrl = HARDCODED_CONFIG.serverUrl;
                 const response = await fetch(`${serverUrl}/create-invoice`, { 
                     method: 'POST', 
-                    headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`}, 
-                    // --- Send accountIdentifier ---
+                    headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`}, // NOTE: Comma added here.
                     body: JSON.stringify({ parentId, studentId, studentName, amount, description, accountIdentifier }) 
                 });
                 if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); }
@@ -1088,7 +1090,6 @@
                 if (result.invoiceUrl) { statusEl.innerHTML += ` <a href="${result.invoiceUrl}" target="_blank" class="text-blue-600 hover:underline">View</a>`; }
                 document.getElementById('invoice-amount').value = ''; 
                 document.getElementById('invoice-description').value = '';
-                // No need to reset account selector here
                 setTimeout(() => closeModal('invoice-modal'), 4000); 
             } catch (error) { 
                 statusEl.textContent = `Error: ${error.message}`; 
