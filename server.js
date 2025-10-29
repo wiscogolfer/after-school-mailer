@@ -487,7 +487,8 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
 
         if (!canSetAdmin) {
              console.log("Set admin permission denied.");
-             return res.status(4G03).json({ error: 'Admin privileges required or bootstrap condition not met.' });
+             // --- THIS IS THE FIX ---
+             return res.status(403).json({ error: 'Admin privileges required or bootstrap condition not met.' });
         }
 
         await admin.auth().setCustomUserClaims(uidToMakeAdmin, { admin: true });
