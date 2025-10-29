@@ -983,7 +983,7 @@
 
                 const response = await fetch(`${serverUrl}/map-stripe-customer`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }
                     // --- Send accountIdentifier in body ---
                     body: JSON.stringify({ studentId, stripeCustomerId: stripeCustomerIdInput, accountIdentifier }) 
                 });
