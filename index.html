@@ -122,7 +122,7 @@
 
     <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-100 p-4">
         <div class="w-full max-w-md p-8 bg-white rounded-lg shadow-xl">
-             <form id="login-form">
+             <form id="login-form" onsubmit="return false;">
                 <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Sign In</h2>
                 <div class="space-y-4">
                     <div>
@@ -628,7 +628,7 @@
         const getParentsCol = () => collection(db, `organizations/${organizationId}/parents`);
 
         // --- Toast Notification ---
-        const toast = (message, type = 'success', duration = 3000) => { /* ... unchanged ... */ };
+        const toast = (message, type = 'success', duration = 3000) => { /* ... unchanged ... */ }
 
         // --- Modal Controls ---
         const openModal = (modalId) => document.getElementById(modalId)?.classList.add('flex');
@@ -878,141 +878,27 @@
         const setActiveNav = (navId) => { /* ... unchanged ... */ }
         
         // --- Authentication ---
-        const handleLogin = (e) => { /* ... unchanged ... */ };
-        const handleSignOut = () => { /* ... unchanged ... */ };
-
-        // --- User Management ---
-        const openUserManagementModal = async () => { /* ... unchanged ... */ };
-        const fetchUsers = async () => { /* ... unchanged ... */ };
-        const handleCreateUser = async (e) => { /* ... unchanged ... */ };
-        const handleDeleteUser = async (uidToDelete, emailToDelete) => { /* ... unchanged ... */ };
-        const handleMakeAdmin = async (uidToMakeAdmin, emailToMakeAdmin) => { /* ... unchanged ... */ };
-        const handleUpdateUserName = async (uidToUpdate, currentName) => { /* ... unchanged ... */ };
-
-        // --- === UPDATED BILLING FUNCTIONS (Multi-Account) START === ---
-
-         /**
-          * Gets the currently selected Stripe account identifier from the UI.
-          * @returns {string} 'halle_dance' or 'state48arts.org'
-          */
-        function determineAccountContext() {
-            const selector = document.getElementById('account-context-select');
-            // !! Add error handling if selector not found !!
-            return selector.value; 
-        }
-
-        /**
-         * Gets the selected Stripe account identifier from the Invoice Modal.
-         * @returns {string|null} 'halle_dance', 'state48arts.org', or null if not selected
-         */
-        function determineAccountContextForInvoice() {
-            const selector = document.getElementById('invoice-account-select');
-            return selector.value || null; // Return null if no value selected
-        }
-
-        /**
-         * Fetches and displays billing data for the selected student AND selected account context.
-         * @param {string} studentId - The Firestore ID of the student.
-         */
-        async function loadStudentBillingData(studentId) {
-            if (!currentUser) { console.error("Not authenticated."); return; }
-            const authToken = await getIdToken(currentUser);
-            const invoiceList = document.getElementById('invoice-list-container');
-            const subList = document.getElementById('subscription-list-container');
-            const invoiceLabel = document.getElementById('invoice-account-label');
-            const subLabel = document.getElementById('subscription-account-label');
-
-            // --- Get Selected Account Context ---
-            const accountIdentifier = determineAccountContext(); 
-            const accountName = accountIdentifier === ACCOUNT_ID_HALLE ? "Halle Dance" : "State48Arts.org";
-            invoiceLabel.textContent = `For: ${accountName}`;
-            subLabel.textContent = `For: ${accountName}`;
-            // ------------------------------------
-
-            invoiceList.innerHTML = '<p id="invoices-loading-message" class="text-gray-500 text-center">Loading invoices...</p>';
-            subList.innerHTML = '<p id="subscriptions-loading-message" class="text-gray-500 text-center">Loading subscriptions...</p>';
-            
-            const headers = new Headers({'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json'});
-            const API_BASE_URL = HARDCODED_CONFIG.serverUrl;
-
-            try { // Fetch Invoices
-                // --- Pass accountIdentifier in URL ---
-                const response = await fetch(`${API_BASE_URL}/get-student-invoices/${studentId}/${accountIdentifier}`, { headers });
-                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Failed: ${response.statusText}`); }
-                const { invoices } = await response.json(); invoiceList.innerHTML = '';
-                if (invoices.length === 0) { invoiceList.innerHTML = `<p class="text-gray-500 text-center">No invoices found for ${accountName}.</p>`; } 
-                else { invoices.forEach(invoice => { invoiceList.appendChild(createInvoiceElement(invoice)); }); }
-            } catch (error) { invoiceList.innerHTML = `<p class="error-message">Could not load invoices. ${error.message}</p>`; }
-
-            try { // Fetch Subscriptions
-                // --- Pass accountIdentifier in URL ---
-                const response = await fetch(`${API_BASE_URL}/get-student-subscriptions/${studentId}/${accountIdentifier}`, { headers });
-                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Failed: ${response.statusText}`); }
-                const { subscriptions } = await response.json(); subList.innerHTML = '';
-                if (subscriptions.length === 0) { subList.innerHTML = `<p class="text-gray-500 text-center">No subscriptions found for ${accountName}.</p>`; } 
-                else { subscriptions.forEach(sub => { subList.appendChild(createSubscriptionElement(sub)); }); }
-            } catch (error) { subList.innerHTML = `<p class="error-message">Could not load subscriptions. ${error.message}</p>`; }
-        }
-
-        function createInvoiceElement(invoice) { /* ... unchanged ... */ }
-        function createSubscriptionElement(subscription) { /* ... unchanged ... */ }
-        
-        // --- UPDATED MANUAL MAP FUNCTION (Asks for Account) ---
-const handleMapStripeId = async (studentId, stripeCustomerIdInput) => {
-    if (!studentId || !stripeCustomerIdInput || !stripeCustomerIdInput.startsWith('cus_')) {
-        toast('Please enter a valid Stripe Customer ID (starts with cus_).', 'error');
-        return;
-    }
-    if (!currentUser) { toast('Not authenticated.', 'error'); return; }
-
-    // --- Ask user which account this ID is for ---
-    const accountIdentifier = prompt(`Which account does this ID belong to? Enter '${ACCOUNT_ID_HALLE}' or '${ACCOUNT_ID_STATE48}':`);
-    if (accountIdentifier !== ACCOUNT_ID_HALLE && accountIdentifier !== ACCOUNT_ID_STATE48) {
-        toast('Invalid account identifier entered. Mapping cancelled.', 'error');
-        return;
-    }
-    // ------------------------------------------
-
-    console.log(`Attempting manual map: Student ${studentId} -> Stripe ${stripeCustomerIdInput} on account ${accountIdentifier}`);
-    const mapButton = document.querySelector(`.map-stripe-btn[data-student-id="${studentId}"]`);
-    if (mapButton) mapButton.textContent = 'Saving...'; // Basic loading state
+        const handleLogin = async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const errorEl = document.getElementById('login-error');
+    const btn = document.getElementById('login-btn');
+    errorEl.textContent = '';
+    btn.disabled = true;
 
     try {
-        const idToken = await getIdToken(currentUser);
-        const serverUrl = HARDCODED_CONFIG.serverUrl;
-
-        // NOTE: Ensure NO TRAILING COMMAS inside this object {}
-        const response = await fetch(`${serverUrl}/map-stripe-customer`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-            body: JSON.stringify({ studentId, stripeCustomerId: stripeCustomerIdInput, accountIdentifier }) 
-        });
-
-        const result = await response.json();
-        if (!response.ok) { throw new Error(result.error || `Server error: ${response.status}`); }
-
-        toast(result.message, 'success');
-        
-        // Update local cache
-        const studentIndex = allStudentsCache.findIndex(s => s.id === studentId);
-        if (studentIndex !== -1) {
-            if (!allStudentsCache[studentIndex].stripeInfo) {
-                 allStudentsCache[studentIndex].stripeInfo = {};
-            }
-            allStudentsCache[studentIndex].stripeInfo[accountIdentifier] = stripeCustomerIdInput;
-        }
-        
-        // Re-render relevant list
-        if (currentView === 'student') renderCol1StudentList(); 
-        else if (currentView === 'class' && currentClassId) renderCol2StudentList(currentClassId); 
-        
-        if (currentStudentId === studentId) loadStudentBillingData(studentId);
-
-    } catch (error) {
-        console.error("Manual Map Error:", error);
-        toast(`Mapping failed: ${error.message}`, 'error');
+        await signInWithEmailAndPassword(auth, email, password);
+        // Clean any stray query string like '?'
+        window.history.replaceState({}, document.title, window.location.pathname);
+        // Basic UI switch; onAuthStateChanged will also run
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('app-shell').style.display = 'flex';
+    } catch (err) {
+        console.error('Login error:', err);
+        errorEl.textContent = err.message || 'Login failed';
     } finally {
-         if (mapButton) mapButton.textContent = 'Save'; // Reset button text
+        btn.disabled = false;
     }
 };
 // --- END MANUAL MAP FUNCTION ---
