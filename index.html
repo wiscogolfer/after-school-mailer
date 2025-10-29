@@ -207,7 +207,8 @@
                 <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="edit-class-modal">&times;</button>
             </div>
             <form id="edit-class-form">
-                <input type="hidden" id="edit-class-id"> <div class="space-y-4">
+                <input type="hidden" id="edit-class-id"> 
+                <div class="space-y-4">
                     <div>
                         <label for="edit-class-name" class="block text-sm font-medium text-gray-700">Class Name</label>
                         <input type="text" id="edit-class-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
@@ -251,7 +252,8 @@
                 <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="edit-student-modal">&times;</button>
             </div>
             <form id="edit-student-form">
-                <input type="hidden" id="edit-student-id"> <div>
+                <input type="hidden" id="edit-student-id"> 
+                <div>
                     <label for="edit-student-name" class="block text-sm font-medium text-gray-700">Student Name</label>
                     <input type="text" id="edit-student-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
                 </div>
@@ -322,7 +324,8 @@
                 <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="edit-contact-modal">&times;</button>
             </div>
             <form id="edit-contact-form">
-                 <input type="hidden" id="edit-contact-id"> <div class="space-y-4">
+                 <input type="hidden" id="edit-contact-id"> 
+                 <div class="space-y-4">
                     <div>
                         <label for="edit-contact-name" class="block text-sm font-medium text-gray-700">Contact Name</label>
                         <input type="text" id="edit-contact-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
@@ -418,6 +421,33 @@
              <div class="mt-6 flex justify-end">
                  <button type="button" class="close-modal-btn bg-white border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" data-modal="user-management-modal">Close</button>
              </div>
+        </div>
+    </div>
+
+    <div id="invoice-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium leading-6 text-gray-900">Create Invoice</h3>
+                <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="invoice-modal">&times;</button>
+            </div>
+            <p id="invoice-subtitle" class="text-sm text-gray-600 mb-4">Creating invoice for: <span class="font-medium"></span></p>
+            <form id="create-invoice-form">
+                <input type="hidden" id="invoice-parent-id"> <div class="space-y-4">
+                    <div>
+                        <label for="invoice-amount" class="block text-sm font-medium text-gray-700">Amount (e.g., 25.00)</label>
+                        <input type="number" id="invoice-amount" step="0.01" min="0.01" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                    </div>
+                    <div>
+                        <label for="invoice-description" class="block text-sm font-medium text-gray-700">Description</label>
+                        <input type="text" id="invoice-description" placeholder="e.g., October Class Fee" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                    </div>
+                </div>
+                 <p id="invoice-status" class="text-xs mt-4 h-4"></p>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" class="close-modal-btn bg-white border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" data-modal="invoice-modal">Cancel</button>
+                    <button type="submit" id="create-invoice-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition">Create Invoice</button>
+                </div>
+            </form>
         </div>
     </div>
     
@@ -628,28 +658,49 @@
             }); 
         }
         
-        // Render Col 3 (Contacts) - ADDED EDIT ICON
+        // --- UPDATED: Render Col 3 (Contacts) - Added Invoice Button ---
         const renderContactList = (contacts) => {
-            const listEl = document.getElementById('contact-list'); listEl.innerHTML = ''; const sortedContacts = [...contacts].sort((a, b) => a.name.localeCompare(b.name));
-            if (sortedContacts.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No contacts for this student.</p>'; return; }
+            const listEl = document.getElementById('contact-list'); 
+            listEl.innerHTML = ''; 
+            const sortedContacts = [...contacts].sort((a, b) => a.name.localeCompare(b.name));
+            
+            if (sortedContacts.length === 0) { 
+                listEl.innerHTML = '<p class="text-gray-500 text-center">No contacts for this student.</p>'; 
+                return; 
+            }
+            
             sortedContacts.forEach(c => {
-                const el = document.createElement('div'); el.className = 'p-3 rounded-lg border border-gray-200';
+                const el = document.createElement('div'); 
+                el.className = 'p-3 rounded-lg border border-gray-200';
+                
+                // Added "Invoice" button
                 el.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div>
                             <span class="font-medium text-gray-800">${c.name}</span>
                             <p class="text-sm text-gray-600">${c.email}</p>
                             <p class="text-sm text-gray-600">${c.phone || ''}</p>
-                            <button class="email-contact-btn text-sm text-blue-600 hover:underline mt-2" data-email="${c.email}" data-name="${c.name}">Email Contact</button>
+                            <div class="mt-2 space-x-3"> 
+                                <button class="email-contact-btn text-sm text-blue-600 hover:underline" data-email="${c.email}" data-name="${c.name}">Email</button>
+                                <button class="invoice-contact-btn text-sm text-green-600 hover:underline" data-parent-id="${c.id}" data-parent-name="${c.name}">Invoice</button>
+                            </div>
                         </div>
                          <div class="flex items-center space-x-2 flex-shrink-0">
                              <button class="edit-contact-btn icon-btn edit" data-id="${c.id}" title="Edit Contact"><i class="fas fa-pencil-alt fa-xs"></i></button>
                             <button class="delete-contact-btn icon-btn" data-id="${c.id}" data-name="${c.name}" title="Delete Contact"><i class="fas fa-times fa-sm"></i></button>
                         </div>
                     </div>`;
+                
                 el.querySelector('.edit-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditContactModal(c.id); });
                 el.querySelector('.delete-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteContact(c.id, c.name); });
                 el.querySelector('.email-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); openEmailModal({ to: c.email }); });
+                
+                // Add event listener for the new invoice button
+                el.querySelector('.invoice-contact-btn').addEventListener('click', (e) => { 
+                    e.stopPropagation(); 
+                    openInvoiceModal(c.id, c.name); // Pass parent ID and name
+                });
+                
                 listEl.appendChild(el);
             });
         }
@@ -821,7 +872,6 @@
             const replyToEl = document.getElementById('reply-to-email');
             
             // Set Reply-To display
-            // MODIFIED: Show display name or email
             replyToEl.textContent = currentUser?.displayName || currentUser?.email || 'Unknown';
             
             if (to) { 
@@ -844,7 +894,6 @@
         }
         const handleEmailClass = async () => { console.log("Handle email class:", currentClassId); if (!currentClassId) return; const classData = allClassCache.find(c => c.id === currentClassId); if (!classData?.students?.length) { toast('No students in class.', 'error'); return; } const studentIds = classData.students; const parentIds = allStudentsCache.filter(s => studentIds.includes(s.id)).flatMap(s => s.parents || []); if (parentIds.length === 0) { toast('No parent contacts found.', 'error'); return; } const uniqueParentIds = [...new Set(parentIds)]; try { const contacts = []; for (let i = 0; i < uniqueParentIds.length; i += 30) { const chunk = uniqueParentIds.slice(i, i + 30); if(chunk.length === 0) continue; const q = query(getParentsCol(), where('__name__', 'in', chunk)); const querySnapshot = await getDocs(q); querySnapshot.docs.forEach(doc => contacts.push(doc.data())); } const bccEmails = contacts.map(c => c.email).filter(Boolean); if (bccEmails.length === 0) { toast('No valid emails found.', 'error'); return; } openEmailModal({ bcc: bccEmails }); } catch (error) { console.error("Email Class Error:", error); toast('Failed to get emails.', 'error'); } }
         
-        // --- MODIFIED: Reply-To name logic updated ---
         const handleSendEmail = async (e) => { 
             e.preventDefault(); 
             const btn = document.getElementById('send-email-btn'); 
@@ -857,12 +906,11 @@
             
             const replyToEmail = currentUser?.email || null;
             
-            // Use displayName or fall back to full email for the name part
             let replyToName;
             if (currentUser?.displayName) {
                 replyToName = currentUser.displayName;
             } else {
-                replyToName = replyToEmail; // Fallback to full email
+                replyToName = replyToEmail; 
             }
             
             let bccList = null; 
@@ -895,7 +943,7 @@
                 bcc: bccList, 
                 replyTo: {
                     email: replyToEmail,
-                    name: replyToName // Use the determined name
+                    name: replyToName 
                 },
                 subject: document.getElementById('email-subject').value, 
                 text: document.getElementById('email-body').value 
@@ -936,10 +984,9 @@
         const openUserManagementModal = async () => { console.log("Opening user mgmt modal"); openModal('user-management-modal'); await fetchUsers(); };
         const fetchUsers = async () => { console.log("Fetching users..."); const listEl = document.getElementById('user-list'); listEl.innerHTML = '<p class="text-gray-500">Loading users...</p>'; if (!currentUser) { listEl.innerHTML = '<p class="text-red-500">Not authenticated.</p>'; return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/list-users`, { method: 'GET', headers: { 'Authorization': `Bearer ${idToken}` } }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } const { users } = await response.json(); console.log("Fetched users:", users); renderUserList(users); } catch (error) { console.error("Fetch Users Error:", error); listEl.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`; toast('Failed load users.', 'error'); } };
         
-        // --- MODIFIED: Create user logic updated ---
         const handleCreateUser = async (e) => { 
             e.preventDefault(); 
-            const name = document.getElementById('new-user-name').value; // Get name
+            const name = document.getElementById('new-user-name').value; 
             const email = document.getElementById('new-user-email').value; 
             const password = document.getElementById('new-user-password').value; 
             const statusEl = document.getElementById('add-user-status'); 
@@ -949,7 +996,6 @@
             console.log("Attempting create user:", name, email); 
             if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); btn.disabled = false; return; } 
             
-            // Updated validation
             if (!name || !email || !password || password.length < 6) {
                 statusEl.textContent = 'Name, email, and password (min 6 chars) required.'; 
                 statusEl.classList.add('text-red-600'); 
@@ -963,7 +1009,7 @@
                 const response = await fetch(`${serverUrl}/create-user`, { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, 
-                    body: JSON.stringify({ name, email, password }) // Send name
+                    body: JSON.stringify({ name, email, password }) 
                 }); 
                 if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } 
                 const result = await response.json(); 
@@ -984,7 +1030,7 @@
         const handleDeleteUser = async (uidToDelete, emailToDelete) => { console.log("Attempting delete user:", uidToDelete, emailToDelete); if (!confirm(`Delete user: ${emailToDelete}? Permanent.`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Deleting ${emailToDelete}...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/delete-user`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uid: uidToDelete }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`User ${emailToDelete} deleted.`, 'success'); statusEl.textContent = `Deleted ${emailToDelete}.`; statusEl.classList.add('text-green-600'); await fetchUsers(); } catch (error) { console.error("Delete User Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed delete user.', 'error'); } };
         const handleMakeAdmin = async (uidToMakeAdmin, emailToMakeAdmin) => { console.log("Attempting make admin:", uidToMakeAdmin, emailToMakeAdmin); if (!confirm(`Grant admin to ${emailToMakeAdmin}?`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Making ${emailToMakeAdmin} admin...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/set-admin`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uidToMakeAdmin: uidToMakeAdmin }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`${emailToMakeAdmin} is now admin. Needs re-login.`, 'success'); statusEl.textContent = `Admin granted.`; statusEl.classList.add('text-green-600'); await fetchUsers(); if (uidToMakeAdmin === userId) { isAdmin = true; document.getElementById('manage-users-btn').classList.remove('hidden'); document.getElementById('user-admin-status').classList.remove('hidden'); await getIdToken(currentUser, true); } } catch (error) { console.error("Make Admin Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed set admin.', 'error'); } };
         
-        // --- UPDATED FUNCTION: Handle Update User Name ---
+        // --- NEW FUNCTION: Handle Update User Name ---
         const handleUpdateUserName = async (uidToUpdate, currentName) => {
             const newName = prompt(`Enter the new name for this user (UID: ${uidToUpdate}):`, currentName);
 
@@ -1004,17 +1050,14 @@
             statusEl.classList.remove('text-red-600', 'text-green-600');
 
             if (!currentUser) {
-                statusEl.textContent = 'Not authenticated (currentUser is null).'; // More specific message
+                statusEl.textContent = 'Not authenticated (currentUser is null).'; 
                 statusEl.classList.add('text-red-600');
                 return;
             }
 
-            // --- ADDED DEBUG LOG ---
             console.log("DEBUG: currentUser object right before getIdToken:", currentUser);
-            // --- END DEBUG LOG ---
 
             try {
-                // This is where the error is likely happening
                 const idToken = await getIdToken(currentUser); 
                 
                 const serverUrl = HARDCODED_CONFIG.serverUrl;
@@ -1049,12 +1092,102 @@
 
             } catch (error) {
                 console.error("Update Name Error:", error);
-                // Display the specific error type if available
                 statusEl.textContent = `Error: ${error.message || 'Failed update name.'}`; 
                 statusEl.classList.add('text-red-600');
                 toast('Failed update name.', 'error');
             }
         };
+
+        // --- NEW FUNCTION: Open Invoice Modal ---
+        const openInvoiceModal = (parentId, parentName) => {
+            console.log(`Opening invoice modal for parent: ${parentName} (${parentId})`);
+            document.getElementById('invoice-parent-id').value = parentId;
+            document.querySelector('#invoice-subtitle span').textContent = parentName;
+            document.getElementById('invoice-amount').value = '';
+            document.getElementById('invoice-description').value = '';
+            document.getElementById('invoice-status').textContent = '';
+            document.getElementById('create-invoice-btn').disabled = false;
+            openModal('invoice-modal');
+        }
+
+        // --- NEW FUNCTION: Handle Create Invoice ---
+        const handleCreateInvoice = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('create-invoice-btn');
+            const statusEl = document.getElementById('invoice-status');
+            btn.disabled = true;
+            statusEl.textContent = 'Creating invoice...';
+            statusEl.classList.remove('text-red-600', 'text-green-600');
+
+            const parentId = document.getElementById('invoice-parent-id').value;
+            const amount = document.getElementById('invoice-amount').value;
+            const description = document.getElementById('invoice-description').value;
+            // Get student name for context (optional, but nice to have)
+            const studentName = allStudentsCache.find(s => s.id === currentStudentId)?.name || null;
+
+            if (!parentId || !amount || !description) {
+                statusEl.textContent = 'Missing required fields.';
+                statusEl.classList.add('text-red-600');
+                btn.disabled = false;
+                return;
+            }
+
+            if (!currentUser) {
+                statusEl.textContent = 'Not authenticated.';
+                statusEl.classList.add('text-red-600');
+                btn.disabled = false;
+                return;
+            }
+
+            console.log(`Sending create invoice request for parent ${parentId}`);
+            try {
+                const idToken = await getIdToken(currentUser);
+                const serverUrl = HARDCODED_CONFIG.serverUrl;
+
+                const response = await fetch(`${serverUrl}/create-invoice`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({
+                        parentId: parentId,
+                        studentName: studentName, // Send student name if available
+                        amount: amount,
+                        description: description
+                    })
+                });
+
+                if (!response.ok) {
+                    const res = await response.json();
+                    throw new Error(res.error || `Server ${response.status}`);
+                }
+
+                const result = await response.json();
+                toast('Invoice created successfully!', 'success');
+                statusEl.textContent = `Invoice ${result.invoiceId} created (${result.invoiceStatus}).`;
+                statusEl.classList.add('text-green-600');
+                
+                // Optionally show the Stripe hosted URL
+                if (result.invoiceUrl) {
+                    statusEl.innerHTML += ` <a href="${result.invoiceUrl}" target="_blank" class="text-blue-600 hover:underline">View Invoice</a>`;
+                }
+
+                // Optionally close modal after a delay
+                setTimeout(() => closeModal('invoice-modal'), 3000);
+
+            } catch (error) {
+                console.error("Create Invoice Error:", error);
+                statusEl.textContent = `Error: ${error.message}`;
+                statusEl.classList.add('text-red-600');
+                toast('Failed to create invoice.', 'error');
+            } finally {
+                 // Keep button disabled on success? Or re-enable? Depends on desired flow.
+                 // For now, let's keep it disabled on success to prevent duplicates.
+                 // btn.disabled = false; // Re-enable if you want them to create another immediately
+            }
+        }
+
         // --- App Start ---
         document.addEventListener('DOMContentLoaded', () => {
             console.log("DOM Loaded. Starting app...");
@@ -1079,7 +1212,6 @@
                     if (user) {
                         userId = user.uid;
                         
-                        // --- MODIFIED: Show displayName or email ---
                         document.getElementById('user-email-display').textContent = user.displayName || user.email;
                         
                         try { 
@@ -1111,7 +1243,6 @@
             document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
             document.getElementById('manage-users-btn').addEventListener('click', openUserManagementModal);
             
-            // FIX: Add null check for add-user-form
             const addUserForm = document.getElementById('add-user-form');
             if (addUserForm) {
                 addUserForm.addEventListener('submit', handleCreateUser);
@@ -1132,6 +1263,9 @@
             document.getElementById('edit-class-form').addEventListener('submit', handleUpdateClass);
             document.getElementById('edit-student-form').addEventListener('submit', handleUpdateStudent);
             document.getElementById('edit-contact-form').addEventListener('submit', handleUpdateContact);
+            
+            // --- ADDED: Stripe Invoice Form Listener ---
+            document.getElementById('create-invoice-form').addEventListener('submit', handleCreateInvoice);
 
             document.getElementById('col-1-add-btn').addEventListener('click', () => openModal(currentView === 'class' ? 'add-class-modal' : 'add-new-student-modal'));
             document.getElementById('add-new-student-btn').addEventListener('click', () => openModal('add-new-student-modal'));

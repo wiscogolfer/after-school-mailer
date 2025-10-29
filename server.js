@@ -116,7 +116,116 @@ app.post('/send-email', async (req, res) => {
     if (!recipient || !subject || !text) {
         console.error("Validation failed: Missing fields.");
         return res.status(400).json({ error: 'Missing required fields: to/bcc, subject, text' });
+    
+
+// --- NEW ROUTE: Create Stripe Invoice ---
+app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
+    const { parentId, studentName, amount, description } = req.body; // Data from frontend
+    const adminUid = req.user.uid;
+
+    console.log(`Admin ${adminUid} attempting to create invoice for parent ID: ${parentId}`);
+
+    if (!parentId || !amount || !description || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+        console.error("Create invoice validation failed: Missing fields or invalid amount.");
+        // Amount should be in cents
+        return res.status(400).json({ error: 'Parent ID, Description, and a valid positive Amount required.' });
     }
+
+    // Convert amount to cents (Stripe requires integers)
+    const amountInCents = Math.round(parseFloat(amount) * 100);
+
+    try {
+        // --- 1. Get Parent Info from Firestore ---
+        const parentRef = doc(getParentsCol(), parentId);
+        const parentSnap = await getDoc(parentRef);
+        if (!parentSnap.exists()) {
+            throw new Error(`Parent with ID ${parentId} not found in Firestore.`);
+        }
+        const parentData = parentSnap.data();
+        const parentEmail = parentData.email;
+        const parentName = parentData.name;
+        let stripeCustomerId = parentData.stripeCustomerId; // Check if we already have one
+
+        // --- 2. Find or Create Stripe Customer ---
+        if (!stripeCustomerId) {
+            console.log(`No Stripe customer ID found for parent ${parentId}. Creating one...`);
+            // Search if customer already exists in Stripe by email (optional but good practice)
+             const existingCustomers = await stripe.customers.list({ email: parentEmail, limit: 1 });
+            if (existingCustomers.data.length > 0) {
+                 stripeCustomerId = existingCustomers.data[0].id;
+                 console.log(`Found existing Stripe customer by email: ${stripeCustomerId}`);
+            } else {
+                 // Create a new customer in Stripe
+                 const customer = await stripe.customers.create({
+                     name: parentName,
+                     email: parentEmail,
+                     metadata: { // Link back to your Firestore ID
+                         firestoreParentId: parentId,
+                         organizationId: organizationId 
+                     }
+                 });
+                 stripeCustomerId = customer.id;
+                 console.log(`Created new Stripe customer: ${stripeCustomerId}`);
+            }
+            
+            // Save the Stripe Customer ID back to Firestore
+            await updateDoc(parentRef, { stripeCustomerId: stripeCustomerId });
+            console.log(`Saved Stripe customer ID ${stripeCustomerId} to Firestore parent ${parentId}`);
+
+        } else {
+            console.log(`Using existing Stripe customer ID: ${stripeCustomerId} for parent ${parentId}`);
+        }
+
+        // --- 3. Create an Invoice Item ---
+        // This is the line item for the invoice
+        console.log(`Creating invoice item for customer ${stripeCustomerId}, amount: ${amountInCents}`);
+        const invoiceItem = await stripe.invoiceItems.create({
+            customer: stripeCustomerId,
+            amount: amountInCents, // Amount in cents
+            currency: 'usd', // Or your desired currency
+            description: description,
+             metadata: {
+                 studentName: studentName || 'N/A' // Optional: Add student name if provided
+             }
+        });
+        console.log(`Created invoice item: ${invoiceItem.id}`);
+
+        // --- 4. Create a Draft Invoice ---
+        // This groups invoice items together
+        console.log(`Creating draft invoice for customer ${stripeCustomerId}`);
+        const invoice = await stripe.invoices.create({
+            customer: stripeCustomerId,
+            collection_method: 'send_invoice', // Stripe will email the invoice
+            days_until_due: 30, // Example: Due in 30 days
+            auto_advance: false, // Keep it as a draft for now
+             description: `Invoice for ${studentName || parentName}`, // Optional description on the invoice itself
+             metadata: {
+                 firestoreParentId: parentId,
+                 createdByAdminUid: adminUid
+             }
+        });
+        console.log(`Created draft invoice: ${invoice.id}`);
+
+        // --- 5. (Optional but recommended) Finalize the Invoice ---
+        // This makes the invoice active and ready to be sent/paid
+        console.log(`Finalizing invoice: ${invoice.id}`);
+        const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
+        console.log(`Finalized invoice: ${finalizedInvoice.id}, Status: ${finalizedInvoice.status}`);
+
+        // --- Respond to Frontend ---
+        res.status(200).json({ 
+            message: 'Invoice created successfully!',
+            invoiceId: finalizedInvoice.id,
+            invoiceStatus: finalizedInvoice.status,
+            // You might want to send back the hosted invoice URL for the user
+            invoiceUrl: finalizedInvoice.hosted_invoice_url 
+        });
+
+    } catch (error) {
+        console.error('Stripe Invoice Creation Error:', error);
+        res.status(500).json({ error: `Failed to create invoice. ${error.message}` });
+    }
+});
 
     // --- Format From and Reply-To ---
     const formattedFrom = `State 48 Arts and Academics <${senderEmail}>`;
