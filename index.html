@@ -984,35 +984,39 @@
         const handleDeleteUser = async (uidToDelete, emailToDelete) => { console.log("Attempting delete user:", uidToDelete, emailToDelete); if (!confirm(`Delete user: ${emailToDelete}? Permanent.`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Deleting ${emailToDelete}...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/delete-user`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uid: uidToDelete }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`User ${emailToDelete} deleted.`, 'success'); statusEl.textContent = `Deleted ${emailToDelete}.`; statusEl.classList.add('text-green-600'); await fetchUsers(); } catch (error) { console.error("Delete User Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed delete user.', 'error'); } };
         const handleMakeAdmin = async (uidToMakeAdmin, emailToMakeAdmin) => { console.log("Attempting make admin:", uidToMakeAdmin, emailToMakeAdmin); if (!confirm(`Grant admin to ${emailToMakeAdmin}?`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Making ${emailToMakeAdmin} admin...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/set-admin`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uidToMakeAdmin: uidToMakeAdmin }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`${emailToMakeAdmin} is now admin. Needs re-login.`, 'success'); statusEl.textContent = `Admin granted.`; statusEl.classList.add('text-green-600'); await fetchUsers(); if (uidToMakeAdmin === userId) { isAdmin = true; document.getElementById('manage-users-btn').classList.remove('hidden'); document.getElementById('user-admin-status').classList.remove('hidden'); await getIdToken(currentUser, true); } } catch (error) { console.error("Make Admin Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed set admin.', 'error'); } };
         
-        // --- NEW FUNCTION: Handle Update User Name ---
+        // --- UPDATED FUNCTION: Handle Update User Name ---
         const handleUpdateUserName = async (uidToUpdate, currentName) => {
             const newName = prompt(`Enter the new name for this user (UID: ${uidToUpdate}):`, currentName);
 
             if (newName === null || newName.trim() === '') {
-                // User cancelled or entered empty name
                 return; 
             }
             
             const trimmedName = newName.trim();
             if (trimmedName === currentName) {
-                // Name didn't change
-                 toast('Name is the same.', 'success'); // Or maybe no message needed
+                 toast('Name is the same.', 'success');
                 return;
             }
 
             console.log(`Attempting update name for ${uidToUpdate} to "${trimmedName}"`);
-            const statusEl = document.getElementById('add-user-status'); // Reuse status element
+            const statusEl = document.getElementById('add-user-status'); 
             statusEl.textContent = `Updating name...`;
             statusEl.classList.remove('text-red-600', 'text-green-600');
 
             if (!currentUser) {
-                statusEl.textContent = 'Not authenticated.';
+                statusEl.textContent = 'Not authenticated (currentUser is null).'; // More specific message
                 statusEl.classList.add('text-red-600');
                 return;
             }
 
+            // --- ADDED DEBUG LOG ---
+            console.log("DEBUG: currentUser object right before getIdToken:", currentUser);
+            // --- END DEBUG LOG ---
+
             try {
-                const idToken = await getIdToken(currentUser);
+                // This is where the error is likely happening
+                const idToken = await getIdToken(currentUser); 
+                
                 const serverUrl = HARDCODED_CONFIG.serverUrl;
                 const response = await fetch(`${serverUrl}/update-user-name`, {
                     method: 'POST',
@@ -1033,26 +1037,24 @@
                 statusEl.textContent = `Name updated.`;
                 statusEl.classList.add('text-green-600');
 
-                // If the admin updated their own name, refresh the header display
                 if (result.updatedSelf) {
-                     // Update the currentUser object locally
-                    currentUser = { ...currentUser, displayName: trimmedName }; 
-                    document.getElementById('user-email-display').textContent = trimmedName; 
-                    // Force refresh ID token to get updated claims if needed later
-                    await getIdToken(currentUser, true); 
+                    currentUser = auth.currentUser; // Get the refreshed user object
+                    if(currentUser) { // Check again in case of race condition
+                         document.getElementById('user-email-display').textContent = currentUser.displayName || currentUser.email; 
+                         await getIdToken(currentUser, true); // Force refresh token
+                    }
                 }
 
-                // Refresh the user list in the modal
-                await fetchUsers(); 
+                await fetchUsers(); // Refresh list
 
             } catch (error) {
                 console.error("Update Name Error:", error);
-                statusEl.textContent = `Error: ${error.message}`;
+                // Display the specific error type if available
+                statusEl.textContent = `Error: ${error.message || 'Failed update name.'}`; 
                 statusEl.classList.add('text-red-600');
                 toast('Failed update name.', 'error');
             }
         };
-
         // --- App Start ---
         document.addEventListener('DOMContentLoaded', () => {
             console.log("DOM Loaded. Starting app...");
