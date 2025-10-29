@@ -635,6 +635,42 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
     }
 });
 
+// --- *** NEW *** Manually Map Stripe Customer ID ---
+app.post('/map-stripe-customer', authenticateToken, isAdmin, async (req, res) => {
+    const { studentId, stripeCustomerId } = req.body;
+
+    console.log(`Manual map request: Student ${studentId} -> Stripe ${stripeCustomerId}`);
+
+    if (!studentId || !stripeCustomerId || !stripeCustomerId.startsWith('cus_')) {
+        return res.status(400).json({ error: 'Valid Student ID and Stripe Customer ID (cus_...) required.' });
+    }
+
+    try {
+        const studentRef = admin.firestore().doc(`organizations/${organizationId}/students/${studentId}`);
+
+        // Optional: Verify the Stripe Customer ID exists in Stripe
+        try {
+            await stripe.customers.retrieve(stripeCustomerId);
+            console.log(`Stripe customer ${stripeCustomerId} verified.`);
+        } catch (stripeError) {
+            if (stripeError.type === 'StripeInvalidRequestError') {
+                 console.warn(`Stripe customer ${stripeCustomerId} not found.`);
+                 return res.status(400).json({ error: `Stripe Customer ID "${stripeCustomerId}" not found.` });
+            }
+             throw stripeError; // Re-throw other Stripe errors
+        }
+
+        // Update Firestore
+        await studentRef.update({ stripeCustomerId: stripeCustomerId });
+
+        console.log(`Successfully mapped student ${studentId} to ${stripeCustomerId}`);
+        res.status(200).json({ message: 'Stripe Customer ID mapped successfully!' });
+
+    } catch (error) {
+        console.error(`Error mapping Stripe ID for student ${studentId}:`, error.message);
+        res.status(500).json({ error: 'Failed to map Stripe Customer ID.' });
+    }
+});
 
 // --- Start Server ---
 app.listen(port, () => {

@@ -40,7 +40,7 @@
         /* Add hover color for invoice icon */
         .icon-btn .fa-file-invoice-dollar:hover { color: #16a34a; /* green-600 */ }
 
-        /* --- NEW BILLING ITEM STYLES --- */
+        /* --- BILLING ITEM STYLES --- */
         .billing-item {
             padding: 0.75rem;
             border: 1px solid #e5e7eb;
@@ -96,7 +96,12 @@
             background-color: #fee2e2;
             border-radius: 0.375rem;
         }
-        /* --- END BILLING STYLES --- */
+        /* --- NEW MANUAL MAP STYLES --- */
+        .manual-map-section {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #e5e7eb; /* gray-200 */
+        }
     </style>
 </head>
 
@@ -227,8 +232,9 @@
                         <div id="subscription-list-container" class="space-y-2">
                             <p id="subscriptions-loading-message" class="text-gray-500 text-center">Select a student</p>
                         </div>
-                        </div> </section>
-                </div>
+                    
+                    </div> </section>
+            </div>
         </div>
     
         <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white shadow-inner p-2 border-t border-gray-200">
@@ -248,7 +254,6 @@
             </div>
         </nav>
     </div>
-    
     
     <div id="add-class-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
@@ -537,21 +542,14 @@
     <script type="module">
         
         // --- HARDCODED CONFIGURATION ---
-        // CRITICAL: Fill in all 5 values for the app to work.
         const HARDCODED_CONFIG = {
-            // 1. Your Render Server URL
-            serverUrl: "https://after-school-mailer.onrender.com", // "YOUR_RENDER_URL",
-            
-            // 2. Your Custom Organization ID (must match Firestore Rules)
-            organizationId: "State-48-Dance", // "YOUR_CUSTOM_ORGANIZATION_ID", 
-
+            serverUrl: "https://after-school-mailer.onrender.com", 
+            organizationId: "State-48-Dance", 
             firebase: {
-                // --- Find these 4 keys in ---
-                // Firebase Console > Project Settings (⚙️) > General tab > Your apps > Web app > SDK config
-                apiKey: "AIzaSyAYDMyMAw7wf3i28C-hQ_iRZRVdMiXmaLk",         // "YOUR_API_KEY",
-                authDomain: "dance-classes-97ad7.firebaseapp.com", // "YOUR_AUTH_DOMAIN",
-                projectId: "dance-classes-97ad7",    // "YOUR_PROJECT_ID",
-                appId: "1:1041555303856:web:5b80e0497eacaf161b7a75"             // "YOUR_APP_ID" // This MUST be the official Firebase App ID
+                apiKey: "AIzaSyAYDMyMAw7wf3i28C-hQ_iRZRVdMiXmaLk",         
+                authDomain: "dance-classes-97ad7.firebaseapp.com", 
+                projectId: "dance-classes-97ad7",    
+                appId: "1:1041555303856:web:5b80e0497eacaf161b7a75"             
             }
         };
         // -------------------------------------------------
@@ -589,43 +587,26 @@
 
         // --- Firebase services ---
         let db;
-        let auth; // Keep auth in module scope
+        let auth; 
         let userId = null;
         let currentUser = null;
-        let isAdmin = false; // Track admin status
+        let isAdmin = false; 
         let currentClassId = null;
         let currentStudentId = null;
         let allStudentsCache = [];
         let allClassCache = [];
-        let contactCache = new Map(); // Cache for contacts
+        let contactCache = new Map(); 
         let unsubscribeClasses = null;
         let unsubscribeAllStudents = null;
-        let unsubscribeContacts = null; // Listener for contacts
+        let unsubscribeContacts = null; 
         
-        // --- Get Organization ID ---
         const organizationId = HARDCODED_CONFIG.organizationId; 
-
-        // --- View State ---
-        let currentView = 'class'; // 'class' or 'student'
+        let currentView = 'class'; 
 
         // --- Collections ---
-        // ADDED CONSOLE LOGGING
-        const getClassesCol = () => {
-             const path = `organizations/${organizationId}/classes`;
-             console.log("Accessing path:", path);
-             return collection(db, path);
-        }
-        const getStudentsCol = () => {
-             const path = `organizations/${organizationId}/students`;
-             console.log("Accessing path:", path);
-             return collection(db, path);
-        }
-        const getParentsCol = () => {
-             const path = `organizations/${organizationId}/parents`;
-             console.log("Accessing path:", path);
-             return collection(db, path);
-        }
-
+        const getClassesCol = () => collection(db, `organizations/${organizationId}/classes`);
+        const getStudentsCol = () => collection(db, `organizations/${organizationId}/students`);
+        const getParentsCol = () => collection(db, `organizations/${organizationId}/parents`);
 
         // --- Toast Notification ---
         const toast = (message, type = 'success', duration = 3000) => {
@@ -646,7 +627,6 @@
         const renderViewByClass = () => { currentView = 'class'; document.getElementById('col-1-title').textContent = 'Classes'; document.getElementById('col-1-add-btn').textContent = 'Add Class'; document.getElementById('col-2-title').textContent = 'Students'; document.getElementById('col-2-btn-group').classList.remove('hidden'); document.getElementById('email-class-btn').classList.remove('hidden'); document.getElementById('nav-col-1-title').textContent = 'Classes'; document.getElementById('nav-col-2-title').textContent = 'Students'; document.getElementById('view-by-class').classList.add('bg-white', 'text-blue-700', 'shadow-sm'); document.getElementById('view-by-student').classList.remove('bg-white', 'text-blue-700', 'shadow-sm'); currentClassId = null; currentStudentId = null; resetCol2(); resetCol3(); renderCol1ClassList(); }
         const renderViewByStudent = () => { currentView = 'student'; document.getElementById('col-1-title').textContent = 'All Students'; document.getElementById('col-1-add-btn').textContent = 'Add Student'; document.getElementById('col-2-title').textContent = 'Enrolled In'; document.getElementById('col-2-btn-group').classList.add('hidden'); document.getElementById('email-class-btn').classList.add('hidden'); document.getElementById('nav-col-1-title').textContent = 'Students'; document.getElementById('nav-col-2-title').textContent = 'Classes'; document.getElementById('view-by-student').classList.add('bg-white', 'text-blue-700', 'shadow-sm'); document.getElementById('view-by-class').classList.remove('bg-white', 'text-blue-700', 'shadow-sm'); currentClassId = null; currentStudentId = null; resetCol2(); resetCol3(); renderCol1StudentList(); }
         
-        // Render Col 1 (Classes) - ADDED EDIT ICON
         const renderCol1ClassList = () => {
             const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
             if (allClassCache.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No classes found. Add one!</p>'; return; }
@@ -669,7 +649,7 @@
             });
         }
 
-        // --- UPDATED: Render Col 1 (Students) - Added Invoice Button ---
+        // --- UPDATED: Render Col 1 (Students) - Added Manual Map ---
         const renderCol1StudentList = () => {
            const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
            if (allStudentsCache.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No students found. Add one!</p>'; return; }
@@ -680,7 +660,16 @@
                el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; 
                el.dataset.id = s.id;
 
-               // Added Invoice Button
+               // Manual Map HTML (conditionally added)
+               const manualMapHtml = !s.stripeCustomerId ? `
+                   <div class="manual-map-section mt-2 border-t pt-2">
+                       <label for="map-${s.id}" class="text-xs text-gray-500 block mb-1">Stripe Customer ID:</label>
+                       <div class="flex gap-1">
+                           <input type="text" id="map-${s.id}" placeholder="cus_..." class="flex-grow border border-gray-300 rounded px-1 py-0.5 text-xs">
+                           <button class="map-stripe-btn bg-gray-200 hover:bg-gray-300 px-2 rounded text-xs" data-student-id="${s.id}">Save</button>
+                       </div>
+                   </div>` : '';
+               
                el.innerHTML = `
                    <div class="flex justify-between items-center">
                        <span class="font-medium text-gray-800">${s.name}</span>
@@ -689,23 +678,21 @@
                             <button class="invoice-student-btn icon-btn" data-student-id="${s.id}" data-student-name="${s.name}" title="Invoice Student"><i class="fas fa-file-invoice-dollar fa-xs text-green-600"></i></button> 
                            <button class="delete-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Delete Student"><i class="fas fa-times fa-sm"></i></button>
                        </div>
-                   </div>`;
+                   </div>
+                   ${manualMapHtml}`; // Add the mapping section if needed
                 
                el.addEventListener('click', () => selectStudent(s.id, s.name));
-                el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
-                el.querySelector('.delete-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteStudent(s.id, s.name); });
-                
-                // Added Event Listener
-                el.querySelector('.invoice-student-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    promptInvoiceParentSelection(s.id, s.name); 
-                });
-                
+               el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
+               el.querySelector('.delete-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteStudent(s.id, s.name); });
+               el.querySelector('.invoice-student-btn').addEventListener('click', (e) => { e.stopPropagation(); promptInvoiceParentSelection(s.id, s.name); });
+               
+               // Listener for the map button (if it exists) is handled by delegation later
+               
                listEl.appendChild(el);
            });
         }
 
-        // --- UPDATED: Render Col 2 (Students in a Class) - Added Invoice Button ---
+        // --- UPDATED: Render Col 2 (Students in a Class) - Added Manual Map ---
         const renderCol2StudentList = (classId) => {
             const listEl = document.getElementById('col-2-list'); const classData = allClassCache.find(c => c.id === classId);
             if (!classData || !classData.students || classData.students.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No students in this class.</p>'; return; }
@@ -716,8 +703,17 @@
                 const el = document.createElement('div'); 
                 el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; 
                 el.dataset.id = s.id;
+
+                // Manual Map HTML (conditionally added)
+                const manualMapHtml = !s.stripeCustomerId ? `
+                   <div class="manual-map-section mt-2 border-t pt-2">
+                       <label for="map-${s.id}" class="text-xs text-gray-500 block mb-1">Stripe Customer ID:</label>
+                       <div class="flex gap-1">
+                           <input type="text" id="map-${s.id}" placeholder="cus_..." class="flex-grow border border-gray-300 rounded px-1 py-0.5 text-xs">
+                           <button class="map-stripe-btn bg-gray-200 hover:bg-gray-300 px-2 rounded text-xs" data-student-id="${s.id}">Save</button>
+                       </div>
+                   </div>` : '';
                 
-                // Added Invoice Button
                 el.innerHTML = `
                     <div class="flex justify-between items-center">
                         <span class="font-medium text-gray-800">${s.name}</span>
@@ -726,17 +722,15 @@
                              <button class="invoice-student-btn icon-btn" data-student-id="${s.id}" data-student-name="${s.name}" title="Invoice Student"><i class="fas fa-file-invoice-dollar fa-xs text-green-600"></i></button> 
                             <button class="remove-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Remove from class"><i class="fas fa-times fa-sm"></i></button>
                         </div>
-                    </div>`;
+                    </div>
+                    ${manualMapHtml}`; // Add the mapping section if needed
 
                 el.addEventListener('click', () => selectStudent(s.id, s.name));
                  el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
                  el.querySelector('.remove-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleRemoveStudent(s.id, s.name); });
+                 el.querySelector('.invoice-student-btn').addEventListener('click', (e) => { e.stopPropagation(); promptInvoiceParentSelection(s.id, s.name); });
                  
-                 // Added Event Listener
-                 el.querySelector('.invoice-student-btn').addEventListener('click', (e) => {
-                     e.stopPropagation();
-                     promptInvoiceParentSelection(s.id, s.name); 
-                 });
+                 // Listener for the map button (if it exists) is handled by delegation later
                  
                 listEl.appendChild(el);
             });
@@ -745,45 +739,26 @@
         const renderCol2ClassList = (studentId) => { const listEl = document.getElementById('col-2-list'); const classesForStudent = allClassCache.filter(c => c.students && c.students.includes(studentId)).sort((a, b) => a.name.localeCompare(b.name)); if (classesForStudent.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">Not enrolled in any classes.</p>'; return; } listEl.innerHTML = ''; classesForStudent.forEach(c => { const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200`; el.dataset.id = c.id; el.innerHTML = `<span class="font-medium text-gray-800">${c.name}</span><p class="text-sm text-gray-600">${c.teacher}</p>`; listEl.appendChild(el); }); }
         const renderStudentDropdown = () => { 
             const selectEl = document.getElementById('existing-student-select'); 
-            // FIX: Add null check
-            if (!selectEl) {
-                console.error("Element 'existing-student-select' not found.");
-                return;
-            }
+            if (!selectEl) { console.error("Element 'existing-student-select' not found."); return; }
             selectEl.innerHTML = '<option value="">Select a student...</option>'; 
             if (!currentClassId) return; 
             const classData = allClassCache.find(c => c.id === currentClassId); 
             if (!classData) return; 
             const studentIdsInClass = classData.students || []; 
             const availableStudents = allStudentsCache.filter(s => !studentIdsInClass.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name)); 
-            if (availableStudents.length === 0) { 
-                selectEl.innerHTML = '<option value="">No other students available</option>'; 
-                return; 
-            } 
-            availableStudents.forEach(s => { 
-                const opt = document.createElement('option'); 
-                opt.value = s.id; 
-                opt.textContent = s.name; 
-                selectEl.appendChild(opt); 
-            }); 
+            if (availableStudents.length === 0) { selectEl.innerHTML = '<option value="">No other students available</option>'; return; } 
+            availableStudents.forEach(s => { const opt = document.createElement('option'); opt.value = s.id; opt.textContent = s.name; selectEl.appendChild(opt); }); 
         }
         
-        // --- UPDATED: Render Col 3 (Contacts) - Removed Invoice Button ---
         const renderContactList = (contacts) => {
             const listEl = document.getElementById('contact-list'); 
             listEl.innerHTML = ''; 
             const sortedContacts = [...contacts].sort((a, b) => a.name.localeCompare(b.name));
             
-            if (sortedContacts.length === 0) { 
-                listEl.innerHTML = '<p class="text-gray-500 text-center">No contacts for this student.</p>'; 
-                return; 
-            }
+            if (sortedContacts.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No contacts for this student.</p>'; return; }
             
             sortedContacts.forEach(c => {
-                const el = document.createElement('div'); 
-                el.className = 'p-3 rounded-lg border border-gray-200';
-                
-                // Invoice button removed
+                const el = document.createElement('div'); el.className = 'p-3 rounded-lg border border-gray-200';
                 el.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div>
@@ -799,48 +774,24 @@
                             <button class="delete-contact-btn icon-btn" data-id="${c.id}" data-name="${c.name}" title="Delete Contact"><i class="fas fa-times fa-sm"></i></button>
                         </div>
                     </div>`;
-                
                 el.querySelector('.edit-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditContactModal(c.id); });
                 el.querySelector('.delete-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteContact(c.id, c.name); });
                 el.querySelector('.email-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); openEmailModal({ to: c.email }); });
-
-                // Invoice button listener removed
-                
                 listEl.appendChild(el);
             });
         }
         
-        // --- MODIFIED: This function is updated ---
         const renderUserList = (users) => { 
             const listEl = document.getElementById('user-list'); 
             listEl.innerHTML = ''; 
-            if (!users || users.length === 0) { 
-                listEl.innerHTML = '<p class="text-gray-500 text-center">No other users found.</p>'; 
-                return; 
-            } 
-            // Sort users, prioritizing the current logged-in admin user to the top
-            const sortedUsers = [...users].sort((a, b) => {
-                if (a.uid === userId) return -1; // Current user comes first
-                if (b.uid === userId) return 1;  // Current user comes first
-                return (a.email || '').localeCompare(b.email || ''); // Sort others by email
-            }); 
-            
+            if (!users || users.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No other users found.</p>'; return; } 
+            const sortedUsers = [...users].sort((a, b) => { if (a.uid === userId) return -1; if (b.uid === userId) return 1; return (a.email || '').localeCompare(b.email || ''); }); 
             sortedUsers.forEach(user => { 
-                const el = document.createElement('div'); 
-                el.className = 'p-3 rounded-lg border border-gray-200 flex justify-between items-center gap-4'; 
-                
-                let adminStatus = ''; 
-                let actionButton = ''; 
-                if (user.isAdmin) { 
-                    adminStatus = '<span class="text-xs font-medium text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full">Admin</span>'; 
-                } else if (isAdmin) { // Only show "Make Admin" if the current user is an admin
-                     actionButton = `<button class="make-admin-btn text-green-600 hover:text-green-800 text-sm font-medium" data-uid="${user.uid}" data-email="${user.email || ''}">Make Admin</button>`; 
-                } 
-                
-                // Display user's name if available, otherwise email
+                const el = document.createElement('div'); el.className = 'p-3 rounded-lg border border-gray-200 flex justify-between items-center gap-4'; 
+                let adminStatus = ''; let actionButton = ''; 
+                if (user.isAdmin) { adminStatus = '<span class="text-xs font-medium text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full">Admin</span>'; } 
+                else if (isAdmin) { actionButton = `<button class="make-admin-btn text-green-600 hover:text-green-800 text-sm font-medium" data-uid="${user.uid}" data-email="${user.email || ''}">Make Admin</button>`; } 
                 const userIdentifier = user.displayName || user.email || 'No Email';
-                
-                // Added Edit Name button
                 el.innerHTML = `
                     <div class="flex-1 min-w-0">
                         <span class="font-medium text-gray-800 block truncate">${userIdentifier}</span> 
@@ -853,45 +804,19 @@
                         <button class="edit-name-btn text-blue-600 hover:text-blue-800 text-sm font-medium" data-uid="${user.uid}" data-current-name="${user.displayName || ''}">Edit Name</button>
                         ${user.uid !== userId ? `<button class="delete-user-btn text-red-500 hover:text-red-700 text-sm font-medium" data-uid="${user.uid}" data-email="${user.email || ''}">Delete</button>` : ''} 
                     </div>`; 
-
-                const makeAdminBtn = el.querySelector('.make-admin-btn'); 
-                if (makeAdminBtn) { 
-                    makeAdminBtn.addEventListener('click', (e) => { e.stopPropagation(); handleMakeAdmin(user.uid, user.email || 'this user'); }); 
-                } 
-                
-                // Added event listener for Edit Name
-                const editNameBtn = el.querySelector('.edit-name-btn');
-                if (editNameBtn) {
-                    editNameBtn.addEventListener('click', (e) => { 
-                        e.stopPropagation(); 
-                        handleUpdateUserName(user.uid, user.displayName || ''); 
-                    });
-                }
-                
-                const deleteUserBtn = el.querySelector('.delete-user-btn');
-                if (deleteUserBtn) {
-                    deleteUserBtn.addEventListener('click', (e) => { e.stopPropagation(); handleDeleteUser(user.uid, user.email || 'this user'); }); 
-                }
+                const makeAdminBtn = el.querySelector('.make-admin-btn'); if (makeAdminBtn) { makeAdminBtn.addEventListener('click', (e) => { e.stopPropagation(); handleMakeAdmin(user.uid, user.email || 'this user'); }); } 
+                const editNameBtn = el.querySelector('.edit-name-btn'); if (editNameBtn) { editNameBtn.addEventListener('click', (e) => { e.stopPropagation(); handleUpdateUserName(user.uid, user.displayName || ''); }); }
+                const deleteUserBtn = el.querySelector('.delete-user-btn'); if (deleteUserBtn) { deleteUserBtn.addEventListener('click', (e) => { e.stopPropagation(); handleDeleteUser(user.uid, user.email || 'this user'); }); }
                 listEl.appendChild(el); 
             }); 
         }
         const resetCol2 = () => { document.getElementById('col-2-subtitle').textContent = currentView === 'class' ? 'Select a class' : 'Select a student'; document.getElementById('col-2-list').innerHTML = ''; if (currentView === 'class') { document.getElementById('add-new-student-btn').disabled = true; document.getElementById('add-existing-student-btn').disabled = true; } }
-        
-        // --- UPDATED: Reset Col 3 ---
-        const resetCol3 = () => { 
-            document.getElementById('contact-student-subtitle').textContent = 'Select a student'; 
-            document.getElementById('contact-list').innerHTML = ''; 
-            document.getElementById('add-contact-btn').disabled = true;
-            // NEW: Reset billing lists
-            document.getElementById('invoice-list-container').innerHTML = '<p id="invoices-loading-message" class="text-gray-500 text-center">Select a student</p>';
-            document.getElementById('subscription-list-container').innerHTML = '<p id="subscriptions-loading-message" class="text-gray-500 text-center">Select a student</p>';
-        }
+        const resetCol3 = () => { document.getElementById('contact-student-subtitle').textContent = 'Select a student'; document.getElementById('contact-list').innerHTML = ''; document.getElementById('add-contact-btn').disabled = true; document.getElementById('invoice-list-container').innerHTML = '<p id="invoices-loading-message" class="text-gray-500 text-center">Select a student</p>'; document.getElementById('subscription-list-container').innerHTML = '<p id="subscriptions-loading-message" class="text-gray-500 text-center">Select a student</p>'; }
         
         // --- Data Listeners ---
         const listenForClasses = () => { if (unsubscribeClasses) unsubscribeClasses(); console.log("Setting up listener for classes..."); unsubscribeClasses = onSnapshot(getClassesCol(), (snapshot) => { console.log("Class listener triggered."); allClassCache = []; snapshot.forEach(doc => { allClassCache.push({ id: doc.id, ...doc.data() }); }); if (currentView === 'class') renderCol1ClassList(); if (currentView === 'student' && currentStudentId) renderCol2ClassList(currentStudentId); }, (error) => { console.error("Error listening for classes: ", error); toast('Failed to load classes. Check security rules.', 'error'); }); }
         const listenForAllStudents = () => { if (unsubscribeAllStudents) unsubscribeAllStudents(); console.log("Setting up listener for all students..."); unsubscribeAllStudents = onSnapshot(getStudentsCol(), (snapshot) => { console.log("All students listener triggered."); allStudentsCache = []; snapshot.forEach(doc => { allStudentsCache.push({ id: doc.id, ...doc.data() }); }); if (currentView === 'student') renderCol1StudentList(); if (currentView === 'class' && currentClassId) { renderCol2StudentList(currentClassId); renderStudentDropdown(); } if (currentStudentId) listenForContacts(currentStudentId); }, (error) => { console.error("Error listening for students: ", error); toast('Failed to load students. Check security rules.', 'error'); }); }
         
-        // --- Contact Listener ---
         const listenForContacts = (studentId) => {
              if (unsubscribeContacts) unsubscribeContacts(); 
              contactCache.clear(); 
@@ -907,670 +832,207 @@
                  try {
                      const contacts = [];
                      for (let i = 0; i < parentIds.length; i += 30) {
-                         const chunk = parentIds.slice(i, i + 30);
-                         if (chunk.length === 0) continue;
-                         console.log("Fetching parent chunk:", chunk);
+                         const chunk = parentIds.slice(i, i + 30); if (chunk.length === 0) continue;
                          const q = query(getParentsCol(), where('__name__', 'in', chunk));
                          const querySnapshot = await getDocs(q);
-                         querySnapshot.docs.forEach(doc => {
-                             const contactData = { id: doc.id, ...doc.data() };
-                             contacts.push(contactData);
-                             contactCache.set(doc.id, contactData); 
-                         });
+                         querySnapshot.docs.forEach(doc => { const contactData = { id: doc.id, ...doc.data() }; contacts.push(contactData); contactCache.set(doc.id, contactData); });
                      }
-                     console.log("Fetched contacts:", contacts);
                      renderContactList(contacts);
                  } catch (error) { console.error("Error fetching contacts:", error); toast('Failed to load contacts.', 'error'); renderContactList([]); }
              }, (error) => { console.error("Error listening for contacts:", error); toast('Failed to load contacts.', 'error'); renderContactList([]); });
         }
 
         // --- UI Selectors ---
-        const selectClass = (classId, className) => { 
-            console.log("Selected class:", classId, className); 
-            currentClassId = classId; 
-            currentStudentId = null; 
-            document.querySelectorAll('#col-1-list > div').forEach(el => { el.classList.toggle('bg-blue-50', el.dataset.id === classId); el.classList.toggle('border-blue-300', el.dataset.id === classId); }); 
-            document.getElementById('col-2-subtitle').textContent = `For: ${className}`; 
-            document.getElementById('add-new-student-btn').disabled = false; 
-            document.getElementById('add-existing-student-btn').disabled = false; 
-            renderStudentDropdown(); 
-            renderCol2StudentList(classId); 
-            resetCol3(); 
-            showCol('col-2-section'); 
-            setActiveNav('nav-col-2'); 
-        }
-
-        // --- UPDATED: Select Student ---
-        const selectStudent = (studentId, studentName) => {
-            console.log("Selected student:", studentId, studentName);
-            currentStudentId = studentId;
-            document.querySelectorAll('#col-1-list > div, #col-2-list > div').forEach(el => { el.classList.toggle('bg-blue-50', el.dataset.id === studentId); el.classList.toggle('border-blue-300', el.dataset.id === studentId); });
-            document.getElementById('contact-student-subtitle').textContent = `For: ${studentName}`; 
-            document.getElementById('add-contact-btn').disabled = false;
-            
-            listenForContacts(studentId); 
-            loadStudentBillingData(studentId); // --- NEW: Load billing data ---
-
-            if (currentView === 'student') { 
-                document.getElementById('col-2-subtitle').textContent = `For: ${studentName}`; 
-                renderCol2ClassList(studentId); 
-            }
-            showCol('col-3-section'); 
-            setActiveNav('nav-contacts');
-            const listEl = document.getElementById('contact-list');
-            if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        const selectClass = (classId, className) => { console.log("Selected class:", classId, className); currentClassId = classId; currentStudentId = null; document.querySelectorAll('#col-1-list > div').forEach(el => { el.classList.toggle('bg-blue-50', el.dataset.id === classId); el.classList.toggle('border-blue-300', el.dataset.id === classId); }); document.getElementById('col-2-subtitle').textContent = `For: ${className}`; document.getElementById('add-new-student-btn').disabled = false; document.getElementById('add-existing-student-btn').disabled = false; renderStudentDropdown(); renderCol2StudentList(classId); resetCol3(); showCol('col-2-section'); setActiveNav('nav-col-2'); }
+        const selectStudent = (studentId, studentName) => { console.log("Selected student:", studentId, studentName); currentStudentId = studentId; document.querySelectorAll('#col-1-list > div, #col-2-list > div').forEach(el => { el.classList.toggle('bg-blue-50', el.dataset.id === studentId); el.classList.toggle('border-blue-300', el.dataset.id === studentId); }); document.getElementById('contact-student-subtitle').textContent = `For: ${studentName}`; document.getElementById('add-contact-btn').disabled = false; listenForContacts(studentId); loadStudentBillingData(studentId); if (currentView === 'student') { document.getElementById('col-2-subtitle').textContent = `For: ${studentName}`; renderCol2ClassList(studentId); } showCol('col-3-section'); setActiveNav('nav-contacts'); const listEl = document.getElementById('contact-list'); if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 
         // --- Open Edit Modals ---
         const openEditClassModal = (classId) => { console.log("Opening edit class modal for:", classId); const classData = allClassCache.find(c => c.id === classId); if (!classData) { toast('Class not found.', 'error'); return; } document.getElementById('edit-class-id').value = classId; document.getElementById('edit-class-name').value = classData.name; document.getElementById('edit-teacher-name').value = classData.teacher; openModal('edit-class-modal'); };
         const openEditStudentModal = (studentId) => { console.log("Opening edit student modal for:", studentId); const studentData = allStudentsCache.find(s => s.id === studentId); if (!studentData) { toast('Student not found.', 'error'); return; } document.getElementById('edit-student-id').value = studentId; document.getElementById('edit-student-name').value = studentData.name; openModal('edit-student-modal'); };
         const openEditContactModal = (contactId) => { console.log("Opening edit contact modal for:", contactId); const contactData = contactCache.get(contactId); if (!contactData) { toast('Contact not found.', 'error'); return; } document.getElementById('edit-contact-id').value = contactId; document.getElementById('edit-contact-name').value = contactData.name; document.getElementById('edit-contact-email').value = contactData.email; document.getElementById('edit-contact-phone').value = contactData.phone || ''; openModal('edit-contact-modal'); };
 
-
         // --- Data Handlers (Add, Delete, Update) ---
-        const handleAddClass = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const name = document.getElementById('class-name').value; const teacher = document.getElementById('teacher-name').value; console.log("Attempting to add class:", name, teacher); try { await addDoc(getClassesCol(), { name, teacher, students: [] }); closeModal('add-class-modal'); e.target.reset(); toast('Class added!', 'success'); } catch (error) { console.error("Add Class Error:", error); toast(`Failed: ${error.message}`, 'error'); } finally { btn.disabled = false; } }
-        const handleUpdateClass = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const classId = document.getElementById('edit-class-id').value; const name = document.getElementById('edit-class-name').value; const teacher = document.getElementById('edit-teacher-name').value; console.log("Attempting to update class:", classId, name, teacher); if (!classId || !name || !teacher) { btn.disabled = false; toast('Missing fields.', 'error'); return; } try { await updateDoc(doc(getClassesCol(), classId), { name, teacher }); closeModal('edit-class-modal'); toast('Class updated!', 'success'); } catch (error) { console.error("Update Class Error:", error); toast(`Update failed: ${error.message}`, 'error'); } finally { btn.disabled = false; } };
-        const handleDeleteClass = async (classId, className) => { console.log("Attempting to delete class:", classId, className); if (!confirm(`Delete class "${className}"?`)) return; try { const batch = writeBatch(db); const classData = allClassCache.find(c => c.id === classId); if (classData?.students) { const studentRefs = classData.students.map(sId => doc(getStudentsCol(), sId)); const studentDocs = await Promise.all(studentRefs.map(getDoc)); studentDocs.forEach(studentDoc => { if (studentDoc.exists()) batch.update(studentDoc.ref, { classes: arrayRemove(classId) }); }); } batch.delete(doc(getClassesCol(), classId)); await batch.commit(); toast('Class deleted.', 'success'); if (currentClassId === classId) { resetCol2(); resetCol3(); } } catch (error) { console.error("Delete Class Error:", error); toast('Failed to delete class.', 'error'); } }
-        const handleAddNewStudent = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const name = document.getElementById('new-student-name').value; console.log("Attempting to add student:", name); if (!name) { btn.disabled = false; return; } try { const studentRef = await addDoc(getStudentsCol(), { name, parents: [], classes: [] }); if (currentView === 'class' && currentClassId) { const batch = writeBatch(db); batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(studentRef.id) }); batch.update(studentRef, { classes: arrayUnion(currentClassId) }); await batch.commit(); } closeModal('add-new-student-modal'); e.target.reset(); toast('Student added!', 'success'); } catch (error) { console.error("Add Student Error:", error); toast('Failed to add student.', 'error'); } finally { btn.disabled = false; } }
-        const handleUpdateStudent = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const studentId = document.getElementById('edit-student-id').value; const name = document.getElementById('edit-student-name').value; console.log("Attempting to update student:", studentId, name); if (!studentId || !name) { btn.disabled = false; toast('Missing name.', 'error'); return; } try { await updateDoc(doc(getStudentsCol(), studentId), { name }); closeModal('edit-student-modal'); toast('Student updated!', 'success'); } catch (error) { console.error("Update Student Error:", error); toast(`Update failed: ${error.message}`, 'error'); } finally { btn.disabled = false; } };
-        const handleAddExistingStudent = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const studentId = document.getElementById('existing-student-select').value; console.log("Attempting to add existing student:", studentId, "to class:", currentClassId); if (!studentId || !currentClassId) { btn.disabled = false; return; } try { const batch = writeBatch(db); batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(studentId) }); batch.update(doc(getStudentsCol(), studentId), { classes: arrayUnion(currentClassId) }); await batch.commit(); closeModal('add-existing-student-modal'); e.target.reset(); toast('Student added to class!', 'success'); } catch (error) { console.error("Add Existing Student Error:", error); toast('Failed to add student.', 'error'); } finally { btn.disabled = false; } }
-        const handleRemoveStudent = async (studentId, studentName) => { console.log("Attempting to remove student:", studentId, "from class:", currentClassId); if (!currentClassId || !confirm(`Remove ${studentName} from this class?`)) return; try { const batch = writeBatch(db); batch.update(doc(getClassesCol(), currentClassId), { students: arrayRemove(studentId) }); batch.update(doc(getStudentsCol(), studentId), { classes: arrayRemove(currentClassId) }); await batch.commit(); toast('Student removed.', 'success'); if (currentStudentId === studentId) resetCol3(); } catch (error) { console.error("Remove Student Error:", error); toast('Failed to remove student.', 'error'); } }
-        const handleDeleteStudent = async (studentId, studentName) => { console.log("Attempting to delete student:", studentId, studentName); if (!confirm(`PERMANENTLY DELETE ${studentName}? This will remove them from all classes and delete all their contacts. This cannot be undone.`)) return; try { const batch = writeBatch(db); const studentRef = doc(getStudentsCol(), studentId); const studentSnap = await getDoc(studentRef); if (studentSnap.exists()) { const data = studentSnap.data(); if (data.parents) data.parents.forEach(pId => batch.delete(doc(getParentsCol(), pId))); if (data.classes) data.classes.forEach(cId => batch.update(doc(getClassesCol(), cId), { students: arrayRemove(studentId) })); } batch.delete(studentRef); await batch.commit(); toast('Student deleted.', 'success'); if (currentStudentId === studentId) { resetCol2(); resetCol3(); } } catch (error) { console.error("Delete Student Error:", error); toast('Failed to delete student.', 'error'); } }
-        const handleAddContact = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const name = document.getElementById('contact-name').value; const email = document.getElementById('contact-email').value; const phone = document.getElementById('contact-phone').value; console.log("Attempting to add contact:", name, email, "for student:", currentStudentId); if (!name || !email || !currentStudentId) { btn.disabled = false; return; } try { const parentRef = await addDoc(getParentsCol(), { name, email, phone }); await updateDoc(doc(getStudentsCol(), currentStudentId), { parents: arrayUnion(parentRef.id) }); closeModal('add-contact-modal'); e.target.reset(); toast('Contact added!', 'success'); } catch (error) { console.error("Add Contact Error:", error); toast('Failed to add contact.', 'error'); } finally { btn.disabled = false; } }
-        const handleUpdateContact = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const contactId = document.getElementById('edit-contact-id').value; const name = document.getElementById('edit-contact-name').value; const email = document.getElementById('edit-contact-email').value; const phone = document.getElementById('edit-contact-phone').value; console.log("Attempting to update contact:", contactId, name, email, phone); if (!contactId || !name || !email) { btn.disabled = false; toast('Missing name or email.', 'error'); return; } try { await updateDoc(doc(getParentsCol(), contactId), { name, email, phone }); closeModal('edit-contact-modal'); toast('Contact updated!', 'success'); } catch (error) { console.error("Update Contact Error:", error); toast(`Update failed: ${error.message}`, 'error'); } finally { btn.disabled = false; } };
-        const handleDeleteContact = async (contactId, contactName) => { console.log("Attempting to delete contact:", contactId, contactName, "for student:", currentStudentId); if (!currentStudentId || !confirm(`Delete contact ${contactName}?`)) return; try { const batch = writeBatch(db); batch.update(doc(getStudentsCol(), currentStudentId), { parents: arrayRemove(contactId) }); batch.delete(doc(getParentsCol(), contactId)); await batch.commit(); toast('Contact deleted.', 'success'); } catch (error) { console.error("Delete Contact Error:", error); toast('Failed to delete contact.', 'error'); } }
+        const handleAddClass = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const name = document.getElementById('class-name').value; const teacher = document.getElementById('teacher-name').value; try { await addDoc(getClassesCol(), { name, teacher, students: [] }); closeModal('add-class-modal'); e.target.reset(); toast('Class added!', 'success'); } catch (error) { console.error("Add Class Error:", error); toast(`Failed: ${error.message}`, 'error'); } finally { btn.disabled = false; } }
+        const handleUpdateClass = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const classId = document.getElementById('edit-class-id').value; const name = document.getElementById('edit-class-name').value; const teacher = document.getElementById('edit-teacher-name').value; if (!classId || !name || !teacher) { btn.disabled = false; toast('Missing fields.', 'error'); return; } try { await updateDoc(doc(getClassesCol(), classId), { name, teacher }); closeModal('edit-class-modal'); toast('Class updated!', 'success'); } catch (error) { console.error("Update Class Error:", error); toast(`Update failed: ${error.message}`, 'error'); } finally { btn.disabled = false; } };
+        const handleDeleteClass = async (classId, className) => { if (!confirm(`Delete class "${className}"?`)) return; try { const batch = writeBatch(db); const classData = allClassCache.find(c => c.id === classId); if (classData?.students) { const studentRefs = classData.students.map(sId => doc(getStudentsCol(), sId)); const studentDocs = await Promise.all(studentRefs.map(getDoc)); studentDocs.forEach(studentDoc => { if (studentDoc.exists()) batch.update(studentDoc.ref, { classes: arrayRemove(classId) }); }); } batch.delete(doc(getClassesCol(), classId)); await batch.commit(); toast('Class deleted.', 'success'); if (currentClassId === classId) { resetCol2(); resetCol3(); } } catch (error) { console.error("Delete Class Error:", error); toast('Failed to delete class.', 'error'); } }
+        const handleAddNewStudent = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const name = document.getElementById('new-student-name').value; if (!name) { btn.disabled = false; return; } try { const studentRef = await addDoc(getStudentsCol(), { name, parents: [], classes: [] }); if (currentView === 'class' && currentClassId) { const batch = writeBatch(db); batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(studentRef.id) }); batch.update(studentRef, { classes: arrayUnion(currentClassId) }); await batch.commit(); } closeModal('add-new-student-modal'); e.target.reset(); toast('Student added!', 'success'); } catch (error) { console.error("Add Student Error:", error); toast('Failed to add student.', 'error'); } finally { btn.disabled = false; } }
+        const handleUpdateStudent = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const studentId = document.getElementById('edit-student-id').value; const name = document.getElementById('edit-student-name').value; if (!studentId || !name) { btn.disabled = false; toast('Missing name.', 'error'); return; } try { await updateDoc(doc(getStudentsCol(), studentId), { name }); closeModal('edit-student-modal'); toast('Student updated!', 'success'); } catch (error) { console.error("Update Student Error:", error); toast(`Update failed: ${error.message}`, 'error'); } finally { btn.disabled = false; } };
+        const handleAddExistingStudent = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const studentId = document.getElementById('existing-student-select').value; if (!studentId || !currentClassId) { btn.disabled = false; return; } try { const batch = writeBatch(db); batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(studentId) }); batch.update(doc(getStudentsCol(), studentId), { classes: arrayUnion(currentClassId) }); await batch.commit(); closeModal('add-existing-student-modal'); e.target.reset(); toast('Student added to class!', 'success'); } catch (error) { console.error("Add Existing Student Error:", error); toast('Failed to add student.', 'error'); } finally { btn.disabled = false; } }
+        const handleRemoveStudent = async (studentId, studentName) => { if (!currentClassId || !confirm(`Remove ${studentName} from this class?`)) return; try { const batch = writeBatch(db); batch.update(doc(getClassesCol(), currentClassId), { students: arrayRemove(studentId) }); batch.update(doc(getStudentsCol(), studentId), { classes: arrayRemove(currentClassId) }); await batch.commit(); toast('Student removed.', 'success'); if (currentStudentId === studentId) resetCol3(); } catch (error) { console.error("Remove Student Error:", error); toast('Failed to remove student.', 'error'); } }
+        const handleDeleteStudent = async (studentId, studentName) => { if (!confirm(`PERMANENTLY DELETE ${studentName}? This will remove them from all classes and delete all their contacts. This cannot be undone.`)) return; try { const batch = writeBatch(db); const studentRef = doc(getStudentsCol(), studentId); const studentSnap = await getDoc(studentRef); if (studentSnap.exists()) { const data = studentSnap.data(); if (data.parents) data.parents.forEach(pId => batch.delete(doc(getParentsCol(), pId))); if (data.classes) data.classes.forEach(cId => batch.update(doc(getClassesCol(), cId), { students: arrayRemove(studentId) })); } batch.delete(studentRef); await batch.commit(); toast('Student deleted.', 'success'); if (currentStudentId === studentId) { resetCol2(); resetCol3(); } } catch (error) { console.error("Delete Student Error:", error); toast('Failed to delete student.', 'error'); } }
+        const handleAddContact = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const name = document.getElementById('contact-name').value; const email = document.getElementById('contact-email').value; const phone = document.getElementById('contact-phone').value; if (!name || !email || !currentStudentId) { btn.disabled = false; return; } try { const parentRef = await addDoc(getParentsCol(), { name, email, phone }); await updateDoc(doc(getStudentsCol(), currentStudentId), { parents: arrayUnion(parentRef.id) }); closeModal('add-contact-modal'); e.target.reset(); toast('Contact added!', 'success'); } catch (error) { console.error("Add Contact Error:", error); toast('Failed to add contact.', 'error'); } finally { btn.disabled = false; } }
+        const handleUpdateContact = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const contactId = document.getElementById('edit-contact-id').value; const name = document.getElementById('edit-contact-name').value; const email = document.getElementById('edit-contact-email').value; const phone = document.getElementById('edit-contact-phone').value; if (!contactId || !name || !email) { btn.disabled = false; toast('Missing name or email.', 'error'); return; } try { await updateDoc(doc(getParentsCol(), contactId), { name, email, phone }); closeModal('edit-contact-modal'); toast('Contact updated!', 'success'); } catch (error) { console.error("Update Contact Error:", error); toast(`Update failed: ${error.message}`, 'error'); } finally { btn.disabled = false; } };
+        const handleDeleteContact = async (contactId, contactName) => { if (!currentStudentId || !confirm(`Delete contact ${contactName}?`)) return; try { const batch = writeBatch(db); batch.update(doc(getStudentsCol(), currentStudentId), { parents: arrayRemove(contactId) }); batch.delete(doc(getParentsCol(), contactId)); await batch.commit(); toast('Contact deleted.', 'success'); } catch (error) { console.error("Delete Contact Error:", error); toast('Failed to delete contact.', 'error'); } }
 
         // --- Email Sending ---
-        const openEmailModal = ({ to, bcc }) => { 
-            console.log("Opening email modal. To:", to, "BCC:", bcc ? bcc.length : 0); 
-            const toEl = document.getElementById('email-to'); 
-            const bccEl = document.getElementById('email-bcc'); 
-            const replyToEl = document.getElementById('reply-to-email');
-            
-            replyToEl.textContent = currentUser?.displayName || currentUser?.email || 'Unknown';
-            
-            if (to) { 
-                toEl.value = to; 
-                document.getElementById('email-to-wrapper').classList.remove('hidden'); 
-                bccEl.value = ''; 
-                document.getElementById('email-bcc-wrapper').classList.add('hidden'); 
-            } 
-            if (bcc) { 
-                toEl.value = ''; 
-                document.getElementById('email-to-wrapper').classList.add('hidden'); 
-                bccEl.value = `BCC: ${bcc.length} recipient(s)`; 
-                document.getElementById('email-bcc-wrapper').classList.remove('hidden'); 
-            } 
-            document.getElementById('email-subject').value = ''; 
-            document.getElementById('email-body').value = ''; 
-            document.getElementById('email-status').textContent = ''; 
-            document.getElementById('send-email-btn').disabled = false; 
-            openModal('email-modal'); 
-        }
-        const handleEmailClass = async () => { console.log("Handle email class:", currentClassId); if (!currentClassId) return; const classData = allClassCache.find(c => c.id === currentClassId); if (!classData?.students?.length) { toast('No students in class.', 'error'); return; } const studentIds = classData.students; const parentIds = allStudentsCache.filter(s => studentIds.includes(s.id)).flatMap(s => s.parents || []); if (parentIds.length === 0) { toast('No parent contacts found.', 'error'); return; } const uniqueParentIds = [...new Set(parentIds)]; try { const contacts = []; for (let i = 0; i < uniqueParentIds.length; i += 30) { const chunk = uniqueParentIds.slice(i, i + 30); if(chunk.length === 0) continue; const q = query(getParentsCol(), where('__name__', 'in', chunk)); const querySnapshot = await getDocs(q); querySnapshot.docs.forEach(doc => contacts.push(doc.data())); } const bccEmails = contacts.map(c => c.email).filter(Boolean); if (bccEmails.length === 0) { toast('No valid emails found.', 'error'); return; } openEmailModal({ bcc: bccEmails }); } catch (error) { console.error("Email Class Error:", error); toast('Failed to get emails.', 'error'); } }
-        
-        const handleSendEmail = async (e) => { 
-            e.preventDefault(); 
-            const btn = document.getElementById('send-email-btn'); 
-            const status = document.getElementById('email-status'); 
-            btn.disabled = true; 
-            status.textContent = 'Sending...'; 
-            const serverUrl = HARDCODED_CONFIG.serverUrl; 
-            const to = document.getElementById('email-to').value; 
-            const bccVal = document.getElementById('email-bcc').value; 
-            
-            const replyToEmail = currentUser?.email || null;
-            
-            let replyToName;
-            if (currentUser?.displayName) {
-                replyToName = currentUser.displayName;
-            } else {
-                replyToName = replyToEmail; 
-            }
-            
-            let bccList = null; 
-            if (bccVal) { 
-                try { 
-                    const classData = allClassCache.find(c => c.id === currentClassId); 
-                    const studentIds = classData.students; 
-                    const parentIds = allStudentsCache.filter(s => studentIds.includes(s.id)).flatMap(s => s.parents || []); 
-                    const uniqueParentIds = [...new Set(parentIds)]; 
-                    const contacts = []; 
-                    for (let i = 0; i < uniqueParentIds.length; i += 30) { 
-                        const chunk = uniqueParentIds.slice(i, i + 30); 
-                        if(chunk.length === 0) continue; 
-                        const q = query(getParentsCol(), where('__name__', 'in', chunk)); 
-                        const querySnapshot = await getDocs(q); 
-                        querySnapshot.docs.forEach(doc => contacts.push(doc.data())); 
-                    } 
-                    bccList = contacts.map(c => c.email).filter(Boolean); 
-                } catch(err) { 
-                    console.error("BCC List Error:", err); 
-                    toast('Failed build BCC list', 'error'); 
-                    status.textContent = 'Failed.'; 
-                    btn.disabled = false; 
-                    return; 
-                } 
-            } 
-            
-            const payload = { 
-                to: to || null, 
-                bcc: bccList, 
-                replyTo: {
-                    email: replyToEmail,
-                    name: replyToName 
-                },
-                subject: document.getElementById('email-subject').value, 
-                text: document.getElementById('email-body').value 
-            }; 
-            
-            console.log("Sending email payload:", payload); 
-            try { 
-                const response = await fetch(`${serverUrl}/send-email`, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await getIdToken(currentUser)}` }, // Added Auth header 
-                    body: JSON.stringify(payload) 
-                }); 
-                if (!response.ok) { 
-                    const res = await response.json(); 
-                    throw new Error(res.error || `Server ${response.status}`); 
-                } 
-                toast('Email sent!', 'success'); 
-                status.textContent = 'Sent!'; 
-                setTimeout(() => closeModal('email-modal'), 1000); 
-            } catch (error) { 
-                console.error("Send Email Error:", error); 
-                toast(`Failed: ${error.message}`, 'error'); 
-                status.textContent = 'Failed.'; 
-            } finally { 
-                btn.disabled = false; 
-            } 
-        }
+        const openEmailModal = ({ to, bcc }) => { const toEl = document.getElementById('email-to'); const bccEl = document.getElementById('email-bcc'); const replyToEl = document.getElementById('reply-to-email'); replyToEl.textContent = currentUser?.displayName || currentUser?.email || 'Unknown'; if (to) { toEl.value = to; document.getElementById('email-to-wrapper').classList.remove('hidden'); bccEl.value = ''; document.getElementById('email-bcc-wrapper').classList.add('hidden'); } if (bcc) { toEl.value = ''; document.getElementById('email-to-wrapper').classList.add('hidden'); bccEl.value = `BCC: ${bcc.length} recipient(s)`; document.getElementById('email-bcc-wrapper').classList.remove('hidden'); } document.getElementById('email-subject').value = ''; document.getElementById('email-body').value = ''; document.getElementById('email-status').textContent = ''; document.getElementById('send-email-btn').disabled = false; openModal('email-modal'); }
+        const handleEmailClass = async () => { if (!currentClassId) return; const classData = allClassCache.find(c => c.id === currentClassId); if (!classData?.students?.length) { toast('No students in class.', 'error'); return; } const studentIds = classData.students; const parentIds = allStudentsCache.filter(s => studentIds.includes(s.id)).flatMap(s => s.parents || []); if (parentIds.length === 0) { toast('No parent contacts found.', 'error'); return; } const uniqueParentIds = [...new Set(parentIds)]; try { const contacts = []; for (let i = 0; i < uniqueParentIds.length; i += 30) { const chunk = uniqueParentIds.slice(i, i + 30); if(chunk.length === 0) continue; const q = query(getParentsCol(), where('__name__', 'in', chunk)); const querySnapshot = await getDocs(q); querySnapshot.docs.forEach(doc => contacts.push(doc.data())); } const bccEmails = contacts.map(c => c.email).filter(Boolean); if (bccEmails.length === 0) { toast('No valid emails found.', 'error'); return; } openEmailModal({ bcc: bccEmails }); } catch (error) { console.error("Email Class Error:", error); toast('Failed to get emails.', 'error'); } }
+        const handleSendEmail = async (e) => { e.preventDefault(); const btn = document.getElementById('send-email-btn'); const status = document.getElementById('email-status'); btn.disabled = true; status.textContent = 'Sending...'; const serverUrl = HARDCODED_CONFIG.serverUrl; const to = document.getElementById('email-to').value; const bccVal = document.getElementById('email-bcc').value; const replyToEmail = currentUser?.email || null; let replyToName = currentUser?.displayName || replyToEmail; let bccList = null; if (bccVal) { try { const classData = allClassCache.find(c => c.id === currentClassId); const studentIds = classData.students; const parentIds = allStudentsCache.filter(s => studentIds.includes(s.id)).flatMap(s => s.parents || []); const uniqueParentIds = [...new Set(parentIds)]; const contacts = []; for (let i = 0; i < uniqueParentIds.length; i += 30) { const chunk = uniqueParentIds.slice(i, i + 30); if(chunk.length === 0) continue; const q = query(getParentsCol(), where('__name__', 'in', chunk)); const querySnapshot = await getDocs(q); querySnapshot.docs.forEach(doc => contacts.push(doc.data())); } bccList = contacts.map(c => c.email).filter(Boolean); } catch(err) { console.error("BCC List Error:", err); toast('Failed build BCC list', 'error'); status.textContent = 'Failed.'; btn.disabled = false; return; } } const payload = { to: to || null, bcc: bccList, replyTo: { email: replyToEmail, name: replyToName }, subject: document.getElementById('email-subject').value, text: document.getElementById('email-body').value }; try { const response = await fetch(`${serverUrl}/send-email`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await getIdToken(currentUser)}` }, body: JSON.stringify(payload) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast('Email sent!', 'success'); status.textContent = 'Sent!'; setTimeout(() => closeModal('email-modal'), 1000); } catch (error) { console.error("Send Email Error:", error); toast(`Failed: ${error.message}`, 'error'); status.textContent = 'Failed.'; } finally { btn.disabled = false; } }
         
         // --- Mobile Navigation ---
         const showCol = (colId) => { console.log("Showing mobile col:", colId); document.getElementById('col-1-section').classList.add('hidden'); document.getElementById('col-2-section').classList.add('hidden'); document.getElementById('col-3-section').classList.add('hidden'); document.getElementById(colId).classList.remove('hidden'); }
         const setActiveNav = (navId) => { console.log("Setting active nav:", navId); document.getElementById('nav-col-1').classList.replace('text-blue-600', 'text-gray-500'); document.getElementById('nav-col-2').classList.replace('text-blue-600', 'text-gray-500'); document.getElementById('nav-contacts').classList.replace('text-blue-600', 'text-gray-500'); document.getElementById(navId).classList.replace('text-gray-500', 'text-blue-600'); }
         
         // --- Authentication ---
-        const handleLogin = (e) => { e.preventDefault(); const email = document.getElementById('login-email').value; const password = document.getElementById('login-password').value; const errorEl = document.getElementById('login-error'); const btn = document.getElementById('login-btn'); btn.disabled = true; errorEl.textContent = ''; console.log("Attempting login for:", email); signInWithEmailAndPassword(auth, email, password) .catch((error) => { console.error("Login failed:", error); errorEl.textContent = error.message.replace('Firebase: ', ''); }) .finally(() => { btn.disabled = false; }); };
-        const handleSignOut = () => { console.log("Signing out..."); if (unsubscribeClasses) unsubscribeClasses(); if (unsubscribeAllStudents) unsubscribeAllStudents(); if (unsubscribeContacts) unsubscribeContacts(); signOut(auth).catch((error) => { console.error("Sign out failed:", error); toast('Sign out failed.', 'error'); }); };
+        const handleLogin = (e) => { e.preventDefault(); const email = document.getElementById('login-email').value; const password = document.getElementById('login-password').value; const errorEl = document.getElementById('login-error'); const btn = document.getElementById('login-btn'); btn.disabled = true; errorEl.textContent = ''; signInWithEmailAndPassword(auth, email, password) .catch((error) => { errorEl.textContent = error.message.replace('Firebase: ', ''); }) .finally(() => { btn.disabled = false; }); };
+        const handleSignOut = () => { if (unsubscribeClasses) unsubscribeClasses(); if (unsubscribeAllStudents) unsubscribeAllStudents(); if (unsubscribeContacts) unsubscribeContacts(); signOut(auth).catch((error) => { toast('Sign out failed.', 'error'); }); };
 
         // --- User Management ---
-        const openUserManagementModal = async () => { console.log("Opening user mgmt modal"); openModal('user-management-modal'); await fetchUsers(); };
-        const fetchUsers = async () => { console.log("Fetching users..."); const listEl = document.getElementById('user-list'); listEl.innerHTML = '<p class="text-gray-500">Loading users...</p>'; if (!currentUser) { listEl.innerHTML = '<p class="text-red-500">Not authenticated.</p>'; return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/list-users`, { method: 'GET', headers: { 'Authorization': `Bearer ${idToken}` } }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } const { users } = await response.json(); console.log("Fetched users:", users); renderUserList(users); } catch (error) { console.error("Fetch Users Error:", error); listEl.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`; toast('Failed load users.', 'error'); } };
-        
-        const handleCreateUser = async (e) => { 
-            e.preventDefault(); 
-            const name = document.getElementById('new-user-name').value; 
-            const email = document.getElementById('new-user-email').value; 
-            const password = document.getElementById('new-user-password').value; 
-            const statusEl = document.getElementById('add-user-status'); 
-            const btn = document.getElementById('add-user-btn'); 
-            btn.disabled = true; statusEl.textContent = 'Creating...'; 
-            statusEl.classList.remove('text-red-600', 'text-green-600'); 
-            console.log("Attempting create user:", name, email); 
-            if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); btn.disabled = false; return; } 
-            
-            if (!name || !email || !password || password.length < 6) {
-                statusEl.textContent = 'Name, email, and password (min 6 chars) required.'; 
-                statusEl.classList.add('text-red-600'); 
-                btn.disabled = false; 
-                return;
-            }
+        const openUserManagementModal = async () => { openModal('user-management-modal'); await fetchUsers(); };
+        const fetchUsers = async () => { const listEl = document.getElementById('user-list'); listEl.innerHTML = '<p class="text-gray-500">Loading users...</p>'; if (!currentUser) { listEl.innerHTML = '<p class="text-red-500">Not authenticated.</p>'; return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/list-users`, { method: 'GET', headers: { 'Authorization': `Bearer ${idToken}` } }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } const { users } = await response.json(); renderUserList(users); } catch (error) { listEl.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`; toast('Failed load users.', 'error'); } };
+        const handleCreateUser = async (e) => { e.preventDefault(); const name = document.getElementById('new-user-name').value; const email = document.getElementById('new-user-email').value; const password = document.getElementById('new-user-password').value; const statusEl = document.getElementById('add-user-status'); const btn = document.getElementById('add-user-btn'); btn.disabled = true; statusEl.textContent = 'Creating...'; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); btn.disabled = false; return; } if (!name || !email || !password || password.length < 6) { statusEl.textContent = 'Name, email, and password (min 6 chars) required.'; statusEl.classList.add('text-red-600'); btn.disabled = false; return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/create-user`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ name, email, password }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } const result = await response.json(); toast('User created!', 'success'); statusEl.textContent = `Created ${result.email}.`; statusEl.classList.add('text-green-600'); e.target.reset(); await fetchUsers(); } catch (error) { statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed create user.', 'error'); } finally { btn.disabled = false; } };
+        const handleDeleteUser = async (uidToDelete, emailToDelete) => { if (!confirm(`Delete user: ${emailToDelete}? Permanent.`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Deleting ${emailToDelete}...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/delete-user`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uid: uidToDelete }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`User ${emailToDelete} deleted.`, 'success'); statusEl.textContent = `Deleted ${emailToDelete}.`; statusEl.classList.add('text-green-600'); await fetchUsers(); } catch (error) { statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed delete user.', 'error'); } };
+        const handleMakeAdmin = async (uidToMakeAdmin, emailToMakeAdmin) => { if (!confirm(`Grant admin to ${emailToMakeAdmin}?`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Making ${emailToMakeAdmin} admin...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/set-admin`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uidToMakeAdmin: uidToMakeAdmin }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`${emailToMakeAdmin} is now admin. Needs re-login.`, 'success'); statusEl.textContent = `Admin granted.`; statusEl.classList.add('text-green-600'); await fetchUsers(); if (uidToMakeAdmin === userId) { isAdmin = true; document.getElementById('manage-users-btn').classList.remove('hidden'); document.getElementById('user-admin-status').classList.remove('hidden'); await getIdToken(currentUser, true); } } catch (error) { statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed set admin.', 'error'); } };
+        const handleUpdateUserName = async (uidToUpdate, currentName) => { const newName = prompt(`Enter the new name for this user (UID: ${uidToUpdate}):`, currentName); if (newName === null || newName.trim() === '') { return; } const trimmedName = newName.trim(); if (trimmedName === currentName) { toast('Name is the same.', 'success'); return; } const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Updating name...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/update-user-name`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uid: uidToUpdate, newName: trimmedName }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } const result = await response.json(); toast('User name updated!', 'success'); statusEl.textContent = `Name updated.`; statusEl.classList.add('text-green-600'); if (result.updatedSelf) { currentUser = auth.currentUser; if(currentUser) { document.getElementById('user-email-display').textContent = currentUser.displayName || currentUser.email; await getIdToken(currentUser, true); } } await fetchUsers(); } catch (error) { statusEl.textContent = `Error: ${error.message || 'Failed update name.'}`; statusEl.classList.add('text-red-600'); toast('Failed update name.', 'error'); } };
 
-            try { 
-                const idToken = await getIdToken(currentUser); 
-                const serverUrl = HARDCODED_CONFIG.serverUrl; 
-                const response = await fetch(`${serverUrl}/create-user`, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, 
-                    body: JSON.stringify({ name, email, password }) 
-                }); 
-                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } 
-                const result = await response.json(); 
-                toast('User created!', 'success'); 
-                statusEl.textContent = `Created ${result.email}.`; 
-                statusEl.classList.add('text-green-600'); 
-                e.target.reset(); 
-                await fetchUsers(); 
-            } catch (error) { 
-                console.error("Create User Error:", error); 
-                statusEl.textContent = `Error: ${error.message}`; 
-                statusEl.classList.add('text-red-600'); 
-                toast('Failed create user.', 'error'); 
-            } finally { 
-                btn.disabled = false; 
-            } 
-        };
-        const handleDeleteUser = async (uidToDelete, emailToDelete) => { console.log("Attempting delete user:", uidToDelete, emailToDelete); if (!confirm(`Delete user: ${emailToDelete}? Permanent.`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Deleting ${emailToDelete}...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/delete-user`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uid: uidToDelete }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`User ${emailToDelete} deleted.`, 'success'); statusEl.textContent = `Deleted ${emailToDelete}.`; statusEl.classList.add('text-green-600'); await fetchUsers(); } catch (error) { console.error("Delete User Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed delete user.', 'error'); } };
-        const handleMakeAdmin = async (uidToMakeAdmin, emailToMakeAdmin) => { console.log("Attempting make admin:", uidToMakeAdmin, emailToMakeAdmin); if (!confirm(`Grant admin to ${emailToMakeAdmin}?`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Making ${emailToMakeAdmin} admin...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/set-admin`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uidToMakeAdmin: uidToMakeAdmin }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`${emailToMakeAdmin} is now admin. Needs re-login.`, 'success'); statusEl.textContent = `Admin granted.`; statusEl.classList.add('text-green-600'); await fetchUsers(); if (uidToMakeAdmin === userId) { isAdmin = true; document.getElementById('manage-users-btn').classList.remove('hidden'); document.getElementById('user-admin-status').classList.remove('hidden'); await getIdToken(currentUser, true); } } catch (error) { console.error("Make Admin Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed set admin.', 'error'); } };
-        
-        const handleUpdateUserName = async (uidToUpdate, currentName) => {
-            const newName = prompt(`Enter the new name for this user (UID: ${uidToUpdate}):`, currentName);
-
-            if (newName === null || newName.trim() === '') {
-                return; 
-            }
-            
-            const trimmedName = newName.trim();
-            if (trimmedName === currentName) {
-                 toast('Name is the same.', 'success');
-                return;
-            }
-
-            console.log(`Attempting update name for ${uidToUpdate} to "${trimmedName}"`);
-            const statusEl = document.getElementById('add-user-status'); 
-            statusEl.textContent = `Updating name...`;
-            statusEl.classList.remove('text-red-600', 'text-green-600');
-
-            if (!currentUser) {
-                statusEl.textContent = 'Not authenticated (currentUser is null).'; 
-                statusEl.classList.add('text-red-600');
-                return;
-            }
-
-            console.log("DEBUG: currentUser object right before getIdToken:", currentUser);
-
-            try {
-                const idToken = await getIdToken(currentUser); 
-                
-                const serverUrl = HARDCODED_CONFIG.serverUrl;
-                const response = await fetch(`${serverUrl}/update-user-name`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json', 
-                        'Authorization': `Bearer ${idToken}` 
-                    },
-                    body: JSON.stringify({ uid: uidToUpdate, newName: trimmedName })
-                });
-
-                if (!response.ok) {
-                    const res = await response.json();
-                    throw new Error(res.error || `Server ${response.status}`);
-                }
-
-                const result = await response.json();
-                toast('User name updated!', 'success');
-                statusEl.textContent = `Name updated.`;
-                statusEl.classList.add('text-green-600');
-
-                if (result.updatedSelf) {
-                    currentUser = auth.currentUser; 
-                    if(currentUser) { 
-                         document.getElementById('user-email-display').textContent = currentUser.displayName || currentUser.email; 
-                         await getIdToken(currentUser, true); 
-                    }
-                }
-
-                await fetchUsers(); // Refresh list
-
-            } catch (error) {
-                console.error("Update Name Error:", error);
-                statusEl.textContent = `Error: ${error.message || 'Failed update name.'}`; 
-                statusEl.classList.add('text-red-600');
-                toast('Failed update name.', 'error');
-            }
-        };
-
-
-        // --- === NEW BILLING FUNCTIONS START === ---
-
-        /**
-         * Fetches and displays all billing data for a specific student.
-         * @param {string} studentId - The Firestore ID of the student.
-         */
+        // --- NEW BILLING FUNCTIONS ---
         async function loadStudentBillingData(studentId) {
-            if (!currentUser) {
-                console.error("No auth token found. Cannot fetch billing data.");
-                return;
-            }
-
+            if (!currentUser) { console.error("No auth token found."); return; }
             const authToken = await getIdToken(currentUser);
-            
-            // Get the HTML container elements
             const invoiceList = document.getElementById('invoice-list-container');
             const subList = document.getElementById('subscription-list-container');
-            
-            // Clear any old data and show loading messages
             invoiceList.innerHTML = '<p id="invoices-loading-message" class="text-gray-500 text-center">Loading invoices...</p>';
             subList.innerHTML = '<p id="subscriptions-loading-message" class="text-gray-500 text-center">Loading subscriptions...</p>';
-
-            // --- Create Reusable Fetch Headers ---
-            const headers = new Headers();
-            headers.append('Authorization', `Bearer ${authToken}`);
-            headers.append('Content-Type', 'application/json');
-
+            const headers = new Headers({'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json'});
             const API_BASE_URL = HARDCODED_CONFIG.serverUrl;
 
-            // --- Fetch Invoices ---
-            try {
-                // NOTE: This calls a new, simpler endpoint. 
-                // We must update server.js to match.
+            try { // Fetch Invoices
                 const response = await fetch(`${API_BASE_URL}/get-student-invoices/${studentId}`, { headers });
-                
-                if (!response.ok) {
-                    const res = await response.json();
-                    throw new Error(res.error || `Failed to fetch invoices: ${response.statusText}`);
-                }
+                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Failed: ${response.statusText}`); }
+                const { invoices } = await response.json(); invoiceList.innerHTML = '';
+                if (invoices.length === 0) { invoiceList.innerHTML = '<p class="text-gray-500 text-center">No invoices found.</p>'; } 
+                else { invoices.forEach(invoice => { invoiceList.appendChild(createInvoiceElement(invoice)); }); }
+            } catch (error) { invoiceList.innerHTML = `<p class="error-message">Could not load invoices. ${error.message}</p>`; }
 
-                const { invoices } = await response.json(); // Get the list from the response
-                invoiceList.innerHTML = ''; // Clear loading message
-
-                if (invoices.length === 0) {
-                    invoiceList.innerHTML = '<p class="text-gray-500 text-center">No invoices found.</p>';
-                } else {
-                    invoices.forEach(invoice => {
-                        invoiceList.appendChild(createInvoiceElement(invoice));
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading invoices:', error);
-                invoiceList.innerHTML = `<p class="error-message">Could not load invoices. ${error.message}</p>`;
-            }
-
-            // --- Fetch Subscriptions ---
-            try {
-                // NOTE: This calls a new, simpler endpoint.
+            try { // Fetch Subscriptions
                 const response = await fetch(`${API_BASE_URL}/get-student-subscriptions/${studentId}`, { headers });
-
-                if (!response.ok) {
-                    const res = await response.json();
-                    throw new Error(res.error || `Failed to fetch subscriptions: ${response.statusText}`);
-                }
-
-                const { subscriptions } = await response.json(); // Get the list
-                subList.innerHTML = ''; // Clear loading message
-
-                if (subscriptions.length === 0) {
-                    subList.innerHTML = '<p class="text-gray-500 text-center">No subscriptions found.</p>';
-                } else {
-                    subscriptions.forEach(sub => {
-                        subList.appendChild(createSubscriptionElement(sub));
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading subscriptions:', error);
-                subList.innerHTML = `<p class="error-message">Could not load subscriptions. ${error.message}</p>`;
-            }
+                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Failed: ${response.statusText}`); }
+                const { subscriptions } = await response.json(); subList.innerHTML = '';
+                if (subscriptions.length === 0) { subList.innerHTML = '<p class="text-gray-500 text-center">No subscriptions found.</p>'; } 
+                else { subscriptions.forEach(sub => { subList.appendChild(createSubscriptionElement(sub)); }); }
+            } catch (error) { subList.innerHTML = `<p class="error-message">Could not load subscriptions. ${error.message}</p>`; }
         }
-
-        /**
-         * Helper function to create an HTML element for one invoice.
-         * @param {object} invoice - A Stripe Invoice object
-         * @returns {HTMLElement} A <div> element
-         */
         function createInvoiceElement(invoice) {
-            const el = document.createElement('div');
-            el.className = `billing-item invoice-status-${invoice.status}`;
-
-            const amount = (invoice.amount_due / 100).toFixed(2);
-            const date = new Date(invoice.created * 1000).toLocaleDateString();
-            const description = invoice.description || 'Invoice';
-
-            el.innerHTML = `
-                <p class="item-title">
-                    <strong>${description}</strong>
-                    <span class="status-badge">${invoice.status}</span>
-                </p>
-                <p class="item-details">$${amount}  •  Created: ${date}</p>
-                ${invoice.hosted_invoice_url ? `<a href="${invoice.hosted_invoice_url}" target="_blank" class="stripe-link">View or Pay Invoice</a>` : ''}
-            `;
-            return el;
+            const el = document.createElement('div'); el.className = `billing-item invoice-status-${invoice.status}`;
+            const amount = (invoice.amount_due / 100).toFixed(2); const date = new Date(invoice.created * 1000).toLocaleDateString(); const description = invoice.description || 'Invoice';
+            el.innerHTML = `<p class="item-title"><strong>${description}</strong><span class="status-badge">${invoice.status}</span></p><p class="item-details">$${amount}  •  Created: ${date}</p>${invoice.hosted_invoice_url ? `<a href="${invoice.hosted_invoice_url}" target="_blank" class="stripe-link">View or Pay Invoice</a>` : ''}`; return el;
         }
-
-        /**
-         * Helper function to create an HTML element for one subscription.
-         * @param {object} subscription - A Stripe Subscription object
-         * @returns {HTMLElement} A <div> element
-         */
         function createSubscriptionElement(subscription) {
-            const el = document.createElement('div');
-            el.className = `billing-item subscription-status-${subscription.status}`;
-
-            const productName = subscription.items.data[0]?.price.product?.name || 'Subscription';
-            const nextBillDate = new Date(subscription.current_period_end * 1000).toLocaleDateString();
-            const price = (subscription.items.data[0]?.price.unit_amount / 100).toFixed(2);
-            const interval = subscription.items.data[0]?.price.recurring.interval;
-
-            let details = `$${price} / ${interval}`;
-            if (subscription.status === 'active') {
-                details += `  •  Next bill: ${nextBillDate}`;
-            }
-
-            el.innerHTML = `
-                <p class="item-title">
-                    <strong>${productName}</strong>
-                    <span class="status-badge">${subscription.status}</span>
-                </p>
-                <p class="item-details">${details}</p>
-            `;
-            return el;
+            const el = document.createElement('div'); el.className = `billing-item subscription-status-${subscription.status}`;
+            const productName = subscription.items.data[0]?.price.product?.name || 'Subscription'; const nextBillDate = new Date(subscription.current_period_end * 1000).toLocaleDateString(); const price = (subscription.items.data[0]?.price.unit_amount / 100).toFixed(2); const interval = subscription.items.data[0]?.price.recurring.interval; let details = `$${price} / ${interval}`; if (subscription.status === 'active') { details += `  •  Next bill: ${nextBillDate}`; }
+            el.innerHTML = `<p class="item-title"><strong>${productName}</strong><span class="status-badge">${subscription.status}</span></p><p class="item-details">${details}</p>`; return el;
         }
+        // --- END BILLING FUNCTIONS ---
 
-        // --- === NEW BILLING FUNCTIONS END === ---
-
-
-        // --- NEW FUNCTION: Open Invoice Modal (Helper) ---
-         const promptInvoiceParentSelection = async (studentId, studentName) => {
-             console.log(`Invoice requested for student: ${studentName} (${studentId})`);
-            
-             // Set student info in modal immediately
-             document.getElementById('invoice-student-id').value = studentId;
-             document.querySelector('#invoice-subtitle span').textContent = studentName;
-              // Suggest a description
-             document.getElementById('invoice-description').value = `Class Fee - ${studentName}`; 
-            
-             const parentSelect = document.getElementById('invoice-parent-select');
-             parentSelect.innerHTML = '<option value="">Loading contacts...</option>'; // Show loading state
-             parentSelect.disabled = true;
-             document.getElementById('create-invoice-btn').disabled = true; // Disable submit until parent loaded
-              document.getElementById('invoice-amount').value = '';
-             document.getElementById('invoice-status').textContent = '';
-
-             openModal('invoice-modal'); // Open modal while loading
-
-             try {
-                 // Fetch the student document to get parent IDs
-                 const studentRef = doc(getStudentsCol(), studentId);
-                 const studentSnap = await getDoc(studentRef);
-                 if (!studentSnap.exists()) {
-                     throw new Error("Student not found");
-                 }
-                 const parentIds = studentSnap.data().parents || [];
-
-                 if (parentIds.length === 0) {
-                      parentSelect.innerHTML = '<option value="">No contacts found for this student</option>';
-                      toast('No contacts found for this student.', 'error');
-                      document.getElementById('invoice-status').textContent = 'Cannot create invoice: No contacts linked.';
-                      document.getElementById('invoice-status').classList.add('text-red-600');
-                     return; 
-                 }
-
-                 // Fetch parent details using the IDs
-                  const contacts = [];
-                  for (let i = 0; i < parentIds.length; i += 30) {
-                      const chunk = parentIds.slice(i, i + 30);
-                      if (chunk.length === 0) continue;
-                      const q = query(getParentsCol(), where('__name__', 'in', chunk));
-                      const querySnapshot = await getDocs(q);
-                      querySnapshot.docs.forEach(doc => {
-                          contacts.push({ id: doc.id, ...doc.data() });
-                      });
-                  }
-
-                 if (contacts.length === 0) {
-                      parentSelect.innerHTML = '<option value="">No contacts found (details fetch failed)</option>';
-                      toast('Could not fetch contact details.', 'error');
-                      document.getElementById('invoice-status').textContent = 'Cannot create invoice: Failed to fetch contacts.';
-                      document.getElementById('invoice-status').classList.add('text-red-600');
-                     return;
-                 }
-
-                 // Populate the dropdown
-                 parentSelect.innerHTML = '<option value="">-- Select Contact to Invoice --</option>';
-                 contacts.sort((a,b) => a.name.localeCompare(b.name)).forEach(contact => {
-                     const option = document.createElement('option');
-                     option.value = contact.id;
-                     option.textContent = `${contact.name} (${contact.email})`;
-                     parentSelect.appendChild(option);
-                 });
-                 parentSelect.disabled = false;
-                 document.getElementById('create-invoice-btn').disabled = false; // Enable submit
-
-             } catch (error) {
-                 console.error("Error fetching parents for invoice:", error);
-                 parentSelect.innerHTML = '<option value="">Error loading contacts</option>';
-                 toast('Error loading contacts.', 'error');
-                 document.getElementById('invoice-status').textContent = 'Error loading contacts.';
-                 document.getElementById('invoice-status').classList.add('text-red-600');
-             }
-         };
-
-        // --- UPDATED FUNCTION: Handle Create Invoice ---
-        const handleCreateInvoice = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('create-invoice-btn');
-            const statusEl = document.getElementById('invoice-status');
-            btn.disabled = true;
-            statusEl.textContent = 'Creating invoice...';
-            statusEl.classList.remove('text-red-600', 'text-green-600');
-
-            // Get parentId from the SELECT dropdown
-            const parentId = document.getElementById('invoice-parent-select').value; 
-            const amount = document.getElementById('invoice-amount').value;
-            const description = document.getElementById('invoice-description').value;
-            const studentId = document.getElementById('invoice-student-id').value; // Get student ID too
-            const studentName = allStudentsCache.find(s => s.id === studentId)?.name || null; // Get student name from cache
-
-            // Updated Validation
-            if (!parentId || !studentId || !amount || !description) { // Added studentId check
-                statusEl.textContent = 'Please select a parent and fill all fields.';
-                statusEl.classList.add('text-red-600');
-                btn.disabled = false;
+        // --- NEW MANUAL MAP FUNCTION ---
+        const handleMapStripeId = async (studentId, stripeCustomerIdInput) => {
+            if (!studentId || !stripeCustomerIdInput || !stripeCustomerIdInput.startsWith('cus_')) {
+                toast('Please enter a valid Stripe Customer ID (starts with cus_).', 'error');
                 return;
             }
+            if (!currentUser) { toast('Not authenticated.', 'error'); return; }
 
-            if (!currentUser) {
-                statusEl.textContent = 'Not authenticated.';
-                statusEl.classList.add('text-red-600');
-                btn.disabled = false;
-                return;
-            }
-
-            console.log(`Sending create invoice request for parent ${parentId} (Student: ${studentName})`);
+            console.log(`Attempting manual map: Student ${studentId} -> Stripe ${stripeCustomerIdInput}`);
+            // Optionally add a loading state to the button/input
+            
             try {
                 const idToken = await getIdToken(currentUser);
                 const serverUrl = HARDCODED_CONFIG.serverUrl;
 
-                const response = await fetch(`${serverUrl}/create-invoice`, {
+                const response = await fetch(`${serverUrl}/map-stripe-customer`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${idToken}`
                     },
-                    body: JSON.stringify({
-                        parentId: parentId, // Send selected parentId
-                        studentId: studentId, // --- THIS IS THE FIX ---
-                        studentName: studentName, // Send student name for context
-                        amount: amount,
-                        description: description
-                    })
+                    body: JSON.stringify({ studentId, stripeCustomerId: stripeCustomerIdInput })
                 });
 
-                if (!response.ok) {
-                    const res = await response.json();
-                    throw new Error(res.error || `Server ${response.status}`);
-                }
-
                 const result = await response.json();
-                toast('Invoice created successfully!', 'success');
-                statusEl.textContent = `Invoice ${result.invoiceId} created (${result.invoiceStatus}).`;
-                statusEl.classList.add('text-green-600');
+
+                if (!response.ok) {
+                    throw new Error(result.error || `Server error: ${response.status}`);
+                }
+
+                toast(result.message, 'success');
                 
-                if (result.invoiceUrl) {
-                    statusEl.innerHTML += ` <a href="${result.invoiceUrl}" target="_blank" class="text-blue-600 hover:underline">View Invoice</a>`;
+                // Update the local cache immediately (important!)
+                const studentIndex = allStudentsCache.findIndex(s => s.id === studentId);
+                if (studentIndex !== -1) {
+                    allStudentsCache[studentIndex].stripeCustomerId = stripeCustomerIdInput;
                 }
                 
-                // Reset form slightly
-                document.getElementById('invoice-amount').value = '';
-                document.getElementById('invoice-description').value = '';
-                // Keep button disabled after success to prevent duplicates easily
-                // btn.disabled = false; 
-
-                // Optionally close modal after a delay
-                setTimeout(() => closeModal('invoice-modal'), 4000); 
+                // Re-render the list the student is currently displayed in
+                if (currentView === 'student') {
+                    renderCol1StudentList(); // Re-render Col 1 if in student view
+                } else if (currentView === 'class' && currentClassId) {
+                    renderCol2StudentList(currentClassId); // Re-render Col 2 if in class view
+                }
+                
+                // If this student is selected, reload billing data
+                if (currentStudentId === studentId) {
+                    loadStudentBillingData(studentId);
+                }
 
             } catch (error) {
-                console.error("Create Invoice Error:", error);
-                statusEl.textContent = `Error: ${error.message}`;
-                statusEl.classList.add('text-red-600');
-                toast('Failed to create invoice.', 'error');
-                btn.disabled = false; // Re-enable button on error
-            } 
+                console.error("Manual Map Error:", error);
+                toast(`Mapping failed: ${error.message}`, 'error');
+            } finally {
+                // Remove loading state if you added one
+            }
+        };
+        // --- END MANUAL MAP FUNCTION ---
+
+        const promptInvoiceParentSelection = async (studentId, studentName) => {
+             document.getElementById('invoice-student-id').value = studentId; document.querySelector('#invoice-subtitle span').textContent = studentName; document.getElementById('invoice-description').value = `Class Fee - ${studentName}`; 
+             const parentSelect = document.getElementById('invoice-parent-select'); parentSelect.innerHTML = '<option value="">Loading contacts...</option>'; parentSelect.disabled = true; document.getElementById('create-invoice-btn').disabled = true; document.getElementById('invoice-amount').value = ''; document.getElementById('invoice-status').textContent = '';
+             openModal('invoice-modal'); 
+             try {
+                 const studentRef = doc(getStudentsCol(), studentId); const studentSnap = await getDoc(studentRef); if (!studentSnap.exists()) { throw new Error("Student not found"); } const parentIds = studentSnap.data().parents || [];
+                 if (parentIds.length === 0) { parentSelect.innerHTML = '<option value="">No contacts found</option>'; toast('No contacts found.', 'error'); document.getElementById('invoice-status').textContent = 'Cannot invoice: No contacts.'; document.getElementById('invoice-status').classList.add('text-red-600'); return; }
+                 const contacts = []; for (let i = 0; i < parentIds.length; i += 30) { const chunk = parentIds.slice(i, i + 30); if (chunk.length === 0) continue; const q = query(getParentsCol(), where('__name__', 'in', chunk)); const querySnapshot = await getDocs(q); querySnapshot.docs.forEach(doc => { contacts.push({ id: doc.id, ...doc.data() }); }); }
+                 if (contacts.length === 0) { parentSelect.innerHTML = '<option value="">Fetch failed</option>'; toast('Could not fetch contacts.', 'error'); document.getElementById('invoice-status').textContent = 'Fetch failed.'; document.getElementById('invoice-status').classList.add('text-red-600'); return; }
+                 parentSelect.innerHTML = '<option value="">-- Select Contact --</option>'; contacts.sort((a,b) => a.name.localeCompare(b.name)).forEach(contact => { const option = document.createElement('option'); option.value = contact.id; option.textContent = `${contact.name} (${contact.email})`; parentSelect.appendChild(option); }); parentSelect.disabled = false; document.getElementById('create-invoice-btn').disabled = false; 
+             } catch (error) { parentSelect.innerHTML = '<option value="">Error loading</option>'; toast('Error loading contacts.', 'error'); document.getElementById('invoice-status').textContent = 'Error loading.'; document.getElementById('invoice-status').classList.add('text-red-600'); }
+         };
+        const handleCreateInvoice = async (e) => {
+            e.preventDefault(); const btn = document.getElementById('create-invoice-btn'); const statusEl = document.getElementById('invoice-status'); btn.disabled = true; statusEl.textContent = 'Creating...'; statusEl.classList.remove('text-red-600', 'text-green-600');
+            const parentId = document.getElementById('invoice-parent-select').value; const amount = document.getElementById('invoice-amount').value; const description = document.getElementById('invoice-description').value; const studentId = document.getElementById('invoice-student-id').value; const studentName = allStudentsCache.find(s => s.id === studentId)?.name || null; 
+            if (!parentId || !studentId || !amount || !description) { statusEl.textContent = 'Please select parent & fill all fields.'; statusEl.classList.add('text-red-600'); btn.disabled = false; return; }
+            if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); btn.disabled = false; return; }
+            try {
+                const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl;
+                const response = await fetch(`${serverUrl}/create-invoice`, { method: 'POST', headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`}, body: JSON.stringify({ parentId, studentId, studentName, amount, description }) });
+                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); }
+                const result = await response.json(); toast('Invoice created!', 'success'); statusEl.textContent = `Invoice ${result.invoiceId} created (${result.invoiceStatus}).`; statusEl.classList.add('text-green-600');
+                if (result.invoiceUrl) { statusEl.innerHTML += ` <a href="${result.invoiceUrl}" target="_blank" class="text-blue-600 hover:underline">View</a>`; }
+                document.getElementById('invoice-amount').value = ''; document.getElementById('invoice-description').value = '';
+                setTimeout(() => closeModal('invoice-modal'), 4000); 
+            } catch (error) { statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed create invoice.', 'error'); btn.disabled = false; } 
         }
 
         // --- App Start ---
         document.addEventListener('DOMContentLoaded', () => {
             console.log("DOM Loaded. Starting app...");
-            // Check config
-            if (!HARDCODED_CONFIG.firebase.apiKey || !HARDCODED_CONFIG.firebase.appId || !HARDCODED_CONFIG.serverUrl || !HARDCODED_CONFIG.organizationId || !HARDCODED_CONFIG.firebase.projectId || !HARDCODED_CONFIG.firebase.authDomain) {
-                console.error("Config Error: Missing values in HARDCODED_CONFIG");
-                document.body.innerHTML = `<div class="p-8 text-center text-red-600"><h1 class="text-2xl font-bold">Config Error</h1><p class="mt-4">Please fill in all 5 values in <strong>HARDCODED_CONFIG</strong> in index.html.</p></div>`; return;
-            }
-            console.log("Config OK.");
-            
-            // Initialize Firebase
+            if (!HARDCODED_CONFIG.firebase.apiKey || !HARDCODED_CONFIG.firebase.appId || !HARDCODED_CONFIG.serverUrl || !HARDCODED_CONFIG.organizationId || !HARDCODED_CONFIG.firebase.projectId || !HARDCODED_CONFIG.firebase.authDomain) { console.error("Config Error"); document.body.innerHTML = `<div class="p-8 text-center text-red-600"><h1 class="text-2xl font-bold">Config Error</h1><p class="mt-4">Fill HARDCODED_CONFIG in index.html.</p></div>`; return; }
             try {
-                console.log("Initializing Firebase with config:", HARDCODED_CONFIG.firebase);
-                const app = initializeApp(HARDCODED_CONFIG.firebase); 
-                db = getFirestore(app);
-                auth = initializeAuth(app, { persistence: browserLocalPersistence });
-                console.log("Firebase Initialized.");
-
+                const app = initializeApp(HARDCODED_CONFIG.firebase); db = getFirestore(app); auth = initializeAuth(app, { persistence: browserLocalPersistence });
                 onAuthStateChanged(auth, async (user) => {
-                    console.log("Auth state changed. User:", user ? user.uid : 'null');
                     currentUser = user;
                     if (user) {
-                        userId = user.uid;
-                        
-                        document.getElementById('user-email-display').textContent = user.displayName || user.email;
-                        
-                        try { 
-                            console.log("Getting ID token result...");
-                            const idTokenResult = await getIdTokenResult(user, true); 
-                            isAdmin = idTokenResult.claims.admin === true;
-                             console.log("Is admin:", isAdmin);
-                            document.getElementById('manage-users-btn').classList.toggle('hidden', !isAdmin);
-                            document.getElementById('user-admin-status').classList.toggle('hidden', !isAdmin);
-                        } catch (claimError) { console.error("Error getting token claims:", claimError); isAdmin = false; document.getElementById('manage-users-btn').classList.add('hidden'); document.getElementById('user-admin-status').classList.add('hidden'); toast('Could not verify admin status.', 'error'); }
+                        userId = user.uid; document.getElementById('user-email-display').textContent = user.displayName || user.email;
+                        try { const idTokenResult = await getIdTokenResult(user, true); isAdmin = idTokenResult.claims.admin === true; document.getElementById('manage-users-btn').classList.toggle('hidden', !isAdmin); document.getElementById('user-admin-status').classList.toggle('hidden', !isAdmin); } catch (claimError) { isAdmin = false; document.getElementById('manage-users-btn').classList.add('hidden'); document.getElementById('user-admin-status').classList.add('hidden'); toast('Could not verify admin.', 'error'); }
                         document.getElementById('app-shell').style.display = 'flex'; document.getElementById('auth-screen').style.display = 'none';
                         listenForClasses(); listenForAllStudents(); renderViewByClass();
-                    } else { // Signed out
-                         console.log("User signed out.");
-                        userId = null; isAdmin = false; currentUser = null;
-                        document.getElementById('app-shell').style.display = 'none'; document.getElementById('auth-screen').style.display = 'flex';
-                        if (unsubscribeClasses) unsubscribeClasses(); if (unsubscribeAllStudents) unsubscribeAllStudents(); if (unsubscribeContacts) unsubscribeContacts(); 
-                        allClassCache = []; allStudentsCache = []; contactCache.clear(); 
-                        document.getElementById('manage-users-btn').classList.add('hidden'); document.getElementById('user-admin-status').classList.add('hidden');
-                    }
+                    } else { userId = null; isAdmin = false; currentUser = null; document.getElementById('app-shell').style.display = 'none'; document.getElementById('auth-screen').style.display = 'flex'; if (unsubscribeClasses) unsubscribeClasses(); if (unsubscribeAllStudents) unsubscribeAllStudents(); if (unsubscribeContacts) unsubscribeContacts(); allClassCache = []; allStudentsCache = []; contactCache.clear(); document.getElementById('manage-users-btn').classList.add('hidden'); document.getElementById('user-admin-status').classList.add('hidden'); }
                 });
-            } catch (error) { // Catch init error
-                 console.error("Firebase Init Failed:", error);
-                 document.body.innerHTML = `<div class="p-8 text-center text-red-600"><h1 class="text-2xl font-bold">Firebase Init Failed</h1><p class="mt-4">Check <strong>HARDCODED_CONFIG.firebase</strong> values.</p><p class="mt-2 text-sm text-gray-500">${error.message}</p></div>`; return;
-            }
+            } catch (error) { console.error("Firebase Init Failed:", error); document.body.innerHTML = `<div class="p-8 text-center text-red-600"><h1 class="text-2xl font-bold">Firebase Init Failed</h1><p class="mt-4">Check config values.</p><p class="mt-2 text-sm">${error.message}</p></div>`; return; }
 
             // --- Setup Event Listeners ---
             document.getElementById('login-form').addEventListener('submit', handleLogin);
             document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
             document.getElementById('manage-users-btn').addEventListener('click', openUserManagementModal);
-            
-            const addUserForm = document.getElementById('add-user-form');
-            if (addUserForm) {
-                addUserForm.addEventListener('submit', handleCreateUser);
-            } else {
-                 console.error("Element 'add-user-form' not found during event listener setup.");
-            }
-
+            document.getElementById('add-user-form')?.addEventListener('submit', handleCreateUser);
             document.getElementById('view-by-class').addEventListener('click', renderViewByClass);
             document.getElementById('view-by-student').addEventListener('click', renderViewByStudent);
             document.getElementById('email-class-btn').addEventListener('click', handleEmailClass);
@@ -1580,14 +1042,10 @@
             document.getElementById('add-existing-student-form').addEventListener('submit', handleAddExistingStudent);
             document.getElementById('add-contact-form').addEventListener('submit', handleAddContact);
             document.getElementById('email-form').addEventListener('submit', handleSendEmail);
-            // Edit form listeners
             document.getElementById('edit-class-form').addEventListener('submit', handleUpdateClass);
             document.getElementById('edit-student-form').addEventListener('submit', handleUpdateStudent);
             document.getElementById('edit-contact-form').addEventListener('submit', handleUpdateContact);
-            
-            // Stripe Invoice Form Listener
             document.getElementById('create-invoice-form').addEventListener('submit', handleCreateInvoice);
-
             document.getElementById('col-1-add-btn').addEventListener('click', () => openModal(currentView === 'class' ? 'add-class-modal' : 'add-new-student-modal'));
             document.getElementById('add-new-student-btn').addEventListener('click', () => openModal('add-new-student-modal'));
             document.getElementById('add-existing-student-btn').addEventListener('click', () => { document.querySelector('#add-existing-student-subtitle span').textContent = allClassCache.find(c => c.id === currentClassId)?.name || ''; renderStudentDropdown(); openModal('add-existing-student-modal'); });
@@ -1596,10 +1054,28 @@
             document.getElementById('nav-col-2').addEventListener('click', () => { showCol('col-2-section'); setActiveNav('nav-col-2'); });
             document.getElementById('nav-contacts').addEventListener('click', () => { showCol('col-3-section'); setActiveNav('nav-contacts'); });
 
-            // --- Expose functions to window for console access ---
-            window.auth = auth; // Expose auth for getting UID
-            window.handleMakeAdmin = handleMakeAdmin; // Expose for bootstrapping         
-            console.log("App setup complete.");
+            // --- NEW: Event Listener for Manual Mapping (using delegation) ---
+            document.getElementById('col-1-list').addEventListener('click', (e) => {
+                if (e.target.classList.contains('map-stripe-btn')) {
+                    const studentId = e.target.dataset.studentId;
+                    const inputElement = document.getElementById(`map-${studentId}`);
+                    if (studentId && inputElement) {
+                        handleMapStripeId(studentId, inputElement.value);
+                    }
+                }
+            });
+            document.getElementById('col-2-list').addEventListener('click', (e) => {
+                 if (e.target.classList.contains('map-stripe-btn')) {
+                    const studentId = e.target.dataset.studentId;
+                    const inputElement = document.getElementById(`map-${studentId}`);
+                    if (studentId && inputElement) {
+                        handleMapStripeId(studentId, inputElement.value);
+                    }
+                }
+            });
+            // --- END NEW LISTENER ---
+
+            window.auth = auth; window.handleMakeAdmin = handleMakeAdmin; console.log("App setup complete.");
         });
     </script>
 
