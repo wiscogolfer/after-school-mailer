@@ -32,8 +32,10 @@ if (!stripeSecretKey) {
     process.exit(1);
 }
 if (!organizationId) {
-    console.error('FATAL ERROR: ORGANIZATION_ID environment variable is not set.');
-    process.exit(1);
+    // If organizationId is critical for Firestore paths, validate it.
+    // If it's okay to use a default, you might remove this check.
+    console.warn('WARNING: ORGANIZATION_ID environment variable not set. Using default:', organizationId);
+    // process.exit(1); // Uncomment this if the org ID MUST be set via environment
 }
 
 
@@ -117,15 +119,13 @@ app.get('/', (req, res) => {
 });
 
 // --- Email Sending Route ---
-app.post('/send-email', authenticateToken, async (req, res) => { // Added authenticateToken middleware
+app.post('/send-email', authenticateToken, async (req, res) => { // Added authenticateToken
     // 'replyTo' is an object: { email: '...', name: '...' }
     const { to, bcc, subject, text, replyTo } = req.body;
 
-    // --- DEBUG LOG ---
     console.log("--------------------");
     console.log("DEBUG /send-email: Data from frontend (replyTo object):", replyTo);
     console.log("--------------------");
-    // ---
 
     const recipient = to || (bcc && bcc.length > 0 ? senderEmail : null);
 
@@ -134,7 +134,6 @@ app.post('/send-email', authenticateToken, async (req, res) => { // Added authen
         return res.status(400).json({ error: 'Missing required fields: to/bcc, subject, text' });
     }
 
-    // --- Format From and Reply-To ---
     const formattedFrom = `State 48 Theatre <${senderEmail}>`;
 
     let formattedReplyTo;
@@ -143,25 +142,21 @@ app.post('/send-email', authenticateToken, async (req, res) => { // Added authen
     } else {
         formattedReplyTo = formattedFrom;
     }
-    // --- END ---
 
     const resendPayload = {
         to: recipient,
         bcc: bcc || undefined,
         from: formattedFrom,
-        replyTo: formattedReplyTo, // Use camelCase as directed by Resend support
+        replyTo: formattedReplyTo, // Use camelCase
         subject: subject,
         text: text,
     };
 
-    // --- DEBUG LOG ---
     console.log("DEBUG /send-email: Final payload for Resend:", JSON.stringify(resendPayload, null, 2));
     console.log("--------------------");
-    // ---
 
     try {
         console.log("Attempting to send email via Resend...");
-
         const { data, error } = await resend.emails.send(resendPayload);
 
         if (error) {
@@ -178,15 +173,13 @@ app.post('/send-email', authenticateToken, async (req, res) => { // Added authen
     }
 }); // <-- End of /send-email route
 
-// --- Create Stripe Invoice Route ---
+// --- Create Stripe Invoice Route (with Pre-Finalization Check) ---
 app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
     const { parentId, studentName, amount, description } = req.body;
     const adminUid = req.user.uid;
 
-    // --- ADDED LOGGING ---
     console.log("--------------------");
     console.log("DEBUG /create-invoice: Received data:", { parentId, studentName, amount, description });
-    // ---
 
     console.log(`Admin ${adminUid} attempting to create invoice for parent ID: ${parentId}`);
 
@@ -195,24 +188,20 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
         return res.status(400).json({ error: 'Parent ID, Description, and a valid positive Amount required.' });
     }
 
-    // Convert amount to cents (Stripe requires integers)
     const amountInCents = Math.round(parseFloat(amount) * 100);
-
-    // --- ADDED LOGGING ---
     console.log(`DEBUG /create-invoice: Calculated amountInCents: ${amountInCents}`);
     console.log("--------------------");
-    // ---
 
-    // Double check amountInCents calculation before proceeding
     if (amountInCents === 0 && parseFloat(amount) > 0) {
          console.error(`CRITICAL ERROR: amountInCents calculated as 0 for input amount ${amount}. Aborting.`);
          return res.status(500).json({ error: 'Internal server error: Failed to calculate invoice amount correctly.'});
     }
 
+    let parentRef;
 
     try {
-        // --- 1. Get Parent Info from Firestore ---
-        const parentRef = admin.firestore().doc(`organizations/${organizationId}/parents/${parentId}`);
+        // --- 1. Get Parent Info ---
+        parentRef = admin.firestore().doc(`organizations/${organizationId}/parents/${parentId}`);
         const parentSnap = await parentRef.get();
         if (!parentSnap.exists) {
             throw new Error(`Parent with ID ${parentId} not found in Firestore.`);
@@ -233,10 +222,7 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
                  const customer = await stripe.customers.create({
                      name: parentName,
                      email: parentEmail,
-                     metadata: {
-                         firestoreParentId: parentId,
-                         organizationId: organizationId
-                     }
+                     metadata: { firestoreParentId: parentId, organizationId: organizationId }
                  });
                  stripeCustomerId = customer.id;
                  console.log(`Created new Stripe customer: ${stripeCustomerId}`);
@@ -247,38 +233,59 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
             console.log(`Using existing Stripe customer ID: ${stripeCustomerId} for parent ${parentId}`);
         }
 
-        // --- 3. Create an Invoice Item ---
+        // --- 3. Create Invoice Item ---
         console.log(`Creating invoice item for customer ${stripeCustomerId}, amount: ${amountInCents}`);
         const invoiceItem = await stripe.invoiceItems.create({
             customer: stripeCustomerId,
-            amount: amountInCents, // Ensure this is correct
+            amount: amountInCents,
             currency: 'usd',
             description: description,
-             metadata: {
-                 studentName: studentName || 'N/A'
-             }
+            metadata: { studentName: studentName || 'N/A' }
         });
         console.log(`Created invoice item: ${invoiceItem.id}`);
 
-        // --- 4. Create a Draft Invoice ---
+        // --- 4. Create Draft Invoice ---
         console.log(`Creating draft invoice for customer ${stripeCustomerId}`);
-        const invoice = await stripe.invoices.create({
+        const draftInvoice = await stripe.invoices.create({
             customer: stripeCustomerId,
             collection_method: 'send_invoice',
             days_until_due: 30,
-            auto_advance: false, // Keep as draft initially
-             description: `Invoice for ${studentName || parentName}`,
-             metadata: {
-                 firestoreParentId: parentId,
-                 createdByAdminUid: adminUid
-             }
+            auto_advance: false, // Keep as draft
+            description: `Invoice for ${studentName || parentName}`,
+            metadata: { firestoreParentId: parentId, createdByAdminUid: adminUid }
         });
-        console.log(`Created draft invoice: ${invoice.id}`);
+        console.log(`Created draft invoice: ${draftInvoice.id}`);
+
+        // --- *** PRE-FINALIZATION CHECK *** ---
+        const retrievedDraft = await stripe.invoices.retrieve(draftInvoice.id);
+        console.log(`DEBUG: Retrieved draft invoice ${retrievedDraft.id}. Status: ${retrievedDraft.status}, Total: ${retrievedDraft.total}`);
+        if (retrievedDraft.total !== amountInCents && retrievedDraft.total !== 0) { // Allow 0 if credit balance covers it
+             console.warn(`WARNING: Draft invoice total (${retrievedDraft.total}) does not match expected item amount (${amountInCents}). Item might not have attached correctly or credit applied.`);
+        } else if (retrievedDraft.total === 0 && amountInCents > 0) {
+             console.log(`DEBUG: Draft invoice total is 0. This might be due to an existing credit balance. Proceeding with finalization.`);
+        }
+        // --- *** END CHECK *** ---
+
 
         // --- 5. Finalize the Invoice ---
-        console.log(`Finalizing invoice: ${invoice.id}`);
-        const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
-        console.log(`Finalized invoice: ${finalizedInvoice.id}, Status: ${finalizedInvoice.status}`);
+        console.log(`Finalizing invoice: ${draftInvoice.id}`);
+        // Add idempotency key to prevent accidental double finalization
+        const finalizedInvoice = await stripe.invoices.finalizeInvoice(draftInvoice.id, {
+          idempotencyKey: `finalize-${draftInvoice.id}-${Date.now()}` // Basic idempotency
+        });
+        console.log(`Finalized invoice: ${finalizedInvoice.id}, Status: ${finalizedInvoice.status}, Final Amount Due: ${finalizedInvoice.amount_due}`);
+
+        // --- Check Final Status ---
+        if (finalizedInvoice.status === 'paid' && finalizedInvoice.amount_due === 0 && amountInCents > 0) {
+             console.warn(`WARNING: Invoice ${finalizedInvoice.id} finalized as paid with $0 due, but item amount was ${amountInCents}. Check Stripe Dashboard for credits or other items.`);
+        } else if (finalizedInvoice.status === 'open' && finalizedInvoice.amount_due === amountInCents) {
+             console.log(`Invoice ${finalizedInvoice.id} finalized correctly with status 'open' and amount due ${finalizedInvoice.amount_due}.`);
+        } else if (finalizedInvoice.status === 'paid' && finalizedInvoice.amount_due === 0 && amountInCents === 0){
+             console.log(`Invoice ${finalizedInvoice.id} finalized correctly as paid with $0 amount.`);
+        } else {
+             console.log(`Invoice ${finalizedInvoice.id} finalized with status ${finalizedInvoice.status} and amount due ${finalizedInvoice.amount_due}.`);
+        }
+
 
         // --- Respond to Frontend ---
         res.status(200).json({
@@ -290,6 +297,7 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
 
     } catch (error) {
         console.error('Stripe Invoice Creation Error:', error);
+        // Consider adding more specific error handling if needed
         res.status(500).json({ error: `Failed to create invoice. ${error.message}` });
     }
 }); // <-- End of /create-invoice route
