@@ -103,7 +103,6 @@ const isAdmin = (req, res, next) => {
         next(); // User is admin, proceed
     } else {
         console.log(`Admin check failed for user: ${req.user.uid}`);
-        // --- TYPO FIX: 4D03 -> 403 ---
         return res.status(403).json({ error: 'Admin privileges required' });
     }
 };
@@ -155,9 +154,8 @@ app.post('/send-email', authenticateToken, async (req, res) => {
     }
 }); // <-- End of /send-email route
 
-// --- *** REWRITTEN *** Create Stripe Invoice Route (Student-Centric) ---
+// --- Create Stripe Invoice Route (Student-Centric) ---
 app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
-    // FRONTEND MUST NOW SEND studentId and parentId
     const { parentId, studentId, studentName, amount, description } = req.body;
     const adminUid = req.user.uid;
 
@@ -184,21 +182,23 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
 
     try {
         // --- 1. Get Student AND Parent Info ---
-        // (Assuming students are in a root collection)
         studentRef = admin.firestore().doc(`organizations/${organizationId}/students/${studentId}`);
         const studentSnap = await studentRef.get();
-        if (!studentSnap.exists) throw new Error(`Student ${studentId} not found.`);
+        if (!studentSnap.exists) { // <-- CORRECT ADMIN SDK SYNTAX
+            throw new Error(`Student ${studentId} not found.`);
+        }
         
         const parentRef = admin.firestore().doc(`organizations/${organizationId}/parents/${parentId}`);
         const parentSnap = await parentRef.get();
-        if (!parentSnap.exists) throw new Error(`Parent ${parentId} not found.`);
+        if (!parentSnap.exists) { // <-- CORRECT ADMIN SDK SYNTAX
+            throw new Error(`Parent ${parentId} not found.`);
+        }
         
         const studentData = studentSnap.data();
         const parentData = parentSnap.data();
         
-        // Use Parent's email for billing, but Student's name for customer
         const billingEmail = parentData.email;
-        const customerName = studentData.name || studentName; // Use name from DB or from request
+        const customerName = studentData.name || studentName; 
         let stripeCustomerId = studentData.stripeCustomerId;
 
         // --- 2. Find or Create Stripe Customer (for the STUDENT) ---
@@ -208,7 +208,6 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
             let customer;
             const existingCustomers = await stripe.customers.list({ email: billingEmail, limit: 10 });
             
-            // Do any existing customers match this student's name?
             const matchingCustomer = existingCustomers.data.find(c => c.name === customerName);
 
             if (matchingCustomer) {
@@ -229,7 +228,6 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
                  console.log(`Created new Stripe customer: ${stripeCustomerId}`);
             }
             
-            // Save the Stripe ID to the STUDENT'S document
             await studentRef.update({ stripeCustomerId: stripeCustomerId });
             console.log(`Saved Stripe ID ${stripeCustomerId} to Firestore STUDENT ${studentId}`);
         } else {
@@ -302,7 +300,7 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
 }); // <-- End of /create-invoice route
 
 
-// --- *** REWRITTEN *** Get Student's Stripe Invoices (Corrected) ---
+// --- *** CORRECTED *** Get Student's Stripe Invoices ---
 app.get('/get-student-invoices/:studentId', authenticateToken, async (req, res) => {
     const { studentId } = req.params;
     console.log(`Fetching invoices for student: ${studentId}`);
@@ -312,7 +310,9 @@ app.get('/get-student-invoices/:studentId', authenticateToken, async (req, res) 
         const studentRef = admin.firestore().doc(`organizations/${organizationId}/students/${studentId}`);
         const studentSnap = await studentRef.get();
 
-        if (!studentSnap.exists()) {
+        // --- THIS IS THE FIX ---
+        // Use the property .exists (no parentheses) for the Admin SDK
+        if (!studentSnap.exists) { 
             console.warn(`Student not found: ${studentId}`);
             return res.status(404).json({ error: 'Student not found.' });
         }
@@ -343,7 +343,7 @@ app.get('/get-student-invoices/:studentId', authenticateToken, async (req, res) 
 }); // <-- End of /get-student-invoices route
 
 
-// --- *** REWRITTEN *** Get Student's Stripe Subscriptions (Corrected) ---
+// --- *** CORRECTED *** Get Student's Stripe Subscriptions ---
 app.get('/get-student-subscriptions/:studentId', authenticateToken, async (req, res) => {
     const { studentId } = req.params;
     console.log(`Fetching subscriptions for student: ${studentId}`);
@@ -353,7 +353,9 @@ app.get('/get-student-subscriptions/:studentId', authenticateToken, async (req, 
         const studentRef = admin.firestore().doc(`organizations/${organizationId}/students/${studentId}`);
         const studentSnap = await studentRef.get();
 
-        if (!studentSnap.exists()) {
+        // --- THIS IS THE FIX ---
+        // Use the property .exists (no parentheses) for the Admin SDK
+        if (!studentSnap.exists) {
             console.warn(`Student not found: ${studentId}`);
             return res.status(404).json({ error: 'Student not found.' });
         }
@@ -384,7 +386,7 @@ app.get('/get-student-subscriptions/:studentId', authenticateToken, async (req, 
 }); // <-- End of /get-student-subscriptions route
 
 
-// --- *** REWRITTEN *** Admin: Sync Firestore Students with Stripe Customers (Corrected) ---
+// --- Admin: Sync Firestore Students with Stripe Customers (Corrected) ---
 app.post('/admin/sync-stripe-customers', authenticateToken, isAdmin, async (req, res) => {
     console.log('--- Starting Stripe Customer Sync (Student-Centric) ---');
     
@@ -628,6 +630,7 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
         if (error.code === 'auth/user-not-found') {
             errorMessage = 'Target user not found.';
         }
+        // --- TYPO FIX: 5G00 -> 500 ---
         res.status(500).json({ error: errorMessage });
     }
 });
