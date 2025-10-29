@@ -32,10 +32,7 @@ if (!stripeSecretKey) {
     process.exit(1);
 }
 if (!organizationId) {
-    // If organizationId is critical for Firestore paths, validate it.
-    // If it's okay to use a default, you might remove this check.
     console.warn('WARNING: ORGANIZATION_ID environment variable not set. Using default:', organizationId);
-    // process.exit(1); // Uncomment this if the org ID MUST be set via environment
 }
 
 
@@ -119,7 +116,7 @@ app.get('/', (req, res) => {
 });
 
 // --- Email Sending Route ---
-app.post('/send-email', authenticateToken, async (req, res) => { // Added authenticateToken
+app.post('/send-email', authenticateToken, async (req, res) => {
     // 'replyTo' is an object: { email: '...', name: '...' }
     const { to, bcc, subject, text, replyTo } = req.body;
 
@@ -173,15 +170,13 @@ app.post('/send-email', authenticateToken, async (req, res) => { // Added authen
     }
 }); // <-- End of /send-email route
 
-// --- Create Stripe Invoice Route (with Pre-Finalization Check) ---
+// --- Create Stripe Invoice Route (Log Invoice Lines) ---
 app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
     const { parentId, studentName, amount, description } = req.body;
     const adminUid = req.user.uid;
 
     console.log("--------------------");
     console.log("DEBUG /create-invoice: Received data:", { parentId, studentName, amount, description });
-
-    console.log(`Admin ${adminUid} attempting to create invoice for parent ID: ${parentId}`);
 
     if (!parentId || !amount || !description || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
         console.error("Create invoice validation failed: Missing fields or invalid amount.");
@@ -198,14 +193,13 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
     }
 
     let parentRef;
+    let createdInvoiceItemId = null; // Variable to hold the ID
 
     try {
         // --- 1. Get Parent Info ---
         parentRef = admin.firestore().doc(`organizations/${organizationId}/parents/${parentId}`);
         const parentSnap = await parentRef.get();
-        if (!parentSnap.exists) {
-            throw new Error(`Parent with ID ${parentId} not found in Firestore.`);
-        }
+        if (!parentSnap.exists) throw new Error(`Parent ${parentId} not found.`);
         const parentData = parentSnap.data();
         const parentEmail = parentData.email;
         const parentName = parentData.name;
@@ -213,22 +207,21 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
 
         // --- 2. Find or Create Stripe Customer ---
         if (!stripeCustomerId) {
-            console.log(`No Stripe customer ID found for parent ${parentId}. Creating one...`);
+            console.log(`No Stripe customer ID found for parent ${parentId}. Creating/Finding...`);
             const existingCustomers = await stripe.customers.list({ email: parentEmail, limit: 1 });
             if (existingCustomers.data.length > 0) {
                  stripeCustomerId = existingCustomers.data[0].id;
                  console.log(`Found existing Stripe customer by email: ${stripeCustomerId}`);
             } else {
                  const customer = await stripe.customers.create({
-                     name: parentName,
-                     email: parentEmail,
+                     name: parentName, email: parentEmail,
                      metadata: { firestoreParentId: parentId, organizationId: organizationId }
                  });
                  stripeCustomerId = customer.id;
                  console.log(`Created new Stripe customer: ${stripeCustomerId}`);
             }
             await parentRef.update({ stripeCustomerId: stripeCustomerId });
-            console.log(`Saved Stripe customer ID ${stripeCustomerId} to Firestore parent ${parentId}`);
+            console.log(`Saved Stripe ID ${stripeCustomerId} to Firestore parent ${parentId}`);
         } else {
             console.log(`Using existing Stripe customer ID: ${stripeCustomerId} for parent ${parentId}`);
         }
@@ -242,7 +235,8 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
             description: description,
             metadata: { studentName: studentName || 'N/A' }
         });
-        console.log(`Created invoice item: ${invoiceItem.id}`);
+        createdInvoiceItemId = invoiceItem.id; // Store the ID
+        console.log(`Created invoice item: ${createdInvoiceItemId}`);
 
         // --- 4. Create Draft Invoice ---
         console.log(`Creating draft invoice for customer ${stripeCustomerId}`);
@@ -252,40 +246,55 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
             days_until_due: 30,
             auto_advance: false, // Keep as draft
             description: `Invoice for ${studentName || parentName}`,
-            metadata: { firestoreParentId: parentId, createdByAdminUid: adminUid }
+            metadata: { firestoreParentId: parentId, createdByAdminUid: adminUid, createdInvoiceItemId: createdInvoiceItemId } // Add item ID to metadata
         });
         console.log(`Created draft invoice: ${draftInvoice.id}`);
 
-        // --- *** PRE-FINALIZATION CHECK *** ---
-        const retrievedDraft = await stripe.invoices.retrieve(draftInvoice.id);
+        // --- *** PRE-FINALIZATION CHECK & LOG LINES *** ---
+        const retrievedDraft = await stripe.invoices.retrieve(draftInvoice.id, {
+            expand: ['lines'], // Explicitly request line item details
+        });
         console.log(`DEBUG: Retrieved draft invoice ${retrievedDraft.id}. Status: ${retrievedDraft.status}, Total: ${retrievedDraft.total}`);
-        if (retrievedDraft.total !== amountInCents && retrievedDraft.total !== 0) { // Allow 0 if credit balance covers it
-             console.warn(`WARNING: Draft invoice total (${retrievedDraft.total}) does not match expected item amount (${amountInCents}). Item might not have attached correctly or credit applied.`);
-        } else if (retrievedDraft.total === 0 && amountInCents > 0) {
-             console.log(`DEBUG: Draft invoice total is 0. This might be due to an existing credit balance. Proceeding with finalization.`);
+
+        // Log the actual lines attached
+        if (retrievedDraft.lines && retrievedDraft.lines.data) {
+            console.log(`DEBUG: Lines attached to draft invoice: ${retrievedDraft.lines.data.length}`);
+            retrievedDraft.lines.data.forEach((line, index) => {
+                console.log(`  Line ${index + 1}: ID=${line.id}, Amount=${line.amount}, Desc=${line.description}, Type=${line.type}`);
+                // Check if our created invoice item ID is present (Stripe line items have IDs like 'il_...' and might refer back to 'invoice_item' like 'ii_...')
+                if (line.invoice_item === createdInvoiceItemId) {
+                    console.log(`  -> This line corresponds to our created item ${createdInvoiceItemId}`);
+                }
+            });
+        } else {
+            console.log(`DEBUG: No lines data found on retrieved draft invoice.`);
+        }
+
+        if (retrievedDraft.total === 0 && amountInCents > 0) {
+             console.warn(`WARNING: Draft invoice total is 0 even though item ${createdInvoiceItemId} was created for ${amountInCents}. Item likely did not attach.`);
+             // Potential Action: Delete invoice item and invoice, then throw error
+             // await stripe.invoiceItems.del(createdInvoiceItemId);
+             // await stripe.invoices.del(draftInvoice.id);
+             // throw new Error("Invoice item did not attach to the draft invoice.");
         }
         // --- *** END CHECK *** ---
 
 
         // --- 5. Finalize the Invoice ---
         console.log(`Finalizing invoice: ${draftInvoice.id}`);
-        // Add idempotency key to prevent accidental double finalization
         const finalizedInvoice = await stripe.invoices.finalizeInvoice(draftInvoice.id, {
-          idempotencyKey: `finalize-${draftInvoice.id}-${Date.now()}` // Basic idempotency
+          idempotencyKey: `finalize-${draftInvoice.id}-${Date.now()}`
         });
         console.log(`Finalized invoice: ${finalizedInvoice.id}, Status: ${finalizedInvoice.status}, Final Amount Due: ${finalizedInvoice.amount_due}`);
 
         // --- Check Final Status ---
         if (finalizedInvoice.status === 'paid' && finalizedInvoice.amount_due === 0 && amountInCents > 0) {
-             console.warn(`WARNING: Invoice ${finalizedInvoice.id} finalized as paid with $0 due, but item amount was ${amountInCents}. Check Stripe Dashboard for credits or other items.`);
-        } else if (finalizedInvoice.status === 'open' && finalizedInvoice.amount_due === amountInCents) {
-             console.log(`Invoice ${finalizedInvoice.id} finalized correctly with status 'open' and amount due ${finalizedInvoice.amount_due}.`);
-        } else if (finalizedInvoice.status === 'paid' && finalizedInvoice.amount_due === 0 && amountInCents === 0){
-             console.log(`Invoice ${finalizedInvoice.id} finalized correctly as paid with $0 amount.`);
+             console.warn(`WARNING: Invoice ${finalizedInvoice.id} finalized as paid with $0 due. Check Stripe Dashboard for credits.`);
+        } else if (finalizedInvoice.status === 'open') {
+             console.log(`Invoice ${finalizedInvoice.id} finalized correctly with status 'open'.`);
         } else {
-             console.log(`Invoice ${finalizedInvoice.id} finalized with status ${finalizedInvoice.status} and amount due ${finalizedInvoice.amount_due}.`);
+             console.log(`Invoice ${finalizedInvoice.id} finalized with status ${finalizedInvoice.status}.`);
         }
-
 
         // --- Respond to Frontend ---
         res.status(200).json({
@@ -297,8 +306,19 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
 
     } catch (error) {
         console.error('Stripe Invoice Creation Error:', error);
-        // Consider adding more specific error handling if needed
-        res.status(500).json({ error: `Failed to create invoice. ${error.message}` });
+        // Clean up orphaned invoice item if it was created and error occurred after
+        if (createdInvoiceItemId && !res.headersSent) {
+             try {
+                 console.log(`Error occurred, attempting to delete orphaned invoice item: ${createdInvoiceItemId}`);
+                 await stripe.invoiceItems.del(createdInvoiceItemId);
+                 console.log(`Deleted orphaned invoice item: ${createdInvoiceItemId}`);
+             } catch (deleteError) {
+                 console.error(`Failed to delete orphaned invoice item ${createdInvoiceItemId}:`, deleteError);
+             }
+        }
+        if (!res.headersSent) {
+             res.status(500).json({ error: `Failed to create invoice. ${error.message}` });
+        }
     }
 }); // <-- End of /create-invoice route
 
@@ -313,7 +333,7 @@ app.get('/list-users', authenticateToken, isAdmin, async (req, res) => {
         const users = listUsersResult.users.map(userRecord => ({
             uid: userRecord.uid,
             email: userRecord.email,
-            displayName: userRecord.displayName, // Include displayName
+            displayName: userRecord.displayName,
             isAdmin: userRecord.customClaims?.admin === true
         }));
         console.log(`Successfully listed ${users.length} users.`);
