@@ -345,6 +345,160 @@ app.post('/create-invoice', authenticateToken, isAdmin, async (req, res) => {
 }); // <-- End of /create-invoice route
 
 
+// --- *** NEW *** Get Parent's Stripe Invoices ---
+app.get('/get-parent-invoices/:parentId', authenticateToken, async (req, res) => {
+    // This can be called by any authenticated user (admin or parent)
+    // to see their own invoices. If you want only admins to see all, add 'isAdmin'
+    const { parentId } = req.params;
+    console.log(`Fetching invoices for parent: ${parentId}`);
+
+    try {
+        // 1. Get the parent document from Firestore
+        const parentRef = admin.firestore().doc(`organizations/${organizationId}/parents/${parentId}`);
+        const parentSnap = await parentRef.get();
+
+        if (!parentSnap.exists) {
+            console.warn(`Parent not found: ${parentId}`);
+            return res.status(404).json({ error: 'Parent not found.' });
+        }
+
+        const stripeCustomerId = parentSnap.data().stripeCustomerId;
+
+        // 2. Check if the parent is mapped to Stripe
+        if (!stripeCustomerId) {
+            console.log(`Parent ${parentId} has no stripeCustomerId. Returning empty list.`);
+            return res.status(200).json({ invoices: [] }); // No ID means no invoices
+        }
+
+        // 3. Fetch invoices from Stripe
+        console.log(`Fetching invoices from Stripe for customer: ${stripeCustomerId}`);
+        const invoices = await stripe.invoices.list({
+            customer: stripeCustomerId,
+            limit: 50, // Get the 50 most recent invoices
+            // IMPORTANT: 'expand' fetches all line items *with* the invoice list.
+            // This prevents your app from having to make 100s of extra requests.
+            expand: ['data.lines'] 
+        });
+
+        // 4. Send the invoice data to the frontend
+        res.status(200).json({ invoices: invoices.data });
+
+    } catch (error) {
+        console.error(`Error fetching invoices for parent ${parentId}:`, error.message);
+        res.status(500).json({ error: 'Failed to fetch invoices.' });
+    }
+}); // <-- End of /get-parent-invoices route
+
+
+// --- *** NEW *** Get Parent's Stripe Subscriptions ---
+app.get('/get-parent-subscriptions/:parentId', authenticateToken, isAdmin, async (req, res) => {
+    const { parentId } = req.params;
+    console.log(`Fetching subscriptions for parent: ${parentId}`);
+
+    try {
+        // 1. Get the parent document from Firestore
+        const parentRef = admin.firestore().doc(`organizations/${organizationId}/parents/${parentId}`);
+        const parentSnap = await parentRef.get();
+
+        if (!parentSnap.exists) {
+            console.warn(`Parent not found: ${parentId}`);
+            return res.status(444).json({ error: 'Parent not found.' });
+        }
+
+        const stripeCustomerId = parentSnap.data().stripeCustomerId;
+
+        // 2. Check if the parent is mapped to Stripe
+        if (!stripeCustomerId) {
+            console.log(`Parent ${parentId} has no stripeCustomerId. Returning empty list.`);
+            return res.status(200).json({ subscriptions: [] }); // No ID means no subscriptions
+        }
+
+        // 3. Fetch active subscriptions from Stripe
+        console.log(`Fetching subscriptions from Stripe for customer: ${stripeCustomerId}`);
+        const subscriptions = await stripe.subscriptions.list({
+            customer: stripeCustomerId,
+            status: 'all', // You can change this to 'active' if you only want active ones
+            limit: 20
+        });
+
+        // 4. Send the subscription data to the frontend
+        res.status(200).json({ subscriptions: subscriptions.data });
+
+    } catch (error) {
+        console.error(`Error fetching subscriptions for parent ${parentId}:`, error.message);
+        res.status(500).json({ error: 'Failed to fetch subscriptions.' });
+    }
+}); // <-- End of /get-parent-subscriptions route
+
+
+// --- *** NEW *** Admin: Sync Firestore Parents with Stripe Customers ---
+app.post('/admin/sync-stripe-customers', authenticateToken, isAdmin, async (req, res) => {
+    console.log('--- Starting Stripe Customer Sync ---');
+    
+    try {
+        const parentsRef = admin.firestore().collection(`organizations/${organizationId}/parents`);
+        const snapshot = await parentsRef.get();
+
+        if (snapshot.empty) {
+            console.log('No parents found to sync.');
+            return res.status(200).json({ message: 'No parents found.' });
+        }
+
+        let updatedCount = 0;
+        let notFoundCount = 0;
+        const promises = [];
+
+        // Loop through every parent in Firestore
+        for (const doc of snapshot.docs) {
+            const parentData = doc.data();
+            const parentId = doc.id;
+
+            // Only process parents who are NOT already mapped
+            if (!parentData.stripeCustomerId) {
+                if (!parentData.email) {
+                    console.warn(`Parent ${parentId} has no email, cannot sync.`);
+                    continue;
+                }
+
+                // Search Stripe for a customer with this email
+                const promise = stripe.customers.list({ email: parentData.email, limit: 1 })
+                    .then(async (existingCustomers) => {
+                        if (existingCustomers.data.length > 0) {
+                            // --- Customer Found ---
+                            const stripeId = existingCustomers.data[0].id;
+                            console.log(`MATCH: Parent ${parentId} (${parentData.email}) -> Stripe ${stripeId}`);
+                            
+                            // Save the ID back to Firestore
+                            await doc.ref.update({ stripeCustomerId: stripeId });
+                            updatedCount++;
+                        } else {
+                            // --- No Customer Found ---
+                            console.log(`NO MATCH: Parent ${parentId} (${parentData.email}) has no Stripe customer.`);
+                            notFoundCount++;
+                        }
+                    })
+                    .catch(err => {
+                        console.error(`Error syncing parent ${parentId}:`, err.message);
+                    });
+                
+                promises.push(promise);
+            }
+        }
+
+        // Wait for all updates to finish
+        await Promise.all(promises);
+
+        const summary = `Sync complete. ${updatedCount} parents updated. ${notFoundCount} parents had no matching Stripe customer.`;
+        console.log(summary);
+        res.status(200).json({ message: summary, updated: updatedCount, notFound: notFoundCount });
+
+    } catch (error) {
+        console.error('Error during Stripe customer sync:', error.message);
+        res.status(500).json({ error: 'Sync failed. Check server logs.' });
+    }
+}); // <-- End of /admin/sync-stripe-customers route
+
+
 // --- User Management Routes (Protected by Auth and Admin) ---
 
 // List Users
@@ -487,7 +641,6 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
 
         if (!canSetAdmin) {
              console.log("Set admin permission denied.");
-             // --- THIS IS THE FIX ---
              return res.status(403).json({ error: 'Admin privileges required or bootstrap condition not met.' });
         }
 
