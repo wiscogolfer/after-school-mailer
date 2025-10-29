@@ -102,11 +102,9 @@ app.get('/', (req, res) => {
 
 // --- Email Sending Route ---
 app.post('/send-email', async (req, res) => {
-    // Basic validation
     // 'replyTo' is an object: { email: '...', name: '...' }
     const { to, bcc, subject, text, replyTo } = req.body;
     
-    // ---
     // --- DEBUG LOG ---
     console.log("--------------------");
     console.log("DEBUG: Data from frontend (replyTo object):", replyTo);
@@ -120,36 +118,27 @@ app.post('/send-email', async (req, res) => {
         return res.status(400).json({ error: 'Missing required fields: to/bcc, subject, text' });
     }
 
-    // --- NEW: Format From and Reply-To ---
-    // Format the 'From' address (e.g., "State 48 Theatre <contact@state48theatre.com>")
-    const formattedFrom = `State 48 Arts and Academics <${senderEmail}>`;
+    // --- Format From and Reply-To ---
+    const formattedFrom = `State 48 Theatre <${senderEmail}>`;
 
-    // Format the 'Reply-To' address. Default to sender if no user is logged in.
     let formattedReplyTo;
     if (replyTo && replyTo.email && replyTo.name) {
-        // e.g., "Justin <justin@state48theatre.com>"
+        // e.g., "Justin <justin@state48theatre.com>" or "justin@state48theatre.com <justin@state48theatre.com>"
         formattedReplyTo = `${replyTo.name} <${replyTo.email}>`;
     } else {
-        // Default fallback
         formattedReplyTo = formattedFrom;
     }
-    // --- END NEW ---
+    // --- END ---
 
-    // This is the final object we will send to Resend
     const resendPayload = {
         to: recipient,
         bcc: bcc || undefined,
         from: formattedFrom,        
-        
-        // --- THIS IS THE FIX (Based on Resend Support) ---
-        replyTo: formattedReplyTo, // Changed from reply_to
-        // ------------------------------------------------
-
+        replyTo: formattedReplyTo, // Use camelCase as directed by Resend support
         subject: subject,
         text: text,
     };
 
-    // ---
     // --- DEBUG LOG ---
     console.log("DEBUG: Final payload for Resend:", JSON.stringify(resendPayload, null, 2));
     console.log("--------------------");
@@ -174,6 +163,7 @@ app.post('/send-email', async (req, res) => {
     }
 });
 
+
 // --- User Management Routes (Protected by Auth and Admin) ---
 
 // List Users
@@ -194,18 +184,21 @@ app.get('/list-users', authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
-// Create User
+// --- MODIFIED: This route is updated ---
 app.post('/create-user', authenticateToken, isAdmin, async (req, res) => {
-    const { email, password } = req.body;
-    console.log(`Admin ${req.user.uid} attempting to create user: ${email}`);
-    if (!email || !password || password.length < 6) {
-        console.error("Create user validation failed: Invalid email or password length.");
-        return res.status(400).json({ error: 'Valid email and password (min 6 chars) required.' });
+    const { name, email, password } = req.body; // <-- MODIFIED
+    console.log(`Admin ${req.user.uid} attempting to create user: ${name} (${email})`); // <-- MODIFIED
+    
+    // --- MODIFIED: Added name validation ---
+    if (!name || !email || !password || password.length < 6) { 
+        console.error("Create user validation failed: Invalid name, email, or password length.");
+        return res.status(400).json({ error: 'Name, valid email, and password (min 6 chars) required.' }); // <-- MODIFIED
     }
     try {
         const userRecord = await admin.auth().createUser({
             email: email,
             password: password,
+            displayName: name // <-- ADDED
         });
         console.log(`Successfully created user: ${userRecord.email} (UID: ${userRecord.uid})`);
         res.status(201).json({ uid: userRecord.uid, email: userRecord.email });
@@ -243,7 +236,7 @@ app.post('/delete-user', authenticateToken, isAdmin, async (req, res) => {
         if (error.code === 'auth/user-not-found') {
             errorMessage = 'User not found.';
         }
-        res.status(500).json({ error: errorMessage });
+        res.status(5Example 00).json({ error: errorMessage });
     }
 });
 
@@ -278,7 +271,6 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
 
         if (!canSetAdmin) {
              console.log("Set admin permission denied.");
-             // --- THIS IS THE 1st TYPO FIX ---
              return res.status(403).json({ error: 'Admin privileges required or bootstrap condition not met.' });
         }
 
@@ -293,7 +285,6 @@ app.post('/set-admin', authenticateToken, async (req, res) => {
         if (error.code === 'auth/user-not-found') {
             errorMessage = 'Target user not found.';
         }
-        // --- THIS IS THE 2nd TYPO FIX ---
         res.status(500).json({ error: errorMessage });
     }
 });

@@ -390,7 +390,11 @@
     
             <form id="add-user-form" class="mb-6 pb-6 border-b border-gray-200">
                  <h4 class="text-lg font-medium text-gray-800 mb-3">Add New User</h4>
-                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                     <div>
+                         <label for="new-user-name" class="block text-sm font-medium text-gray-700">Name</label>
+                         <input type="text" id="new-user-name" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                     </div>
                      <div>
                          <label for="new-user-email" class="block text-sm font-medium text-gray-700">Email</label>
                          <input type="email" id="new-user-email" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
@@ -753,7 +757,8 @@
             const replyToEl = document.getElementById('reply-to-email');
             
             // Set Reply-To display
-            replyToEl.textContent = currentUser?.email || 'Unknown';
+            // MODIFIED: Show display name or email
+            replyToEl.textContent = currentUser?.displayName || currentUser?.email || 'Unknown';
             
             if (to) { 
                 toEl.value = to; 
@@ -775,7 +780,7 @@
         }
         const handleEmailClass = async () => { console.log("Handle email class:", currentClassId); if (!currentClassId) return; const classData = allClassCache.find(c => c.id === currentClassId); if (!classData?.students?.length) { toast('No students in class.', 'error'); return; } const studentIds = classData.students; const parentIds = allStudentsCache.filter(s => studentIds.includes(s.id)).flatMap(s => s.parents || []); if (parentIds.length === 0) { toast('No parent contacts found.', 'error'); return; } const uniqueParentIds = [...new Set(parentIds)]; try { const contacts = []; for (let i = 0; i < uniqueParentIds.length; i += 30) { const chunk = uniqueParentIds.slice(i, i + 30); if(chunk.length === 0) continue; const q = query(getParentsCol(), where('__name__', 'in', chunk)); const querySnapshot = await getDocs(q); querySnapshot.docs.forEach(doc => contacts.push(doc.data())); } const bccEmails = contacts.map(c => c.email).filter(Boolean); if (bccEmails.length === 0) { toast('No valid emails found.', 'error'); return; } openEmailModal({ bcc: bccEmails }); } catch (error) { console.error("Email Class Error:", error); toast('Failed to get emails.', 'error'); } }
         
-        // --- THIS IS THE CORRECTED FUNCTION ---
+        // --- MODIFIED: This function is updated ---
         const handleSendEmail = async (e) => { 
             e.preventDefault(); 
             const btn = document.getElementById('send-email-btn'); 
@@ -786,16 +791,14 @@
             const to = document.getElementById('email-to').value; 
             const bccVal = document.getElementById('email-bcc').value; 
             
-            // --- MODIFICATION: Get user's name and email ---
-            // Get the user's email
             const replyToEmail = currentUser?.email || null;
-            // Get the user's name, or create one from their email (e.g., 'justin' from 'justin@...')
-            let replyToName = 'User'; // Default
+            
+            // --- MODIFICATION: Use displayName or fall back to full email ---
+            let replyToName;
             if (currentUser?.displayName) {
                 replyToName = currentUser.displayName;
-            } else if (replyToEmail) {
-                const namePart = replyToEmail.split('@')[0];
-                replyToName = namePart.charAt(0).toUpperCase() + namePart.slice(1); // Capitalize it
+            } else {
+                replyToName = replyToEmail; // Fallback to full email, as requested
             }
             // --- END MODIFICATION ---
             
@@ -824,11 +827,9 @@
                 } 
             } 
             
-            // --- MODIFICATION: Update the payload object ---
             const payload = { 
                 to: to || null, 
                 bcc: bccList, 
-                // Instead of just an email string, send an object
                 replyTo: {
                     email: replyToEmail,
                     name: replyToName
@@ -836,8 +837,7 @@
                 subject: document.getElementById('email-subject').value, 
                 text: document.getElementById('email-body').value 
             }; 
-            // --- END MODIFICATION ---
-
+            
             console.log("Sending email payload:", payload); 
             try { 
                 const response = await fetch(`${serverUrl}/send-email`, { 
@@ -860,7 +860,6 @@
                 btn.disabled = false; 
             } 
         }
-        // --- THE DUPLICATED, BROKEN CODE WAS HERE AND IS NOW REMOVED ---
         
         // --- Mobile Navigation ---
         const showCol = (colId) => { console.log("Showing mobile col:", colId); document.getElementById('col-1-section').classList.add('hidden'); document.getElementById('col-2-section').classList.add('hidden'); document.getElementById('col-3-section').classList.add('hidden'); document.getElementById(colId).classList.remove('hidden'); }
@@ -873,7 +872,52 @@
         // --- User Management ---
         const openUserManagementModal = async () => { console.log("Opening user mgmt modal"); openModal('user-management-modal'); await fetchUsers(); };
         const fetchUsers = async () => { console.log("Fetching users..."); const listEl = document.getElementById('user-list'); listEl.innerHTML = '<p class="text-gray-500">Loading users...</p>'; if (!currentUser) { listEl.innerHTML = '<p class="text-red-500">Not authenticated.</p>'; return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/list-users`, { method: 'GET', headers: { 'Authorization': `Bearer ${idToken}` } }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } const { users } = await response.json(); console.log("Fetched users:", users); renderUserList(users); } catch (error) { console.error("Fetch Users Error:", error); listEl.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`; toast('Failed load users.', 'error'); } };
-        const handleCreateUser = async (e) => { e.preventDefault(); const email = document.getElementById('new-user-email').value; const password = document.getElementById('new-user-password').value; const statusEl = document.getElementById('add-user-status'); const btn = document.getElementById('add-user-btn'); btn.disabled = true; statusEl.textContent = 'Creating...'; statusEl.classList.remove('text-red-600', 'text-green-600'); console.log("Attempting create user:", email); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); btn.disabled = false; return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/create-user`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ email, password }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } const result = await response.json(); toast('User created!', 'success'); statusEl.textContent = `Created ${result.email}.`; statusEl.classList.add('text-green-600'); e.target.reset(); await fetchUsers(); } catch (error) { console.error("Create User Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed create user.', 'error'); } finally { btn.disabled = false; } };
+        
+        // --- MODIFIED: This function is updated ---
+        const handleCreateUser = async (e) => { 
+            e.preventDefault(); 
+            const name = document.getElementById('new-user-name').value; // <-- ADDED
+            const email = document.getElementById('new-user-email').value; 
+            const password = document.getElementById('new-user-password').value; 
+            const statusEl = document.getElementById('add-user-status'); 
+            const btn = document.getElementById('add-user-btn'); 
+            btn.disabled = true; statusEl.textContent = 'Creating...'; 
+            statusEl.classList.remove('text-red-600', 'text-green-600'); 
+            console.log("Attempting create user:", name, email); // <-- MODIFIED
+            if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); btn.disabled = false; return; } 
+            
+            // --- MODIFIED: Added name to validation ---
+            if (!name || !email || !password || password.length < 6) {
+                statusEl.textContent = 'Name, email, and password (min 6 chars) required.'; 
+                statusEl.classList.add('text-red-600'); 
+                btn.disabled = false; 
+                return;
+            }
+
+            try { 
+                const idToken = await getIdToken(currentUser); 
+                const serverUrl = HARDCODED_CONFIG.serverUrl; 
+                const response = await fetch(`${serverUrl}/create-user`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, 
+                    body: JSON.stringify({ name, email, password }) // <-- MODIFIED
+                }); 
+                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } 
+                const result = await response.json(); 
+                toast('User created!', 'success'); 
+                statusEl.textContent = `Created ${result.email}.`; 
+                statusEl.classList.add('text-green-600'); 
+                e.target.reset(); 
+                await fetchUsers(); 
+            } catch (error) { 
+                console.error("Create User Error:", error); 
+                statusEl.textContent = `Error: ${error.message}`; 
+                statusEl.classList.add('text-red-600'); 
+                toast('Failed create user.', 'error'); 
+            } finally { 
+                btn.disabled = false; 
+            } 
+        };
         const handleDeleteUser = async (uidToDelete, emailToDelete) => { console.log("Attempting delete user:", uidToDelete, emailToDelete); if (!confirm(`Delete user: ${emailToDelete}? Permanent.`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Deleting ${emailToDelete}...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/delete-user`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uid: uidToDelete }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`User ${emailToDelete} deleted.`, 'success'); statusEl.textContent = `Deleted ${emailToDelete}.`; statusEl.classList.add('text-green-600'); await fetchUsers(); } catch (error) { console.error("Delete User Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed delete user.', 'error'); } };
         const handleMakeAdmin = async (uidToMakeAdmin, emailToMakeAdmin) => { console.log("Attempting make admin:", uidToMakeAdmin, emailToMakeAdmin); if (!confirm(`Grant admin to ${emailToMakeAdmin}?`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Making ${emailToMakeAdmin} admin...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/set-admin`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uidToMakeAdmin: uidToMakeAdmin }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`${emailToMakeAdmin} is now admin. Needs re-login.`, 'success'); statusEl.textContent = `Admin granted.`; statusEl.classList.add('text-green-600'); await fetchUsers(); if (uidToMakeAdmin === userId) { isAdmin = true; document.getElementById('manage-users-btn').classList.remove('hidden'); document.getElementById('user-admin-status').classList.remove('hidden'); await getIdToken(currentUser, true); } } catch (error) { console.error("Make Admin Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed set admin.', 'error'); } };
 
@@ -901,7 +945,10 @@
                     currentUser = user;
                     if (user) {
                         userId = user.uid;
-                        document.getElementById('user-email-display').textContent = user.email;
+                        
+                        // --- MODIFIED: Show displayName or email ---
+                        document.getElementById('user-email-display').textContent = user.displayName || user.email;
+                        
                         try { 
                             console.log("Getting ID token result...");
                             const idTokenResult = await getIdTokenResult(user, true); 
