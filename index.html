@@ -104,6 +104,7 @@
           <div id="col2-btns" class="flex items-center gap-2">
             <button id="add-existing-student-btn" class="bg-gray-200 text-gray-800 px-3 py-1.5 rounded text-sm" disabled>Add Existing</button>
             <button id="add-new-student-btn" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm" disabled>Add New</button>
+            <button id="email-class-btn" class="bg-indigo-600 text-white px-3 py-1.5 rounded text-sm" disabled>Email Class</button>
           </div>
         </div>
         <div class="mb-2">
@@ -151,6 +152,9 @@
         <section class="slide bg-white p-4 rounded-lg shadow mx-4">
           <div id="stud-sticky" class="sticky-subheader">
             <div id="stud-sticky-text" class="text-sm text-gray-600">Select a class</div>
+          </div>
+          <div class="mb-2 flex gap-2">
+            <button id="email-class-btn-m" class="bg-indigo-600 text-white px-3 py-1.5 rounded text-sm" disabled>Email Class</button>
           </div>
           <div class="mb-2">
             <input id="search-students-m" type="text" placeholder="Search students..." class="w-full border rounded p-2">
@@ -359,6 +363,50 @@
   </div>
 </div>
 
+<!-- Email Modal -->
+<div id="email-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+  <div class="relative top-16 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="text-lg font-semibold">Compose Email</h3>
+      <button class="close-modal text-gray-500" data-modal="email-modal">&times;</button>
+    </div>
+
+    <form id="email-form" class="space-y-3">
+      <p class="text-xs text-gray-500">
+        Replies will go to: <span id="reply-to-display" class="font-medium"></span>
+      </p>
+
+      <div id="email-to-wrap">
+        <label class="block text-sm text-gray-600">To</label>
+        <input id="email-to" type="email" class="w-full border rounded p-2 bg-gray-50" readonly>
+      </div>
+
+      <div id="email-bcc-wrap" class="hidden">
+        <label class="block text-sm text-gray-600">BCC</label>
+        <textarea id="email-bcc" rows="3" class="w-full border rounded p-2 bg-gray-50" readonly></textarea>
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-600">Subject</label>
+        <input id="email-subject" type="text" class="w-full border rounded p-2" required>
+      </div>
+
+      <div>
+        <label class="block text-sm text-gray-600">Message</label>
+        <textarea id="email-body" rows="8" class="w-full border rounded p-2" required></textarea>
+      </div>
+
+      <div class="flex justify-between items-center">
+        <span id="email-status" class="text-sm text-gray-500"></span>
+        <div class="flex gap-2">
+          <button type="button" class="close-modal border px-3 py-1.5 rounded" data-modal="email-modal">Cancel</button>
+          <button id="email-send-btn" class="bg-indigo-600 text-white px-3 py-1.5 rounded">Send</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script type="module">
 /* ------------- Firebase ------------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -380,6 +428,9 @@ const firebaseConfig = {
   appId: "1:1041555303856:web:5b80e0497eacaf161b7a75",
 };
 const ORG = "State-48-Dance";
+
+/* ---- Your Render mailer ---- */
+const SERVER_URL = "https://after-school-mailer.onrender.com";
 
 /* ------------- Init ------------- */
 const app = initializeApp(firebaseConfig);
@@ -604,6 +655,8 @@ function clearStudentsPane(){
   $("col2-list-m").innerHTML = "";
   $("add-new-student-btn").disabled = true;
   $("add-existing-student-btn").disabled = true;
+  $("email-class-btn").disabled = true;
+  $("email-class-btn-m").disabled = true;
 }
 function clearEnrolledPane(){
   $("col2-subtitle").textContent = "Select a student";
@@ -649,6 +702,8 @@ function renderStudentsForClass(classId){
   // enable desktop buttons
   $("add-new-student-btn").disabled = false;
   $("add-existing-student-btn").disabled = false;
+  $("email-class-btn").disabled = false;
+  $("email-class-btn-m").disabled = false;
 
   // mobile sticky
   $("stud-sticky-text").textContent = c ? `For: ${c.name}` : "Select a class";
@@ -714,10 +769,19 @@ async function renderContacts(studentId){
               <div class="text-sm text-gray-600">${c.phone||""}</div>
             </div>
             <div class="flex gap-2">
+              <button class="email-contact px-2 py-1 text-sm bg-indigo-600 text-white rounded">Email</button>
               <button class="edit-contact px-2 py-1 text-sm bg-gray-200 rounded">Edit</button>
               <button class="del-contact px-2 py-1 text-sm bg-red-600 text-white rounded">Del</button>
             </div>
           </div>`;
+        // wire buttons
+        const emailBtn = el.querySelector(".email-contact");
+        if (c.email) {
+          emailBtn.addEventListener("click", ()=> openEmailModal({ to: c.email }));
+        } else {
+          emailBtn.disabled = true;
+          emailBtn.classList.add("opacity-50","cursor-not-allowed");
+        }
         el.querySelector(".edit-contact").addEventListener("click", ()=>openEditContact(c));
         el.querySelector(".del-contact").addEventListener("click", ()=>deleteContact(c.id));
         list.appendChild(el);
@@ -963,22 +1027,135 @@ async function deleteContact(id){
   } catch(err){ console.error(err); toast("Failed to delete contact","error"); }
 }
 
+/* ------------- Email: individual + whole class ------------- */
+function openEmailModal({ to=null, bccList=null } = {}){
+  const rtName = auth?.currentUser?.displayName || null;
+  const rtEmail = auth?.currentUser?.email || null;
+  $("reply-to-display").textContent = rtName ? `${rtName} <${rtEmail}>` : (rtEmail || "Unknown");
+
+  if (to){
+    $("email-to-wrap").classList.remove("hidden");
+    $("email-bcc-wrap").classList.add("hidden");
+    $("email-to").value = to;
+    $("email-bcc").value = "";
+  } else if (bccList && bccList.length){
+    $("email-to-wrap").classList.add("hidden");
+    $("email-bcc-wrap").classList.remove("hidden");
+    $("email-to").value = "";
+    $("email-bcc").value = bccList.join(", ");
+  } else {
+    toast("No recipients selected","error");
+    return;
+  }
+
+  $("email-subject").value = "";
+  $("email-body").value = "";
+  $("email-status").textContent = "";
+  $("email-send-btn").disabled = false;
+
+  openModal("email-modal");
+}
+
+async function handleSendEmail(e){
+  e.preventDefault();
+  const sendBtn = $("email-send-btn");
+  const status = $("email-status");
+  sendBtn.disabled = true;
+  status.textContent = "Sending…";
+
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Not authenticated");
+    const replyToEmail = user.email || null;
+    const replyToName  = user.displayName || user.email || "Program Staff";
+
+    const to = $("email-to").value.trim() || null;
+    const bccRaw = $("email-bcc").value.trim();
+    const bcc = bccRaw
+      ? bccRaw.split(",").map(s => s.trim()).filter(Boolean)
+      : null;
+
+    const payload = {
+      to,
+      bcc,
+      replyTo: { email: replyToEmail, name: replyToName },
+      subject: $("email-subject").value.trim(),
+      text: $("email-body").value
+    };
+
+    const res = await fetch(`${SERVER_URL}/send-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      let msg = `Server error ${res.status}`;
+      try { const j = await res.json(); if (j?.error) msg = j.error; } catch {}
+      throw new Error(msg);
+    }
+
+    toast("Email sent");
+    status.textContent = "Sent!";
+    setTimeout(()=> closeModal("email-modal"), 700);
+  } catch (err){
+    console.error(err);
+    toast(err.message || "Failed to send email","error");
+    $("email-status").textContent = "Failed.";
+    $("email-send-btn").disabled = false;
+  }
+}
+$("email-form").addEventListener("submit", handleSendEmail);
+
+async function emailWholeClass(){
+  if (!currentClassId){ toast("Select a class first","error"); return; }
+  const c = allClasses.find(x=>x.id===currentClassId);
+  const studentIds = c?.students || [];
+  if (studentIds.length === 0){ toast("This class has no students","error"); return; }
+
+  const parentIds = new Set();
+  allStudents.forEach(s=>{
+    if (studentIds.includes(s.id)) (s.parents||[]).forEach(pid => parentIds.add(pid));
+  });
+  if (parentIds.size === 0){ toast("No parent contacts found","error"); return; }
+
+  const bccEmails = [];
+  try {
+    const ids = Array.from(parentIds);
+    for (let i=0; i<ids.length; i+=30){
+      const chunk = ids.slice(i, i+30);
+      const qs = await getDocs(query(parentsCol(), where("__name__", "in", chunk)));
+      qs.forEach(d => {
+        const email = d.data()?.email;
+        if (email) bccEmails.push(email);
+      });
+    }
+  } catch (e){
+    console.error(e);
+    toast("Failed to build recipient list","error");
+    return;
+  }
+
+  if (bccEmails.length === 0){ toast("No valid emails found","error"); return; }
+
+  openEmailModal({ bccList: [...new Set(bccEmails)] });
+}
+$("email-class-btn")?.addEventListener("click", emailWholeClass);
+$("email-class-btn-m")?.addEventListener("click", emailWholeClass);
+
 /* ------------- Desktop “By” toggle & Add buttons ------------- */
 $("view-by-class").addEventListener("click", ()=>{ currentView="class"; renderPrimary(); });
 $("view-by-student").addEventListener("click", ()=>{ currentView="student"; renderPrimary(); });
 
 /* ------------- Badges ------------- */
 function updateBadges(){
-  // classes = total classes
   badges.classes.textContent = allClasses.length;
-  // students = count for selected class (if any), else 0
   let studCount = 0;
   if (currentClassId){
     const c = allClasses.find(x=>x.id===currentClassId);
     studCount = c?.students?.length || 0;
   }
   badges.students.textContent = studCount;
-  // contacts = parents for selected student
   let contCount = 0;
   if (currentStudentId){
     const s = allStudents.find(x=>x.id===currentStudentId);
