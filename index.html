@@ -37,84 +37,6 @@
         .icon-btn { background: none; border: none; padding: 0.25rem; cursor: pointer; color: #9ca3af; /* gray-400 */ }
         .icon-btn:hover { color: #dc2626; /* red-600 for delete */ }
         .icon-btn.edit:hover { color: #2563eb; /* blue-600 for edit */ }
-        /* Add hover color for invoice icon */
-        .icon-btn .fa-file-invoice-dollar:hover { color: #16a34a; /* green-600 */ }
-
-        /* --- BILLING ITEM STYLES --- */
-        .billing-item {
-            padding: 0.75rem;
-            border: 1px solid #e5e7eb;
-            border-radius: 0.5rem;
-            background-color: #f9fafb;
-        }
-        .item-title {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 500;
-        }
-        .item-details {
-            font-size: 0.875rem;
-            color: #6b7280;
-            margin-top: 0.25rem;
-        }
-        .status-badge {
-            font-size: 0.75rem;
-            font-weight: 600;
-            padding: 0.125rem 0.5rem;
-            border-radius: 9999px;
-            text-transform: uppercase;
-        }
-        .invoice-status-paid, .subscription-status-active {
-            color: #057a55;
-            background-color: #def7ec;
-        }
-        .invoice-status-open, .subscription-status-past_due {
-            color: #c2410c;
-            background-color: #fffbeb;
-        }
-        .invoice-status-void, .subscription-status-canceled {
-            color: #4b5563;
-            background-color: #f3f4f6;
-        }
-        .stripe-link {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #2563eb;
-            text-decoration: none;
-            margin-top: 0.5rem;
-            display: inline-block;
-        }
-        .stripe-link:hover {
-            text-decoration: underline;
-        }
-        .error-message {
-            color: #dc2626;
-            font-size: 0.875rem;
-            text-align: center;
-            padding: 0.5rem;
-            background-color: #fee2e2;
-            border-radius: 0.375rem;
-        }
-        /* --- MANUAL MAP STYLES --- */
-        .manual-map-section {
-            margin-top: 0.5rem;
-            padding-top: 0.5rem;
-            border-top: 1px solid #e5e7eb; /* gray-200 */
-        }
-        /* Style for displaying existing Stripe IDs */
-        .stripe-id-display {
-             font-size: 0.75rem;
-             color: #6b7280; /* gray-500 */
-             margin-top: 0.5rem;
-             padding-top: 0.5rem;
-             border-top: 1px solid #e5e7eb; /* gray-200 */
-             word-break: break-all; /* Prevent long IDs from overflowing */
-        }
-        .stripe-id-label {
-             font-weight: 500;
-             color: #374151; /* gray-700 */
-        }
     </style>
 </head>
 
@@ -182,14 +104,7 @@
                     <button id="view-by-class" class="px-4 py-2 text-sm font-medium bg-white text-blue-700 rounded-md shadow-sm">View By Class</button>
                     <button id="view-by-student" class="px-4 py-2 text-sm font-medium text-gray-700">View By Student</button>
                 </div>
-                 <div class="flex items-center gap-2">
-                     <label for="account-context-select" class="text-sm font-medium text-gray-700">View For:</label>
-                     <select id="account-context-select" class="border border-gray-300 rounded-md shadow-sm p-1.5 text-sm">
-                         <option value="halle_dance" selected>Halle Dance</option>
-                         <option value="state48arts.org">State48Arts.org</option>
-                     </select>
-                </div>
-                 <button id="email-class-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition hidden">
+                <button id="email-class-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition hidden">
                     Email Class
                 </button>
             </div>
@@ -225,7 +140,7 @@
                         </div>
                 </section>
     
-                <section id="col-3-section" class="bg-white p-4 rounded-lg shadow-lg flex flex-col h-full hidden md:flex">
+                <section id="col-3-section" class="bg-white p-4 rounded-lg shadow-lg flex-col h-full hidden md:flex">
                     <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                         <div>
                             <h2 class="text-2xl font-bold text-gray-800">Parents/Contacts</h2>
@@ -235,31 +150,9 @@
                             Add Contact
                         </button>
                     </div>
-
-                    <div class="flex-1 overflow-y-auto scrolling-list min-h-0 pb-16 md:pb-0 space-y-2">
-                        
-                        <div id="contact-list" class="space-y-2">
-                            </div>
-        
-                        <hr class="my-4 border-gray-200">
-        
-                        <div class="flex justify-between items-center mb-2">
-                            <h3 class="text-lg font-bold text-gray-800">Invoices</h3>
-                            <span id="invoice-account-label" class="text-xs font-medium text-gray-500"></span> 
+                     <div id="contact-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0 pb-16 md:pb-0">
                         </div>
-                        <div id="invoice-list-container" class="space-y-2">
-                            <p id="invoices-loading-message" class="text-gray-500 text-center">Select a student</p>
-                        </div>
-        
-                        <div class="flex justify-between items-center mt-4 mb-2">
-                            <h3 class="text-lg font-bold text-gray-800">Subscriptions</h3>
-                            <span id="subscription-account-label" class="text-xs font-medium text-gray-500"></span> 
-                        </div>
-                        <div id="subscription-list-container" class="space-y-2">
-                            <p id="subscriptions-loading-message" class="text-gray-500 text-center">Select a student</p>
-                        </div>
-                    
-                    </div> </section>
+                </section>
             </div>
         </div>
     
@@ -280,6 +173,7 @@
             </div>
         </nav>
     </div>
+    
     
     <div id="add-class-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
@@ -536,31 +430,16 @@
                 <h3 class="text-lg font-medium leading-6 text-gray-900">Create Invoice</h3>
                 <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="invoice-modal">&times;</button>
             </div>
-            <p id="invoice-subtitle" class="text-sm text-gray-600 mb-4">Creating invoice for student: <span class="font-medium"></span></p>
+            <p id="invoice-subtitle" class="text-sm text-gray-600 mb-4">Creating invoice for: <span class="font-medium"></span></p>
             <form id="create-invoice-form">
-                <input type="hidden" id="invoice-student-id"> 
-                <div class="space-y-4">
+                <input type="hidden" id="invoice-parent-id"> <div class="space-y-4">
                     <div>
-                         <label for="invoice-parent-select" class="block text-sm font-medium text-gray-700">Invoice To (Parent/Contact):</label>
-                         <select id="invoice-parent-select" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
-                             <option value="">Loading contacts...</option>
-                         </select>
-                    </div>
-                     <div>
-                         <label for="invoice-account-select" class="block text-sm font-medium text-gray-700">Invoice For Account:</label>
-                         <select id="invoice-account-select" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
-                             <option value="">-- Select Account --</option>
-                             <option value="halle_dance">Halle Dance</option>
-                             <option value="state48arts.org">State48Arts.org</option>
-                         </select>
-                     </div>
-                     <div>
                         <label for="invoice-amount" class="block text-sm font-medium text-gray-700">Amount (e.g., 25.00)</label>
                         <input type="number" id="invoice-amount" step="0.01" min="0.01" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
                     </div>
                     <div>
                         <label for="invoice-description" class="block text-sm font-medium text-gray-700">Description</label>
-                        <input type="text" id="invoice-description" placeholder="e.g., October Class Fee - [Student Name]" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                        <input type="text" id="invoice-description" placeholder="e.g., October Class Fee" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
                     </div>
                 </div>
                  <p id="invoice-status" class="text-xs mt-4 h-4"></p>
@@ -576,59 +455,106 @@
     <script type="module">
         
         // --- HARDCODED CONFIGURATION ---
+        // CRITICAL: Fill in all 5 values for the app to work.
         const HARDCODED_CONFIG = {
-            serverUrl: "https://after-school-mailer.onrender.com", 
-            organizationId: "State-48-Dance", 
+            // 1. Your Render Server URL
+            serverUrl: "https://after-school-mailer.onrender.com", // "YOUR_RENDER_URL",
+            
+            // 2. Your Custom Organization ID (must match Firestore Rules)
+            organizationId: "State-48-Dance", // "YOUR_CUSTOM_ORGANIZATION_ID", 
+
             firebase: {
-                apiKey: "AIzaSyAYDMyMAw7wf3i28C-hQ_iRZRVdMiXmaLk",         
-                authDomain: "dance-classes-97ad7.firebaseapp.com", 
-                projectId: "dance-classes-97ad7",    
-                appId: "1:1041555303856:web:5b80e0497eacaf161b7a75"             
+                // --- Find these 4 keys in ---
+                // Firebase Console > Project Settings (⚙️) > General tab > Your apps > Web app > SDK config
+                apiKey: "AIzaSyAYDMyMAw7wf3i28C-hQ_iRZRVdMiXmaLk",         // "YOUR_API_KEY",
+                authDomain: "dance-classes-97ad7.firebaseapp.com", // "YOUR_AUTH_DOMAIN",
+                projectId: "dance-classes-97ad7",    // "YOUR_PROJECT_ID",
+                appId: "1:1041555303856:web:5b80e0497eacaf161b7a75"             // "YOUR_APP_ID" // This MUST be the official Firebase App ID
             }
         };
         // -------------------------------------------------
 
-        // --- NEW: Stripe Account Identifiers ---
-        const ACCOUNT_ID_HALLE = 'halle_dance';
-        const ACCOUNT_ID_STATE48 = 'state48arts.org';
-        // ------------------------------------
 
         // --- Import Firebase modules ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import {
-            getAuth, onAuthStateChanged, initializeAuth, browserLocalPersistence,
-            signInWithEmailAndPassword, signOut, getIdToken, getIdTokenResult
+            getAuth,
+            onAuthStateChanged,
+            initializeAuth,
+            browserLocalPersistence,
+            signInWithEmailAndPassword,
+            signOut,
+            getIdToken, // Needed for server auth
+            getIdTokenResult // Needed for admin claims
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import {
-            getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot,
-            collection, query, where, getDocs, arrayUnion, arrayRemove, writeBatch
+            getFirestore,
+            doc,
+            getDoc,
+            addDoc,
+            setDoc,
+            updateDoc,
+            deleteDoc,
+            onSnapshot,
+            collection,
+            query,
+            where,
+            getDocs,
+            arrayUnion,
+            arrayRemove,
+            writeBatch
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase services ---
         let db;
-        let auth; 
+        let auth; // Keep auth in module scope
         let userId = null;
         let currentUser = null;
-        let isAdmin = false; 
+        let isAdmin = false; // Track admin status
         let currentClassId = null;
         let currentStudentId = null;
-        let allStudentsCache = []; // Holds { id, name, ..., stripeInfo: { halle_dance: 'cus_..', state48arts.org: 'cus_..' } }
+        let allStudentsCache = [];
         let allClassCache = [];
-        let contactCache = new Map(); 
+        let contactCache = new Map(); // Cache for contacts
         let unsubscribeClasses = null;
         let unsubscribeAllStudents = null;
-        let unsubscribeContacts = null; 
+        let unsubscribeContacts = null; // Listener for contacts
         
+        // --- Get Organization ID ---
         const organizationId = HARDCODED_CONFIG.organizationId; 
-        let currentView = 'class'; 
+
+        // --- View State ---
+        let currentView = 'class'; // 'class' or 'student'
 
         // --- Collections ---
-        const getClassesCol = () => collection(db, `organizations/${organizationId}/classes`);
-        const getStudentsCol = () => collection(db, `organizations/${organizationId}/students`);
-        const getParentsCol = () => collection(db, `organizations/${organizationId}/parents`);
+        // ADDED CONSOLE LOGGING
+        const getClassesCol = () => {
+             const path = `organizations/${organizationId}/classes`;
+             console.log("Accessing path:", path);
+             return collection(db, path);
+        }
+        const getStudentsCol = () => {
+             const path = `organizations/${organizationId}/students`;
+             console.log("Accessing path:", path);
+             return collection(db, path);
+        }
+        const getParentsCol = () => {
+             const path = `organizations/${organizationId}/parents`;
+             console.log("Accessing path:", path);
+             return collection(db, path);
+        }
+
 
         // --- Toast Notification ---
-        const toast = (message, type = 'success', duration = 3000) => { /* ... unchanged ... */ }
+        const toast = (message, type = 'success', duration = 3000) => {
+            const toastEl = document.getElementById('toast'); if (!toastEl) return;
+            const iconEl = document.getElementById('toast-icon'); const msgEl = document.getElementById('toast-message');
+            msgEl.textContent = message;
+            toastEl.classList.remove('hidden', 'bg-green-100', 'bg-red-100'); iconEl.classList.remove('text-green-500', 'text-red-500');
+            if (type === 'success') { iconEl.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>`; iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg'; }
+            else if (type === 'error') { iconEl.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>`; iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg'; }
+            toastEl.classList.remove('hidden'); setTimeout(() => toastEl.classList.add('hidden'), duration);
+        }
 
         // --- Modal Controls ---
         const openModal = (modalId) => document.getElementById(modalId)?.classList.add('flex');
@@ -638,193 +564,336 @@
         const renderViewByClass = () => { currentView = 'class'; document.getElementById('col-1-title').textContent = 'Classes'; document.getElementById('col-1-add-btn').textContent = 'Add Class'; document.getElementById('col-2-title').textContent = 'Students'; document.getElementById('col-2-btn-group').classList.remove('hidden'); document.getElementById('email-class-btn').classList.remove('hidden'); document.getElementById('nav-col-1-title').textContent = 'Classes'; document.getElementById('nav-col-2-title').textContent = 'Students'; document.getElementById('view-by-class').classList.add('bg-white', 'text-blue-700', 'shadow-sm'); document.getElementById('view-by-student').classList.remove('bg-white', 'text-blue-700', 'shadow-sm'); currentClassId = null; currentStudentId = null; resetCol2(); resetCol3(); renderCol1ClassList(); }
         const renderViewByStudent = () => { currentView = 'student'; document.getElementById('col-1-title').textContent = 'All Students'; document.getElementById('col-1-add-btn').textContent = 'Add Student'; document.getElementById('col-2-title').textContent = 'Enrolled In'; document.getElementById('col-2-btn-group').classList.add('hidden'); document.getElementById('email-class-btn').classList.add('hidden'); document.getElementById('nav-col-1-title').textContent = 'Students'; document.getElementById('nav-col-2-title').textContent = 'Classes'; document.getElementById('view-by-student').classList.add('bg-white', 'text-blue-700', 'shadow-sm'); document.getElementById('view-by-class').classList.remove('bg-white', 'text-blue-700', 'shadow-sm'); currentClassId = null; currentStudentId = null; resetCol2(); resetCol3(); renderCol1StudentList(); }
         
+        // Render Col 1 (Classes) - ADDED EDIT ICON
         const renderCol1ClassList = () => {
-             const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
-             if (allClassCache.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No classes found. Add one!</p>'; return; }
-             const sortedClasses = [...allClassCache].sort((a, b) => a.name.localeCompare(b.name));
-             sortedClasses.forEach(c => {
-                 const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentClassId === c.id ? 'bg-blue-50 border-blue-300' : ''}`; el.dataset.id = c.id;
-                 el.innerHTML = `
-                     <div class="flex justify-between items-center">
-                         <span class="font-medium text-gray-800">${c.name}</span>
-                         <div class="flex items-center space-x-2">
-                             <button class="edit-class-btn icon-btn edit" data-id="${c.id}" title="Edit Class"><i class="fas fa-pencil-alt fa-xs"></i></button>
-                             <button class="delete-class-btn icon-btn" data-id="${c.id}" title="Delete Class"><i class="fas fa-times fa-sm"></i></button>
-                         </div>
-                     </div>
-                     <p class="text-sm text-gray-600">${c.teacher}</p>`;
-                 el.addEventListener('click', () => selectClass(c.id, c.name));
-                 el.querySelector('.edit-class-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditClassModal(c.id); });
-                 el.querySelector('.delete-class-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteClass(c.id, c.name); });
-                 listEl.appendChild(el);
-             });
+            const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
+            if (allClassCache.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No classes found. Add one!</p>'; return; }
+            const sortedClasses = [...allClassCache].sort((a, b) => a.name.localeCompare(b.name));
+            sortedClasses.forEach(c => {
+                const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentClassId === c.id ? 'bg-blue-50 border-blue-300' : ''}`; el.dataset.id = c.id;
+                el.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-gray-800">${c.name}</span>
+                        <div class="flex items-center space-x-2">
+                            <button class="edit-class-btn icon-btn edit" data-id="${c.id}" title="Edit Class"><i class="fas fa-pencil-alt fa-xs"></i></button>
+                            <button class="delete-class-btn icon-btn" data-id="${c.id}" title="Delete Class"><i class="fas fa-times fa-sm"></i></button>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600">${c.teacher}</p>`;
+                el.addEventListener('click', () => selectClass(c.id, c.name));
+                el.querySelector('.edit-class-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditClassModal(c.id); });
+                el.querySelector('.delete-class-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteClass(c.id, c.name); });
+                listEl.appendChild(el);
+            });
         }
 
-        // --- UPDATED: Render Col 1 (Students) - Check stripeInfo map ---
+        // Render Col 1 (Students) - ADDED EDIT ICON
         const renderCol1StudentList = () => {
-           const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
-           if (allStudentsCache.length === 0) { /* ... no students message ... */ return; }
-           const sortedStudents = [...allStudentsCache].sort((a, b) => a.name.localeCompare(b.name));
-            
-           sortedStudents.forEach(s => {
-               const el = document.createElement('div'); 
-               el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; 
-               el.dataset.id = s.id;
-
-               // --- UPDATED: Manual Map & Display Existing IDs ---
-               let stripeSectionHtml = '';
-               const hasHalleId = s.stripeInfo?.[ACCOUNT_ID_HALLE];
-               const hasState48Id = s.stripeInfo?.[ACCOUNT_ID_STATE48];
-
-               // Display existing IDs
-                if (hasHalleId || hasState48Id) {
-                    stripeSectionHtml += '<div class="stripe-id-display">';
-                    if (hasHalleId) stripeSectionHtml += `<div><span class="stripe-id-label">Halle:</span> ${hasHalleId}</div>`;
-                    if (hasState48Id) stripeSectionHtml += `<div><span class="stripe-id-label">State48:</span> ${hasState48Id}</div>`;
-                    stripeSectionHtml += '</div>';
-                }
-               
-               // Show manual map input if EITHER ID is missing (adjust condition if needed)
-               if (!hasHalleId || !hasState48Id) {
-                   stripeSectionHtml += `
-                       <div class="manual-map-section">
-                           <label for="map-${s.id}" class="text-xs text-gray-500 block mb-1">Add Missing Stripe ID:</label>
-                           <div class="flex gap-1">
-                               <input type="text" id="map-${s.id}" placeholder="cus_..." class="flex-grow border border-gray-300 rounded px-1 py-0.5 text-xs">
-                               <button class="map-stripe-btn bg-gray-200 hover:bg-gray-300 px-2 rounded text-xs" data-student-id="${s.id}">Save</button>
-                           </div>
-                       </div>`;
-               }
-               
-               el.innerHTML = `
-                   <div class="flex justify-between items-center">
-                       <span class="font-medium text-gray-800">${s.name}</span>
-                       <div class="flex items-center space-x-2">
-                            <button class="edit-student-btn icon-btn edit" data-id="${s.id}" title="Edit Student"><i class="fas fa-pencil-alt fa-xs"></i></button>
-                            <button class="invoice-student-btn icon-btn" data-student-id="${s.id}" data-student-name="${s.name}" title="Invoice Student"><i class="fas fa-file-invoice-dollar fa-xs text-green-600"></i></button> 
-                           <button class="delete-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Delete Student"><i class="fas fa-times fa-sm"></i></button>
-                       </div>
-                   </div>
-                   ${stripeSectionHtml}`; // Add the Stripe section
-                
-               el.addEventListener('click', () => selectStudent(s.id, s.name));
-               el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
-               el.querySelector('.delete-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteStudent(s.id, s.name); });
-               el.querySelector('.invoice-student-btn').addEventListener('click', (e) => { e.stopPropagation(); promptInvoiceParentSelection(s.id, s.name); });
-               
-               listEl.appendChild(el);
-           });
-        }
-
-        // --- UPDATED: Render Col 2 (Students in a Class) - Check stripeInfo map ---
-        const renderCol2StudentList = (classId) => {
-            const listEl = document.getElementById('col-2-list'); const classData = allClassCache.find(c => c.id === classId);
-            if (!classData || !classData.students || classData.students.length === 0) { /* ... no students message ... */ return; }
-            const studentIds = classData.students; const studentsInClass = allStudentsCache.filter(s => studentIds.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name));
-            listEl.innerHTML = '';
-
-            studentsInClass.forEach(s => {
-                const el = document.createElement('div'); 
-                el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; 
-                el.dataset.id = s.id;
-
-                // --- UPDATED: Manual Map & Display Existing IDs ---
-                let stripeSectionHtml = '';
-                const hasHalleId = s.stripeInfo?.[ACCOUNT_ID_HALLE];
-                const hasState48Id = s.stripeInfo?.[ACCOUNT_ID_STATE48];
-
-                if (hasHalleId || hasState48Id) {
-                    stripeSectionHtml += '<div class="stripe-id-display">';
-                    if (hasHalleId) stripeSectionHtml += `<div><span class="stripe-id-label">Halle:</span> ${hasHalleId}</div>`;
-                    if (hasState48Id) stripeSectionHtml += `<div><span class="stripe-id-label">State48:</span> ${hasState48Id}</div>`;
-                    stripeSectionHtml += '</div>';
-                }
-               
-                if (!hasHalleId || !hasState48Id) {
-                    stripeSectionHtml += `
-                       <div class="manual-map-section">
-                           <label for="map-${s.id}" class="text-xs text-gray-500 block mb-1">Add Missing Stripe ID:</label>
-                           <div class="flex gap-1">
-                               <input type="text" id="map-${s.id}" placeholder="cus_..." class="flex-grow border border-gray-300 rounded px-1 py-0.5 text-xs">
-                               <button class="map-stripe-btn bg-gray-200 hover:bg-gray-300 px-2 rounded text-xs" data-student-id="${s.id}">Save</button>
-                           </div>
-                       </div>`;
-                }
-                
+            const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
+            if (allStudentsCache.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No students found. Add one!</p>'; return; }
+            const sortedStudents = [...allStudentsCache].sort((a, b) => a.name.localeCompare(b.name));
+            sortedStudents.forEach(s => {
+                const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; el.dataset.id = s.id;
                 el.innerHTML = `
                     <div class="flex justify-between items-center">
                         <span class="font-medium text-gray-800">${s.name}</span>
                         <div class="flex items-center space-x-2">
                              <button class="edit-student-btn icon-btn edit" data-id="${s.id}" title="Edit Student"><i class="fas fa-pencil-alt fa-xs"></i></button>
-                             <button class="invoice-student-btn icon-btn" data-student-id="${s.id}" data-student-name="${s.name}" title="Invoice Student"><i class="fas fa-file-invoice-dollar fa-xs text-green-600"></i></button> 
-                            <button class="remove-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Remove from class"><i class="fas fa-times fa-sm"></i></button>
+                            <button class="delete-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Delete Student"><i class="fas fa-times fa-sm"></i></button>
                         </div>
-                    </div>
-                    ${stripeSectionHtml}`; // Add the Stripe section
-
+                    </div>`;
                 el.addEventListener('click', () => selectStudent(s.id, s.name));
                  el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
-                 el.querySelector('.remove-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleRemoveStudent(s.id, s.name); });
-                 el.querySelector('.invoice-student-btn').addEventListener('click', (e) => { e.stopPropagation(); promptInvoiceParentSelection(s.id, s.name); });
-                 
+                el.querySelector('.delete-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteStudent(s.id, s.name); });
+                listEl.appendChild(el);
+            });
+        }
+
+        // Render Col 2 (Students in a Class) - ADDED EDIT ICON
+        const renderCol2StudentList = (classId) => {
+            const listEl = document.getElementById('col-2-list'); const classData = allClassCache.find(c => c.id === classId);
+            if (!classData || !classData.students || classData.students.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No students in this class.</p>'; return; }
+            const studentIds = classData.students; const studentsInClass = allStudentsCache.filter(s => studentIds.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name));
+            listEl.innerHTML = '';
+            studentsInClass.forEach(s => {
+                const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; el.dataset.id = s.id;
+                el.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-gray-800">${s.name}</span>
+                        <div class="flex items-center space-x-2">
+                             <button class="edit-student-btn icon-btn edit" data-id="${s.id}" title="Edit Student"><i class="fas fa-pencil-alt fa-xs"></i></button>
+                            <button class="remove-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Remove from class"><i class="fas fa-times fa-sm"></i></button>
+                        </div>
+                    </div>`;
+                el.addEventListener('click', () => selectStudent(s.id, s.name));
+                 el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
+                el.querySelector('.remove-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleRemoveStudent(s.id, s.name); });
                 listEl.appendChild(el);
             });
         }
         
-        const renderCol2ClassList = (studentId) => { /* ... unchanged ... */ }
-        const renderStudentDropdown = () => { /* ... unchanged ... */ }
-        const renderContactList = (contacts) => { /* ... unchanged ... */ }
-        const renderUserList = (users) => { /* ... unchanged ... */ }
-        const resetCol2 = () => { /* ... unchanged ... */ }
-        const resetCol3 = () => { /* ... unchanged ... */ }
+        const renderCol2ClassList = (studentId) => { const listEl = document.getElementById('col-2-list'); const classesForStudent = allClassCache.filter(c => c.students && c.students.includes(studentId)).sort((a, b) => a.name.localeCompare(b.name)); if (classesForStudent.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">Not enrolled in any classes.</p>'; return; } listEl.innerHTML = ''; classesForStudent.forEach(c => { const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200`; el.dataset.id = c.id; el.innerHTML = `<span class="font-medium text-gray-800">${c.name}</span><p class="text-sm text-gray-600">${c.teacher}</p>`; listEl.appendChild(el); }); }
+        const renderStudentDropdown = () => { 
+            const selectEl = document.getElementById('existing-student-select'); 
+            // FIX: Add null check
+            if (!selectEl) {
+                console.error("Element 'existing-student-select' not found.");
+                return;
+            }
+            selectEl.innerHTML = '<option value="">Select a student...</option>'; 
+            if (!currentClassId) return; 
+            const classData = allClassCache.find(c => c.id === currentClassId); 
+            if (!classData) return; 
+            const studentIdsInClass = classData.students || []; 
+            const availableStudents = allStudentsCache.filter(s => !studentIdsInClass.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name)); 
+            if (availableStudents.length === 0) { 
+                selectEl.innerHTML = '<option value="">No other students available</option>'; 
+                return; 
+            } 
+            availableStudents.forEach(s => { 
+                const opt = document.createElement('option'); 
+                opt.value = s.id; 
+                opt.textContent = s.name; 
+                selectEl.appendChild(opt); 
+            }); 
+        }
+        
+        // --- UPDATED: Render Col 3 (Contacts) - Added Invoice Button ---
+        const renderContactList = (contacts) => {
+            const listEl = document.getElementById('contact-list'); 
+            listEl.innerHTML = ''; 
+            const sortedContacts = [...contacts].sort((a, b) => a.name.localeCompare(b.name));
+            
+            if (sortedContacts.length === 0) { 
+                listEl.innerHTML = '<p class="text-gray-500 text-center">No contacts for this student.</p>'; 
+                return; 
+            }
+            
+            sortedContacts.forEach(c => {
+                const el = document.createElement('div'); 
+                el.className = 'p-3 rounded-lg border border-gray-200';
+                
+                // Added "Invoice" button
+                el.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="font-medium text-gray-800">${c.name}</span>
+                            <p class="text-sm text-gray-600">${c.email}</p>
+                            <p class="text-sm text-gray-600">${c.phone || ''}</p>
+                            <div class="mt-2 space-x-3"> 
+                                <button class="email-contact-btn text-sm text-blue-600 hover:underline" data-email="${c.email}" data-name="${c.name}">Email</button>
+                                <button class="invoice-contact-btn text-sm text-green-600 hover:underline" data-parent-id="${c.id}" data-parent-name="${c.name}">Invoice</button>
+                            </div>
+                        </div>
+                         <div class="flex items-center space-x-2 flex-shrink-0">
+                             <button class="edit-contact-btn icon-btn edit" data-id="${c.id}" title="Edit Contact"><i class="fas fa-pencil-alt fa-xs"></i></button>
+                            <button class="delete-contact-btn icon-btn" data-id="${c.id}" data-name="${c.name}" title="Delete Contact"><i class="fas fa-times fa-sm"></i></button>
+                        </div>
+                    </div>`;
+                
+                el.querySelector('.edit-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditContactModal(c.id); });
+                el.querySelector('.delete-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteContact(c.id, c.name); });
+                el.querySelector('.email-contact-btn').addEventListener('click', (e) => { e.stopPropagation(); openEmailModal({ to: c.email }); });
+                
+                // Add event listener for the new invoice button
+                el.querySelector('.invoice-contact-btn').addEventListener('click', (e) => { 
+                    e.stopPropagation(); 
+                    openInvoiceModal(c.id, c.name); // Pass parent ID and name
+                });
+                
+                listEl.appendChild(el);
+            });
+        }
+        
+        // --- MODIFIED: This function is updated ---
+        const renderUserList = (users) => { 
+            const listEl = document.getElementById('user-list'); 
+            listEl.innerHTML = ''; 
+            if (!users || users.length === 0) { 
+                listEl.innerHTML = '<p class="text-gray-500 text-center">No other users found.</p>'; 
+                return; 
+            } 
+            // Sort users, prioritizing the current logged-in admin user to the top
+            const sortedUsers = [...users].sort((a, b) => {
+                if (a.uid === userId) return -1; // Current user comes first
+                if (b.uid === userId) return 1;  // Current user comes first
+                return (a.email || '').localeCompare(b.email || ''); // Sort others by email
+            }); 
+            
+            sortedUsers.forEach(user => { 
+                const el = document.createElement('div'); 
+                el.className = 'p-3 rounded-lg border border-gray-200 flex justify-between items-center gap-4'; 
+                
+                let adminStatus = ''; 
+                let actionButton = ''; 
+                if (user.isAdmin) { 
+                    adminStatus = '<span class="text-xs font-medium text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full">Admin</span>'; 
+                } else if (isAdmin) { // Only show "Make Admin" if the current user is an admin
+                     actionButton = `<button class="make-admin-btn text-green-600 hover:text-green-800 text-sm font-medium" data-uid="${user.uid}" data-email="${user.email || ''}">Make Admin</button>`; 
+                } 
+                
+                // Display user's name if available, otherwise email
+                const userIdentifier = user.displayName || user.email || 'No Email';
+                
+                // Added Edit Name button
+                el.innerHTML = `
+                    <div class="flex-1 min-w-0">
+                        <span class="font-medium text-gray-800 block truncate">${userIdentifier}</span> 
+                        ${user.displayName ? `<span class="text-xs text-gray-500 block truncate">${user.email || 'No Email'}</span>` : ''} 
+                        <span class="text-xs text-gray-500 block truncate">(UID: ${user.uid})</span>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        ${adminStatus}
+                        ${actionButton}
+                        <button class="edit-name-btn text-blue-600 hover:text-blue-800 text-sm font-medium" data-uid="${user.uid}" data-current-name="${user.displayName || ''}">Edit Name</button>
+                        ${user.uid !== userId ? `<button class="delete-user-btn text-red-500 hover:text-red-700 text-sm font-medium" data-uid="${user.uid}" data-email="${user.email || ''}">Delete</button>` : ''} 
+                    </div>`; 
+
+                const makeAdminBtn = el.querySelector('.make-admin-btn'); 
+                if (makeAdminBtn) { 
+                    makeAdminBtn.addEventListener('click', (e) => { e.stopPropagation(); handleMakeAdmin(user.uid, user.email || 'this user'); }); 
+                } 
+                
+                // Added event listener for Edit Name
+                const editNameBtn = el.querySelector('.edit-name-btn');
+                if (editNameBtn) {
+                    editNameBtn.addEventListener('click', (e) => { 
+                        e.stopPropagation(); 
+                        handleUpdateUserName(user.uid, user.displayName || ''); 
+                    });
+                }
+                
+                const deleteUserBtn = el.querySelector('.delete-user-btn');
+                if (deleteUserBtn) {
+                    deleteUserBtn.addEventListener('click', (e) => { e.stopPropagation(); handleDeleteUser(user.uid, user.email || 'this user'); }); 
+                }
+                listEl.appendChild(el); 
+            }); 
+        }
+        const resetCol2 = () => { document.getElementById('col-2-subtitle').textContent = currentView === 'class' ? 'Select a class' : 'Select a student'; document.getElementById('col-2-list').innerHTML = ''; if (currentView === 'class') { document.getElementById('add-new-student-btn').disabled = true; document.getElementById('add-existing-student-btn').disabled = true; } }
+        const resetCol3 = () => { document.getElementById('contact-student-subtitle').textContent = 'Select a student'; document.getElementById('contact-list').innerHTML = ''; document.getElementById('add-contact-btn').disabled = true; }
         
         // --- Data Listeners ---
-        const listenForClasses = () => { /* ... unchanged ... */ }
-        const listenForAllStudents = () => { /* ... unchanged ... */ }
-        const listenForContacts = (studentId) => { /* ... unchanged ... */ }
+        const listenForClasses = () => { if (unsubscribeClasses) unsubscribeClasses(); console.log("Setting up listener for classes..."); unsubscribeClasses = onSnapshot(getClassesCol(), (snapshot) => { console.log("Class listener triggered."); allClassCache = []; snapshot.forEach(doc => { allClassCache.push({ id: doc.id, ...doc.data() }); }); if (currentView === 'class') renderCol1ClassList(); if (currentView === 'student' && currentStudentId) renderCol2ClassList(currentStudentId); }, (error) => { console.error("Error listening for classes: ", error); toast('Failed to load classes. Check security rules.', 'error'); }); }
+        const listenForAllStudents = () => { if (unsubscribeAllStudents) unsubscribeAllStudents(); console.log("Setting up listener for all students..."); unsubscribeAllStudents = onSnapshot(getStudentsCol(), (snapshot) => { console.log("All students listener triggered."); allStudentsCache = []; snapshot.forEach(doc => { allStudentsCache.push({ id: doc.id, ...doc.data() }); }); if (currentView === 'student') renderCol1StudentList(); if (currentView === 'class' && currentClassId) { renderCol2StudentList(currentClassId); renderStudentDropdown(); } if (currentStudentId) listenForContacts(currentStudentId); }, (error) => { console.error("Error listening for students: ", error); toast('Failed to load students. Check security rules.', 'error'); }); }
+        
+        // --- Contact Listener ---
+        const listenForContacts = (studentId) => {
+             if (unsubscribeContacts) unsubscribeContacts(); 
+             contactCache.clear(); 
+             if (!studentId) { renderContactList([]); return; }
+             console.log(`Setting up listener for contacts for student: ${studentId}`);
+             const studentRef = doc(getStudentsCol(), studentId);
+             unsubscribeContacts = onSnapshot(studentRef, async (studentDoc) => {
+                 console.log(`Contact listener triggered for student: ${studentId}`);
+                 if (!studentDoc.exists()) { renderContactList([]); return; }
+                 const studentData = studentDoc.data();
+                 const parentIds = studentData.parents || [];
+                 if (parentIds.length === 0) { renderContactList([]); return; }
+                 try {
+                     const contacts = [];
+                     for (let i = 0; i < parentIds.length; i += 30) {
+                         const chunk = parentIds.slice(i, i + 30);
+                         if (chunk.length === 0) continue;
+                         console.log("Fetching parent chunk:", chunk);
+                         const q = query(getParentsCol(), where('__name__', 'in', chunk));
+                         const querySnapshot = await getDocs(q);
+                         querySnapshot.docs.forEach(doc => {
+                             const contactData = { id: doc.id, ...doc.data() };
+                             contacts.push(contactData);
+                             contactCache.set(doc.id, contactData); 
+                         });
+                     }
+                     console.log("Fetched contacts:", contacts);
+                     renderContactList(contacts);
+                 } catch (error) { console.error("Error fetching contacts:", error); toast('Failed to load contacts.', 'error'); renderContactList([]); }
+             }, (error) => { console.error("Error listening for contacts:", error); toast('Failed to load contacts.', 'error'); renderContactList([]); });
+        }
 
         // --- UI Selectors ---
-        const selectClass = (classId, className) => { /* ... unchanged ... */ }
-        const selectStudent = (studentId, studentName) => { 
-            console.log("Selected student:", studentId, studentName); 
-            currentStudentId = studentId; 
-            document.querySelectorAll('#col-1-list > div, #col-2-list > div').forEach(el => { el.classList.toggle('bg-blue-50', el.dataset.id === studentId); el.classList.toggle('border-blue-300', el.dataset.id === studentId); }); 
+        const selectClass = (classId, className) => { 
+            console.log("Selected class:", classId, className); 
+            currentClassId = classId; 
+            currentStudentId = null; 
+            document.querySelectorAll('#col-1-list > div').forEach(el => { el.classList.toggle('bg-blue-50', el.dataset.id === classId); el.classList.toggle('border-blue-300', el.dataset.id === classId); }); 
+            document.getElementById('col-2-subtitle').textContent = `For: ${className}`; 
+            document.getElementById('add-new-student-btn').disabled = false; 
+            document.getElementById('add-existing-student-btn').disabled = false; 
+            renderStudentDropdown(); 
+            renderCol2StudentList(classId); 
+            resetCol3(); 
+            showCol('col-2-section'); 
+            setActiveNav('nav-col-2'); 
+            // REMOVED auto-scroll for col-2
+        }
+        const selectStudent = (studentId, studentName) => {
+            console.log("Selected student:", studentId, studentName);
+            currentStudentId = studentId;
+            document.querySelectorAll('#col-1-list > div, #col-2-list > div').forEach(el => { el.classList.toggle('bg-blue-50', el.dataset.id === studentId); el.classList.toggle('border-blue-300', el.dataset.id === studentId); });
             document.getElementById('contact-student-subtitle').textContent = `For: ${studentName}`; 
-            document.getElementById('add-contact-btn').disabled = false; 
+            document.getElementById('add-contact-btn').disabled = false;
             listenForContacts(studentId); 
-            loadStudentBillingData(studentId); // Now fetches based on account selector
             if (currentView === 'student') { 
                 document.getElementById('col-2-subtitle').textContent = `For: ${studentName}`; 
                 renderCol2ClassList(studentId); 
-            } 
+                 // REMOVED auto-scroll for col-2
+            }
             showCol('col-3-section'); 
-            setActiveNav('nav-contacts'); 
-            const listEl = document.getElementById('contact-list'); 
-            if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
+            setActiveNav('nav-contacts');
+            // Auto-scroll Col 3 using scrollIntoView
+            const listEl = document.getElementById('contact-list');
+            if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         // --- Open Edit Modals ---
-        const openEditClassModal = (classId) => { /* ... unchanged ... */ };
-        const openEditStudentModal = (studentId) => { /* ... unchanged ... */ };
-        const openEditContactModal = (contactId) => { /* ... unchanged ... */ };
+        const openEditClassModal = (classId) => { console.log("Opening edit class modal for:", classId); const classData = allClassCache.find(c => c.id === classId); if (!classData) { toast('Class not found.', 'error'); return; } document.getElementById('edit-class-id').value = classId; document.getElementById('edit-class-name').value = classData.name; document.getElementById('edit-teacher-name').value = classData.teacher; openModal('edit-class-modal'); };
+        const openEditStudentModal = (studentId) => { console.log("Opening edit student modal for:", studentId); const studentData = allStudentsCache.find(s => s.id === studentId); if (!studentData) { toast('Student not found.', 'error'); return; } document.getElementById('edit-student-id').value = studentId; document.getElementById('edit-student-name').value = studentData.name; openModal('edit-student-modal'); };
+        const openEditContactModal = (contactId) => { console.log("Opening edit contact modal for:", contactId); const contactData = contactCache.get(contactId); if (!contactData) { toast('Contact not found.', 'error'); return; } document.getElementById('edit-contact-id').value = contactId; document.getElementById('edit-contact-name').value = contactData.name; document.getElementById('edit-contact-email').value = contactData.email; document.getElementById('edit-contact-phone').value = contactData.phone || ''; openModal('edit-contact-modal'); };
+
 
         // --- Data Handlers (Add, Delete, Update) ---
-        const handleAddClass = async (e) => { /* ... unchanged ... */ }
-        const handleUpdateClass = async (e) => { /* ... unchanged ... */ };
-        const handleDeleteClass = async (classId, className) => { /* ... unchanged ... */ }
-        // --- UPDATED: Add empty stripeInfo on new student ---
-        const handleAddNewStudent = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const name = document.getElementById('new-student-name').value; if (!name) { btn.disabled = false; return; } try { const studentRef = await addDoc(getStudentsCol(), { name, parents: [], classes: [], stripeInfo: {} }); // Add empty map if (currentView === 'class' && currentClassId) { const batch = writeBatch(db); batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(studentRef.id) }); batch.update(studentRef, { classes: arrayUnion(currentClassId) }); await batch.commit(); } closeModal('add-new-student-modal'); e.target.reset(); toast('Student added!', 'success'); } catch (error) { console.error("Add Student Error:", error); toast('Failed to add student.', 'error'); } finally { btn.disabled = false; } }
-        const handleUpdateStudent = async (e) => { /* ... unchanged ... */ };
-        const handleAddExistingStudent = async (e) => { /* ... unchanged ... */ }
-        const handleRemoveStudent = async (studentId, studentName) => { /* ... unchanged ... */ }
-        const handleDeleteStudent = async (studentId, studentName) => { /* ... unchanged ... */ }
-        const handleAddContact = async (e) => { /* ... unchanged ... */ }
-        const handleUpdateContact = async (e) => { /* ... unchanged ... */ };
-        const handleDeleteContact = async (contactId, contactName) => { /* ... unchanged ... */ }
+        const handleAddClass = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const name = document.getElementById('class-name').value; const teacher = document.getElementById('teacher-name').value; console.log("Attempting to add class:", name, teacher); try { await addDoc(getClassesCol(), { name, teacher, students: [] }); closeModal('add-class-modal'); e.target.reset(); toast('Class added!', 'success'); } catch (error) { console.error("Add Class Error:", error); toast(`Failed: ${error.message}`, 'error'); } finally { btn.disabled = false; } }
+        const handleUpdateClass = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const classId = document.getElementById('edit-class-id').value; const name = document.getElementById('edit-class-name').value; const teacher = document.getElementById('edit-teacher-name').value; console.log("Attempting to update class:", classId, name, teacher); if (!classId || !name || !teacher) { btn.disabled = false; toast('Missing fields.', 'error'); return; } try { await updateDoc(doc(getClassesCol(), classId), { name, teacher }); closeModal('edit-class-modal'); toast('Class updated!', 'success'); } catch (error) { console.error("Update Class Error:", error); toast(`Update failed: ${error.message}`, 'error'); } finally { btn.disabled = false; } };
+        const handleDeleteClass = async (classId, className) => { console.log("Attempting to delete class:", classId, className); if (!confirm(`Delete class "${className}"?`)) return; try { const batch = writeBatch(db); const classData = allClassCache.find(c => c.id === classId); if (classData?.students) { const studentRefs = classData.students.map(sId => doc(getStudentsCol(), sId)); const studentDocs = await Promise.all(studentRefs.map(getDoc)); studentDocs.forEach(studentDoc => { if (studentDoc.exists()) batch.update(studentDoc.ref, { classes: arrayRemove(classId) }); }); } batch.delete(doc(getClassesCol(), classId)); await batch.commit(); toast('Class deleted.', 'success'); if (currentClassId === classId) { resetCol2(); resetCol3(); } } catch (error) { console.error("Delete Class Error:", error); toast('Failed to delete class.', 'error'); } }
+        const handleAddNewStudent = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const name = document.getElementById('new-student-name').value; console.log("Attempting to add student:", name); if (!name) { btn.disabled = false; return; } try { const studentRef = await addDoc(getStudentsCol(), { name, parents: [], classes: [] }); if (currentView === 'class' && currentClassId) { const batch = writeBatch(db); batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(studentRef.id) }); batch.update(studentRef, { classes: arrayUnion(currentClassId) }); await batch.commit(); } closeModal('add-new-student-modal'); e.target.reset(); toast('Student added!', 'success'); } catch (error) { console.error("Add Student Error:", error); toast('Failed to add student.', 'error'); } finally { btn.disabled = false; } }
+        const handleUpdateStudent = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const studentId = document.getElementById('edit-student-id').value; const name = document.getElementById('edit-student-name').value; console.log("Attempting to update student:", studentId, name); if (!studentId || !name) { btn.disabled = false; toast('Missing name.', 'error'); return; } try { await updateDoc(doc(getStudentsCol(), studentId), { name }); closeModal('edit-student-modal'); toast('Student updated!', 'success'); } catch (error) { console.error("Update Student Error:", error); toast(`Update failed: ${error.message}`, 'error'); } finally { btn.disabled = false; } };
+        const handleAddExistingStudent = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const studentId = document.getElementById('existing-student-select').value; console.log("Attempting to add existing student:", studentId, "to class:", currentClassId); if (!studentId || !currentClassId) { btn.disabled = false; return; } try { const batch = writeBatch(db); batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(studentId) }); batch.update(doc(getStudentsCol(), studentId), { classes: arrayUnion(currentClassId) }); await batch.commit(); closeModal('add-existing-student-modal'); e.target.reset(); toast('Student added to class!', 'success'); } catch (error) { console.error("Add Existing Student Error:", error); toast('Failed to add student.', 'error'); } finally { btn.disabled = false; } }
+        const handleRemoveStudent = async (studentId, studentName) => { console.log("Attempting to remove student:", studentId, "from class:", currentClassId); if (!currentClassId || !confirm(`Remove ${studentName} from this class?`)) return; try { const batch = writeBatch(db); batch.update(doc(getClassesCol(), currentClassId), { students: arrayRemove(studentId) }); batch.update(doc(getStudentsCol(), studentId), { classes: arrayRemove(currentClassId) }); await batch.commit(); toast('Student removed.', 'success'); if (currentStudentId === studentId) resetCol3(); } catch (error) { console.error("Remove Student Error:", error); toast('Failed to remove student.', 'error'); } }
+        const handleDeleteStudent = async (studentId, studentName) => { console.log("Attempting to delete student:", studentId, studentName); if (!confirm(`PERMANENTLY DELETE ${studentName}? This will remove them from all classes and delete all their contacts. This cannot be undone.`)) return; try { const batch = writeBatch(db); const studentRef = doc(getStudentsCol(), studentId); const studentSnap = await getDoc(studentRef); if (studentSnap.exists()) { const data = studentSnap.data(); if (data.parents) data.parents.forEach(pId => batch.delete(doc(getParentsCol(), pId))); if (data.classes) data.classes.forEach(cId => batch.update(doc(getClassesCol(), cId), { students: arrayRemove(studentId) })); } batch.delete(studentRef); await batch.commit(); toast('Student deleted.', 'success'); if (currentStudentId === studentId) { resetCol2(); resetCol3(); } } catch (error) { console.error("Delete Student Error:", error); toast('Failed to delete student.', 'error'); } }
+        const handleAddContact = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const name = document.getElementById('contact-name').value; const email = document.getElementById('contact-email').value; const phone = document.getElementById('contact-phone').value; console.log("Attempting to add contact:", name, email, "for student:", currentStudentId); if (!name || !email || !currentStudentId) { btn.disabled = false; return; } try { const parentRef = await addDoc(getParentsCol(), { name, email, phone }); await updateDoc(doc(getStudentsCol(), currentStudentId), { parents: arrayUnion(parentRef.id) }); closeModal('add-contact-modal'); e.target.reset(); toast('Contact added!', 'success'); } catch (error) { console.error("Add Contact Error:", error); toast('Failed to add contact.', 'error'); } finally { btn.disabled = false; } }
+        const handleUpdateContact = async (e) => { e.preventDefault(); const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; const contactId = document.getElementById('edit-contact-id').value; const name = document.getElementById('edit-contact-name').value; const email = document.getElementById('edit-contact-email').value; const phone = document.getElementById('edit-contact-phone').value; console.log("Attempting to update contact:", contactId, name, email, phone); if (!contactId || !name || !email) { btn.disabled = false; toast('Missing name or email.', 'error'); return; } try { await updateDoc(doc(getParentsCol(), contactId), { name, email, phone }); closeModal('edit-contact-modal'); toast('Contact updated!', 'success'); } catch (error) { console.error("Update Contact Error:", error); toast(`Update failed: ${error.message}`, 'error'); } finally { btn.disabled = false; } };
+        const handleDeleteContact = async (contactId, contactName) => { console.log("Attempting to delete contact:", contactId, contactName, "for student:", currentStudentId); if (!currentStudentId || !confirm(`Delete contact ${contactName}?`)) return; try { const batch = writeBatch(db); batch.update(doc(getStudentsCol(), currentStudentId), { parents: arrayRemove(contactId) }); batch.delete(doc(getParentsCol(), contactId)); await batch.commit(); toast('Contact deleted.', 'success'); } catch (error) { console.error("Delete Contact Error:", error); toast('Failed to delete contact.', 'error'); } }
 
         // --- Email Sending ---
-        const openEmailModal = ({ to, bcc }) => { /* ... unchanged ... */ }
-        const handleEmailClass = async () => { /* ... unchanged ... */ }
+        const openEmailModal = ({ to, bcc }) => { 
+            console.log("Opening email modal. To:", to, "BCC:", bcc ? bcc.length : 0); 
+            const toEl = document.getElementById('email-to'); 
+            const bccEl = document.getElementById('email-bcc'); 
+            const replyToEl = document.getElementById('reply-to-email');
+            
+            // Set Reply-To display
+            replyToEl.textContent = currentUser?.displayName || currentUser?.email || 'Unknown';
+            
+            if (to) { 
+                toEl.value = to; 
+                document.getElementById('email-to-wrapper').classList.remove('hidden'); 
+                bccEl.value = ''; 
+                document.getElementById('email-bcc-wrapper').classList.add('hidden'); 
+            } 
+            if (bcc) { 
+                toEl.value = ''; 
+                document.getElementById('email-to-wrapper').classList.add('hidden'); 
+                bccEl.value = `BCC: ${bcc.length} recipient(s)`; 
+                document.getElementById('email-bcc-wrapper').classList.remove('hidden'); 
+            } 
+            document.getElementById('email-subject').value = ''; 
+            document.getElementById('email-body').value = ''; 
+            document.getElementById('email-status').textContent = ''; 
+            document.getElementById('send-email-btn').disabled = false; 
+            openModal('email-modal'); 
+        }
+        const handleEmailClass = async () => { console.log("Handle email class:", currentClassId); if (!currentClassId) return; const classData = allClassCache.find(c => c.id === currentClassId); if (!classData?.students?.length) { toast('No students in class.', 'error'); return; } const studentIds = classData.students; const parentIds = allStudentsCache.filter(s => studentIds.includes(s.id)).flatMap(s => s.parents || []); if (parentIds.length === 0) { toast('No parent contacts found.', 'error'); return; } const uniqueParentIds = [...new Set(parentIds)]; try { const contacts = []; for (let i = 0; i < uniqueParentIds.length; i += 30) { const chunk = uniqueParentIds.slice(i, i + 30); if(chunk.length === 0) continue; const q = query(getParentsCol(), where('__name__', 'in', chunk)); const querySnapshot = await getDocs(q); querySnapshot.docs.forEach(doc => contacts.push(doc.data())); } const bccEmails = contacts.map(c => c.email).filter(Boolean); if (bccEmails.length === 0) { toast('No valid emails found.', 'error'); return; } openEmailModal({ bcc: bccEmails }); } catch (error) { console.error("Email Class Error:", error); toast('Failed to get emails.', 'error'); } }
+        
         const handleSendEmail = async (e) => { 
             e.preventDefault(); 
             const btn = document.getElementById('send-email-btn'); 
@@ -834,9 +903,17 @@
             const serverUrl = HARDCODED_CONFIG.serverUrl; 
             const to = document.getElementById('email-to').value; 
             const bccVal = document.getElementById('email-bcc').value; 
-            const replyToEmail = currentUser?.email || null; 
-            let replyToName = currentUser?.displayName || replyToEmail; 
-            let bccList = null; // --- ADDED let ---
+            
+            const replyToEmail = currentUser?.email || null;
+            
+            let replyToName;
+            if (currentUser?.displayName) {
+                replyToName = currentUser.displayName;
+            } else {
+                replyToName = replyToEmail; 
+            }
+            
+            let bccList = null; 
             if (bccVal) { 
                 try { 
                     const classData = allClassCache.find(c => c.id === currentClassId); 
@@ -852,270 +929,327 @@
                         querySnapshot.docs.forEach(doc => contacts.push(doc.data())); 
                     } 
                     bccList = contacts.map(c => c.email).filter(Boolean); 
-                } catch(err) { /* ... handle BCC error ... */ return; } 
+                } catch(err) { 
+                    console.error("BCC List Error:", err); 
+                    toast('Failed build BCC list', 'error'); 
+                    status.textContent = 'Failed.'; 
+                    btn.disabled = false; 
+                    return; 
+                } 
             } 
+            
             const payload = { 
-                to: to || null, bcc: bccList, 
-                replyTo: { email: replyToEmail, name: replyToName }, 
+                to: to || null, 
+                bcc: bccList, 
+                replyTo: {
+                    email: replyToEmail,
+                    name: replyToName 
+                },
                 subject: document.getElementById('email-subject').value, 
                 text: document.getElementById('email-body').value 
             }; 
+            
+            console.log("Sending email payload:", payload); 
             try { 
                 const response = await fetch(`${serverUrl}/send-email`, { 
                     method: 'POST', 
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await getIdToken(currentUser)}` }, 
+                    headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify(payload) 
                 }); 
-                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } 
-                toast('Email sent!', 'success'); status.textContent = 'Sent!'; 
+                if (!response.ok) { 
+                    const res = await response.json(); 
+                    throw new Error(res.error || `Server ${response.status}`); 
+                } 
+                toast('Email sent!', 'success'); 
+                status.textContent = 'Sent!'; 
                 setTimeout(() => closeModal('email-modal'), 1000); 
-            } catch (error) { /* ... handle send error ... */ } 
-            finally { btn.disabled = false; } 
+            } catch (error) { 
+                console.error("Send Email Error:", error); 
+                toast(`Failed: ${error.message}`, 'error'); 
+                status.textContent = 'Failed.'; 
+            } finally { 
+                btn.disabled = false; 
+            } 
         }
         
         // --- Mobile Navigation ---
-        const showCol = (colId) => { /* ... unchanged ... */ }
-        const setActiveNav = (navId) => { /* ... unchanged ... */ }
+        const showCol = (colId) => { console.log("Showing mobile col:", colId); document.getElementById('col-1-section').classList.add('hidden'); document.getElementById('col-2-section').classList.add('hidden'); document.getElementById('col-3-section').classList.add('hidden'); document.getElementById(colId).classList.remove('hidden'); }
+        const setActiveNav = (navId) => { console.log("Setting active nav:", navId); document.getElementById('nav-col-1').classList.replace('text-blue-600', 'text-gray-500'); document.getElementById('nav-col-2').classList.replace('text-blue-600', 'text-gray-500'); document.getElementById('nav-contacts').classList.replace('text-blue-600', 'text-gray-500'); document.getElementById(navId).classList.replace('text-gray-500', 'text-blue-600'); }
         
         // --- Authentication ---
-        const handleLogin = (e) => { /* ... unchanged ... */ };
-        const handleSignOut = () => { /* ... unchanged ... */ };
+        const handleLogin = (e) => { e.preventDefault(); const email = document.getElementById('login-email').value; const password = document.getElementById('login-password').value; const errorEl = document.getElementById('login-error'); const btn = document.getElementById('login-btn'); btn.disabled = true; errorEl.textContent = ''; console.log("Attempting login for:", email); signInWithEmailAndPassword(auth, email, password) .catch((error) => { console.error("Login failed:", error); errorEl.textContent = error.message.replace('Firebase: ', ''); }) .finally(() => { btn.disabled = false; }); };
+        const handleSignOut = () => { console.log("Signing out..."); if (unsubscribeClasses) unsubscribeClasses(); if (unsubscribeAllStudents) unsubscribeAllStudents(); if (unsubscribeContacts) unsubscribeContacts(); signOut(auth).catch((error) => { console.error("Sign out failed:", error); toast('Sign out failed.', 'error'); }); };
 
         // --- User Management ---
-        const openUserManagementModal = async () => { /* ... unchanged ... */ };
-        const fetchUsers = async () => { /* ... unchanged ... */ };
-        const handleCreateUser = async (e) => { /* ... unchanged ... */ };
-        const handleDeleteUser = async (uidToDelete, emailToDelete) => { /* ... unchanged ... */ };
-        const handleMakeAdmin = async (uidToMakeAdmin, emailToMakeAdmin) => { /* ... unchanged ... */ };
-        const handleUpdateUserName = async (uidToUpdate, currentName) => { /* ... unchanged ... */ };
-
-        // --- === UPDATED BILLING FUNCTIONS (Multi-Account) START === ---
-
-         /**
-          * Gets the currently selected Stripe account identifier from the UI.
-          * @returns {string} 'halle_dance' or 'state48arts.org'
-          */
-        function determineAccountContext() {
-            const selector = document.getElementById('account-context-select');
-            // !! Add error handling if selector not found !!
-            return selector.value; 
-        }
-
-        /**
-         * Gets the selected Stripe account identifier from the Invoice Modal.
-         * @returns {string|null} 'halle_dance', 'state48arts.org', or null if not selected
-         */
-        function determineAccountContextForInvoice() {
-            const selector = document.getElementById('invoice-account-select');
-            return selector.value || null; // Return null if no value selected
-        }
-
-        /**
-         * Fetches and displays billing data for the selected student AND selected account context.
-         * @param {string} studentId - The Firestore ID of the student.
-         */
-        async function loadStudentBillingData(studentId) {
-            if (!currentUser) { console.error("Not authenticated."); return; }
-            const authToken = await getIdToken(currentUser);
-            const invoiceList = document.getElementById('invoice-list-container');
-            const subList = document.getElementById('subscription-list-container');
-            const invoiceLabel = document.getElementById('invoice-account-label');
-            const subLabel = document.getElementById('subscription-account-label');
-
-            // --- Get Selected Account Context ---
-            const accountIdentifier = determineAccountContext(); 
-            const accountName = accountIdentifier === ACCOUNT_ID_HALLE ? "Halle Dance" : "State48Arts.org";
-            invoiceLabel.textContent = `For: ${accountName}`;
-            subLabel.textContent = `For: ${accountName}`;
-            // ------------------------------------
-
-            invoiceList.innerHTML = '<p id="invoices-loading-message" class="text-gray-500 text-center">Loading invoices...</p>';
-            subList.innerHTML = '<p id="subscriptions-loading-message" class="text-gray-500 text-center">Loading subscriptions...</p>';
-            
-            const headers = new Headers({'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json'});
-            const API_BASE_URL = HARDCODED_CONFIG.serverUrl;
-
-            try { // Fetch Invoices
-                // --- Pass accountIdentifier in URL ---
-                const response = await fetch(`${API_BASE_URL}/get-student-invoices/${studentId}/${accountIdentifier}`, { headers });
-                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Failed: ${response.statusText}`); }
-                const { invoices } = await response.json(); invoiceList.innerHTML = '';
-                if (invoices.length === 0) { invoiceList.innerHTML = `<p class="text-gray-500 text-center">No invoices found for ${accountName}.</p>`; } 
-                else { invoices.forEach(invoice => { invoiceList.appendChild(createInvoiceElement(invoice)); }); }
-            } catch (error) { invoiceList.innerHTML = `<p class="error-message">Could not load invoices. ${error.message}</p>`; }
-
-            try { // Fetch Subscriptions
-                // --- Pass accountIdentifier in URL ---
-                const response = await fetch(`${API_BASE_URL}/get-student-subscriptions/${studentId}/${accountIdentifier}`, { headers });
-                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Failed: ${response.statusText}`); }
-                const { subscriptions } = await response.json(); subList.innerHTML = '';
-                if (subscriptions.length === 0) { subList.innerHTML = `<p class="text-gray-500 text-center">No subscriptions found for ${accountName}.</p>`; } 
-                else { subscriptions.forEach(sub => { subList.appendChild(createSubscriptionElement(sub)); }); }
-            } catch (error) { subList.innerHTML = `<p class="error-message">Could not load subscriptions. ${error.message}</p>`; }
-        }
-
-        function createInvoiceElement(invoice) { /* ... unchanged ... */ }
-        function createSubscriptionElement(subscription) { /* ... unchanged ... */ }
+        const openUserManagementModal = async () => { console.log("Opening user mgmt modal"); openModal('user-management-modal'); await fetchUsers(); };
+        const fetchUsers = async () => { console.log("Fetching users..."); const listEl = document.getElementById('user-list'); listEl.innerHTML = '<p class="text-gray-500">Loading users...</p>'; if (!currentUser) { listEl.innerHTML = '<p class="text-red-500">Not authenticated.</p>'; return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/list-users`, { method: 'GET', headers: { 'Authorization': `Bearer ${idToken}` } }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } const { users } = await response.json(); console.log("Fetched users:", users); renderUserList(users); } catch (error) { console.error("Fetch Users Error:", error); listEl.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`; toast('Failed load users.', 'error'); } };
         
-        // --- UPDATED MANUAL MAP FUNCTION (Asks for Account) ---
-const handleMapStripeId = async (studentId, stripeCustomerIdInput) => {
-    if (!studentId || !stripeCustomerIdInput || !stripeCustomerIdInput.startsWith('cus_')) {
-        toast('Please enter a valid Stripe Customer ID (starts with cus_).', 'error');
-        return;
-    }
-    if (!currentUser) { toast('Not authenticated.', 'error'); return; }
-
-    // --- Ask user which account this ID is for ---
-    const accountIdentifier = prompt(`Which account does this ID belong to? Enter '${ACCOUNT_ID_HALLE}' or '${ACCOUNT_ID_STATE48}':`);
-    if (accountIdentifier !== ACCOUNT_ID_HALLE && accountIdentifier !== ACCOUNT_ID_STATE48) {
-        toast('Invalid account identifier entered. Mapping cancelled.', 'error');
-        return;
-    }
-    // ------------------------------------------
-
-    console.log(`Attempting manual map: Student ${studentId} -> Stripe ${stripeCustomerIdInput} on account ${accountIdentifier}`);
-    const mapButton = document.querySelector(`.map-stripe-btn[data-student-id="${studentId}"]`);
-    if (mapButton) mapButton.textContent = 'Saving...'; // Basic loading state
-
-    try {
-        const idToken = await getIdToken(currentUser);
-        const serverUrl = HARDCODED_CONFIG.serverUrl;
-
-        // NOTE: Ensure NO TRAILING COMMAS inside this object {}
-        const response = await fetch(`${serverUrl}/map-stripe-customer`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-            body: JSON.stringify({ studentId, stripeCustomerId: stripeCustomerIdInput, accountIdentifier }) 
-        });
-
-        const result = await response.json();
-        if (!response.ok) { throw new Error(result.error || `Server error: ${response.status}`); }
-
-        toast(result.message, 'success');
-        
-        // Update local cache
-        const studentIndex = allStudentsCache.findIndex(s => s.id === studentId);
-        if (studentIndex !== -1) {
-            if (!allStudentsCache[studentIndex].stripeInfo) {
-                 allStudentsCache[studentIndex].stripeInfo = {};
-            }
-            allStudentsCache[studentIndex].stripeInfo[accountIdentifier] = stripeCustomerIdInput;
-        }
-        
-        // Re-render relevant list
-        if (currentView === 'student') renderCol1StudentList(); 
-        else if (currentView === 'class' && currentClassId) renderCol2StudentList(currentClassId); 
-        
-        if (currentStudentId === studentId) loadStudentBillingData(studentId);
-
-    } catch (error) {
-        console.error("Manual Map Error:", error);
-        toast(`Mapping failed: ${error.message}`, 'error');
-    } finally {
-         if (mapButton) mapButton.textContent = 'Save'; // Reset button text
-    }
-};
-// --- END MANUAL MAP FUNCTION ---
-
-        const promptInvoiceParentSelection = async (studentId, studentName) => {
-             document.getElementById('invoice-student-id').value = studentId; 
-             document.querySelector('#invoice-subtitle span').textContent = studentName; 
-             document.getElementById('invoice-description').value = `Class Fee - ${studentName}`; 
-             // Reset account selector in invoice modal
-             document.getElementById('invoice-account-select').value = ''; 
-             
-             const parentSelect = document.getElementById('invoice-parent-select'); 
-             parentSelect.innerHTML = '<option value="">Loading contacts...</option>'; 
-             parentSelect.disabled = true; 
-             document.getElementById('create-invoice-btn').disabled = true; 
-             document.getElementById('invoice-amount').value = ''; 
-             document.getElementById('invoice-status').textContent = '';
-             openModal('invoice-modal'); 
-             try {
-                 const studentRef = doc(getStudentsCol(), studentId); 
-                 const studentSnap = await getDoc(studentRef); 
-                 if (!studentSnap.exists()) { throw new Error("Student not found"); } 
-                 const parentIds = studentSnap.data().parents || [];
-                 if (parentIds.length === 0) { /* ... handle no contacts ... */ return; }
-                 const contacts = []; 
-                 for (let i = 0; i < parentIds.length; i += 30) { /* ... fetch contacts ... */ }
-                 if (contacts.length === 0) { /* ... handle fetch failed ... */ return; }
-                 parentSelect.innerHTML = '<option value="">-- Select Contact --</option>'; 
-                 contacts.sort((a,b) => a.name.localeCompare(b.name)).forEach(contact => { const option = document.createElement('option'); option.value = contact.id; option.textContent = `${contact.name} (${contact.email})`; parentSelect.appendChild(option); }); 
-                 parentSelect.disabled = false; 
-                 document.getElementById('create-invoice-btn').disabled = false; 
-             } catch (error) { /* ... handle error loading contacts ... */ }
-         };
-
-        /// --- UPDATED: Handle Create Invoice (Sends Account Identifier) ---
-        const handleCreateInvoice = async (e) => {
+        const handleCreateUser = async (e) => { 
             e.preventDefault(); 
-            const btn = document.getElementById('create-invoice-btn'); 
-            const statusEl = document.getElementById('invoice-status'); 
+            const name = document.getElementById('new-user-name').value; 
+            const email = document.getElementById('new-user-email').value; 
+            const password = document.getElementById('new-user-password').value; 
+            const statusEl = document.getElementById('add-user-status'); 
+            const btn = document.getElementById('add-user-btn'); 
             btn.disabled = true; statusEl.textContent = 'Creating...'; 
-            statusEl.classList.remove('text-red-600', 'text-green-600');
+            statusEl.classList.remove('text-red-600', 'text-green-600'); 
+            console.log("Attempting create user:", name, email); 
+            if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); btn.disabled = false; return; } 
             
-            const parentId = document.getElementById('invoice-parent-select').value; 
-            const amount = document.getElementById('invoice-amount').value; 
-            const description = document.getElementById('invoice-description').value; 
-            const studentId = document.getElementById('invoice-student-id').value; 
-            const studentName = allStudentsCache.find(s => s.id === studentId)?.name || null; 
-            const accountIdentifier = determineAccountContextForInvoice(); 
-            
-            if (!parentId || !studentId || !amount || !description || !accountIdentifier) { 
-                statusEl.textContent = 'Please select parent, account & fill all fields.'; 
+            if (!name || !email || !password || password.length < 6) {
+                statusEl.textContent = 'Name, email, and password (min 6 chars) required.'; 
                 statusEl.classList.add('text-red-600'); 
-                btn.disabled = false; return; 
+                btn.disabled = false; 
+                return;
             }
-            if (!currentUser) { 
-                 statusEl.textContent = 'Not authenticated.'; 
-                 statusEl.classList.add('text-red-600'); 
-                 btn.disabled = false; return;
-            }
-            
-            try {
+
+            try { 
                 const idToken = await getIdToken(currentUser); 
-                const serverUrl = HARDCODED_CONFIG.serverUrl;
-                const response = await fetch(`${serverUrl}/create-invoice`, { 
+                const serverUrl = HARDCODED_CONFIG.serverUrl; 
+                const response = await fetch(`${serverUrl}/create-user`, { 
                     method: 'POST', 
-                    headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}`}, // NOTE: Comma added here.
-                    body: JSON.stringify({ parentId, studentId, studentName, amount, description, accountIdentifier }) 
-                });
-                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); }
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, 
+                    body: JSON.stringify({ name, email, password }) 
+                }); 
+                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } 
                 const result = await response.json(); 
-                toast('Invoice created!', 'success'); 
-                statusEl.textContent = `Invoice ${result.invoiceId} created (${result.invoiceStatus}).`; 
-                statusEl.classList.add('text-green-600');
-                if (result.invoiceUrl) { statusEl.innerHTML += ` <a href="${result.invoiceUrl}" target="_blank" class="text-blue-600 hover:underline">View</a>`; }
-                document.getElementById('invoice-amount').value = ''; 
-                document.getElementById('invoice-description').value = '';
-                setTimeout(() => closeModal('invoice-modal'), 4000); 
+                toast('User created!', 'success'); 
+                statusEl.textContent = `Created ${result.email}.`; 
+                statusEl.classList.add('text-green-600'); 
+                e.target.reset(); 
+                await fetchUsers(); 
             } catch (error) { 
+                console.error("Create User Error:", error); 
                 statusEl.textContent = `Error: ${error.message}`; 
                 statusEl.classList.add('text-red-600'); 
-                toast('Failed create invoice.', 'error'); 
+                toast('Failed create user.', 'error'); 
+            } finally { 
                 btn.disabled = false; 
             } 
+        };
+        const handleDeleteUser = async (uidToDelete, emailToDelete) => { console.log("Attempting delete user:", uidToDelete, emailToDelete); if (!confirm(`Delete user: ${emailToDelete}? Permanent.`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Deleting ${emailToDelete}...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/delete-user`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uid: uidToDelete }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`User ${emailToDelete} deleted.`, 'success'); statusEl.textContent = `Deleted ${emailToDelete}.`; statusEl.classList.add('text-green-600'); await fetchUsers(); } catch (error) { console.error("Delete User Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed delete user.', 'error'); } };
+        const handleMakeAdmin = async (uidToMakeAdmin, emailToMakeAdmin) => { console.log("Attempting make admin:", uidToMakeAdmin, emailToMakeAdmin); if (!confirm(`Grant admin to ${emailToMakeAdmin}?`)) return; const statusEl = document.getElementById('add-user-status'); statusEl.textContent = `Making ${emailToMakeAdmin} admin...`; statusEl.classList.remove('text-red-600', 'text-green-600'); if (!currentUser) { statusEl.textContent = 'Not authenticated.'; statusEl.classList.add('text-red-600'); return; } try { const idToken = await getIdToken(currentUser); const serverUrl = HARDCODED_CONFIG.serverUrl; const response = await fetch(`${serverUrl}/set-admin`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }, body: JSON.stringify({ uidToMakeAdmin: uidToMakeAdmin }) }); if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Server ${response.status}`); } toast(`${emailToMakeAdmin} is now admin. Needs re-login.`, 'success'); statusEl.textContent = `Admin granted.`; statusEl.classList.add('text-green-600'); await fetchUsers(); if (uidToMakeAdmin === userId) { isAdmin = true; document.getElementById('manage-users-btn').classList.remove('hidden'); document.getElementById('user-admin-status').classList.remove('hidden'); await getIdToken(currentUser, true); } } catch (error) { console.error("Make Admin Error:", error); statusEl.textContent = `Error: ${error.message}`; statusEl.classList.add('text-red-600'); toast('Failed set admin.', 'error'); } };
+        
+        // --- NEW FUNCTION: Handle Update User Name ---
+        const handleUpdateUserName = async (uidToUpdate, currentName) => {
+            const newName = prompt(`Enter the new name for this user (UID: ${uidToUpdate}):`, currentName);
+
+            if (newName === null || newName.trim() === '') {
+                return; 
+            }
+            
+            const trimmedName = newName.trim();
+            if (trimmedName === currentName) {
+                 toast('Name is the same.', 'success');
+                return;
+            }
+
+            console.log(`Attempting update name for ${uidToUpdate} to "${trimmedName}"`);
+            const statusEl = document.getElementById('add-user-status'); 
+            statusEl.textContent = `Updating name...`;
+            statusEl.classList.remove('text-red-600', 'text-green-600');
+
+            if (!currentUser) {
+                statusEl.textContent = 'Not authenticated (currentUser is null).'; 
+                statusEl.classList.add('text-red-600');
+                return;
+            }
+
+            console.log("DEBUG: currentUser object right before getIdToken:", currentUser);
+
+            try {
+                const idToken = await getIdToken(currentUser); 
+                
+                const serverUrl = HARDCODED_CONFIG.serverUrl;
+                const response = await fetch(`${serverUrl}/update-user-name`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Authorization': `Bearer ${idToken}` 
+                    },
+                    body: JSON.stringify({ uid: uidToUpdate, newName: trimmedName })
+                });
+
+                if (!response.ok) {
+                    const res = await response.json();
+                    throw new Error(res.error || `Server ${response.status}`);
+                }
+
+                const result = await response.json();
+                toast('User name updated!', 'success');
+                statusEl.textContent = `Name updated.`;
+                statusEl.classList.add('text-green-600');
+
+                if (result.updatedSelf) {
+                    currentUser = auth.currentUser; // Get the refreshed user object
+                    if(currentUser) { // Check again in case of race condition
+                         document.getElementById('user-email-display').textContent = currentUser.displayName || currentUser.email; 
+                         await getIdToken(currentUser, true); // Force refresh token
+                    }
+                }
+
+                await fetchUsers(); // Refresh list
+
+            } catch (error) {
+                console.error("Update Name Error:", error);
+                statusEl.textContent = `Error: ${error.message || 'Failed update name.'}`; 
+                statusEl.classList.add('text-red-600');
+                toast('Failed update name.', 'error');
+            }
+        };
+
+        // --- NEW FUNCTION: Open Invoice Modal ---
+        const openInvoiceModal = (parentId, parentName) => {
+            console.log(`Opening invoice modal for parent: ${parentName} (${parentId})`);
+            document.getElementById('invoice-parent-id').value = parentId;
+            document.querySelector('#invoice-subtitle span').textContent = parentName;
+            document.getElementById('invoice-amount').value = '';
+            document.getElementById('invoice-description').value = '';
+            document.getElementById('invoice-status').textContent = '';
+            document.getElementById('create-invoice-btn').disabled = false;
+            openModal('invoice-modal');
+        }
+
+        // --- NEW FUNCTION: Handle Create Invoice ---
+        const handleCreateInvoice = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('create-invoice-btn');
+            const statusEl = document.getElementById('invoice-status');
+            btn.disabled = true;
+            statusEl.textContent = 'Creating invoice...';
+            statusEl.classList.remove('text-red-600', 'text-green-600');
+
+            const parentId = document.getElementById('invoice-parent-id').value;
+            const amount = document.getElementById('invoice-amount').value;
+            const description = document.getElementById('invoice-description').value;
+            // Get student name for context (optional, but nice to have)
+            const studentName = allStudentsCache.find(s => s.id === currentStudentId)?.name || null;
+
+            if (!parentId || !amount || !description) {
+                statusEl.textContent = 'Missing required fields.';
+                statusEl.classList.add('text-red-600');
+                btn.disabled = false;
+                return;
+            }
+
+            if (!currentUser) {
+                statusEl.textContent = 'Not authenticated.';
+                statusEl.classList.add('text-red-600');
+                btn.disabled = false;
+                return;
+            }
+
+            console.log(`Sending create invoice request for parent ${parentId}`);
+            try {
+                const idToken = await getIdToken(currentUser);
+                const serverUrl = HARDCODED_CONFIG.serverUrl;
+
+                const response = await fetch(`${serverUrl}/create-invoice`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({
+                        parentId: parentId,
+                        studentName: studentName, // Send student name if available
+                        amount: amount,
+                        description: description
+                    })
+                });
+
+                if (!response.ok) {
+                    const res = await response.json();
+                    throw new Error(res.error || `Server ${response.status}`);
+                }
+
+                const result = await response.json();
+                toast('Invoice created successfully!', 'success');
+                statusEl.textContent = `Invoice ${result.invoiceId} created (${result.invoiceStatus}).`;
+                statusEl.classList.add('text-green-600');
+                
+                // Optionally show the Stripe hosted URL
+                if (result.invoiceUrl) {
+                    statusEl.innerHTML += ` <a href="${result.invoiceUrl}" target="_blank" class="text-blue-600 hover:underline">View Invoice</a>`;
+                }
+
+                // Optionally close modal after a delay
+                setTimeout(() => closeModal('invoice-modal'), 3000);
+
+            } catch (error) {
+                console.error("Create Invoice Error:", error);
+                statusEl.textContent = `Error: ${error.message}`;
+                statusEl.classList.add('text-red-600');
+                toast('Failed to create invoice.', 'error');
+            } finally {
+                 // Keep button disabled on success? Or re-enable? Depends on desired flow.
+                 // For now, let's keep it disabled on success to prevent duplicates.
+                 // btn.disabled = false; // Re-enable if you want them to create another immediately
+            }
         }
 
         // --- App Start ---
         document.addEventListener('DOMContentLoaded', () => {
             console.log("DOM Loaded. Starting app...");
-            if (!HARDCODED_CONFIG?.firebase?.apiKey) { console.error('Missing Firebase config'); return; }
+            // Check config
+            if (!HARDCODED_CONFIG.firebase.apiKey || !HARDCODED_CONFIG.firebase.appId || !HARDCODED_CONFIG.serverUrl || !HARDCODED_CONFIG.organizationId || !HARDCODED_CONFIG.firebase.projectId || !HARDCODED_CONFIG.firebase.authDomain) {
+                console.error("Config Error: Missing values in HARDCODED_CONFIG");
+                document.body.innerHTML = `<div class="p-8 text-center text-red-600"><h1 class="text-2xl font-bold">Config Error</h1><p class="mt-4">Please fill in all 5 values in <strong>HARDCODED_CONFIG</strong> in index.html.</p></div>`; return;
+            }
+            console.log("Config OK.");
+            
+            // Initialize Firebase
             try {
-                const app = initializeApp(HARDCODED_CONFIG.firebase); db = getFirestore(app); auth = initializeAuth(app, { persistence: browserLocalPersistence });
+                console.log("Initializing Firebase with config:", HARDCODED_CONFIG.firebase);
+                const app = initializeApp(HARDCODED_CONFIG.firebase); 
+                db = getFirestore(app);
+                auth = initializeAuth(app, { persistence: browserLocalPersistence });
+                console.log("Firebase Initialized.");
+
                 onAuthStateChanged(auth, async (user) => {
+                    console.log("Auth state changed. User:", user ? user.uid : 'null');
                     currentUser = user;
-                    if (user) { /* ... handle logged in ... */ listenForClasses(); listenForAllStudents(); renderViewByClass(); } 
-                    else { /* ... handle logged out ... */ }
+                    if (user) {
+                        userId = user.uid;
+                        
+                        document.getElementById('user-email-display').textContent = user.displayName || user.email;
+                        
+                        try { 
+                            console.log("Getting ID token result...");
+                            const idTokenResult = await getIdTokenResult(user, true); 
+                            isAdmin = idTokenResult.claims.admin === true;
+                             console.log("Is admin:", isAdmin);
+                            document.getElementById('manage-users-btn').classList.toggle('hidden', !isAdmin);
+                            document.getElementById('user-admin-status').classList.toggle('hidden', !isAdmin);
+                        } catch (claimError) { console.error("Error getting token claims:", claimError); isAdmin = false; document.getElementById('manage-users-btn').classList.add('hidden'); document.getElementById('user-admin-status').classList.add('hidden'); toast('Could not verify admin status.', 'error'); }
+                        document.getElementById('app-shell').style.display = 'flex'; document.getElementById('auth-screen').style.display = 'none';
+                        listenForClasses(); listenForAllStudents(); renderViewByClass();
+                    } else { // Signed out
+                         console.log("User signed out.");
+                        userId = null; isAdmin = false; currentUser = null;
+                        document.getElementById('app-shell').style.display = 'none'; document.getElementById('auth-screen').style.display = 'flex';
+                        if (unsubscribeClasses) unsubscribeClasses(); if (unsubscribeAllStudents) unsubscribeAllStudents(); if (unsubscribeContacts) unsubscribeContacts(); 
+                        allClassCache = []; allStudentsCache = []; contactCache.clear(); 
+                        document.getElementById('manage-users-btn').classList.add('hidden'); document.getElementById('user-admin-status').classList.add('hidden');
+                    }
                 });
-            } catch (error) { /* ... handle init error ... */ return; }
+            } catch (error) { // Catch init error
+                 console.error("Firebase Init Failed:", error);
+                 document.body.innerHTML = `<div class="p-8 text-center text-red-600"><h1 class="text-2xl font-bold">Firebase Init Failed</h1><p class="mt-4">Check <strong>HARDCODED_CONFIG.firebase</strong> values.</p><p class="mt-2 text-sm text-gray-500">${error.message}</p></div>`; return;
+            }
 
             // --- Setup Event Listeners ---
             document.getElementById('login-form').addEventListener('submit', handleLogin);
             document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
             document.getElementById('manage-users-btn').addEventListener('click', openUserManagementModal);
-            document.getElementById('add-user-form')?.addEventListener('submit', handleCreateUser);
+            
+            const addUserForm = document.getElementById('add-user-form');
+            if (addUserForm) {
+                addUserForm.addEventListener('submit', handleCreateUser);
+            } else {
+                 console.error("Element 'add-user-form' not found during event listener setup.");
+            }
+
             document.getElementById('view-by-class').addEventListener('click', renderViewByClass);
             document.getElementById('view-by-student').addEventListener('click', renderViewByStudent);
             document.getElementById('email-class-btn').addEventListener('click', handleEmailClass);
@@ -1125,31 +1259,26 @@ const handleMapStripeId = async (studentId, stripeCustomerIdInput) => {
             document.getElementById('add-existing-student-form').addEventListener('submit', handleAddExistingStudent);
             document.getElementById('add-contact-form').addEventListener('submit', handleAddContact);
             document.getElementById('email-form').addEventListener('submit', handleSendEmail);
+            // Edit form listeners
             document.getElementById('edit-class-form').addEventListener('submit', handleUpdateClass);
             document.getElementById('edit-student-form').addEventListener('submit', handleUpdateStudent);
             document.getElementById('edit-contact-form').addEventListener('submit', handleUpdateContact);
+            
+            // --- ADDED: Stripe Invoice Form Listener ---
             document.getElementById('create-invoice-form').addEventListener('submit', handleCreateInvoice);
+
             document.getElementById('col-1-add-btn').addEventListener('click', () => openModal(currentView === 'class' ? 'add-class-modal' : 'add-new-student-modal'));
             document.getElementById('add-new-student-btn').addEventListener('click', () => openModal('add-new-student-modal'));
-            document.getElementById('add-existing-student-btn').addEventListener('click', () => { /* ... */ });
-            document.getElementById('add-contact-btn').addEventListener('click', () => { /* ... */ });
+            document.getElementById('add-existing-student-btn').addEventListener('click', () => { document.querySelector('#add-existing-student-subtitle span').textContent = allClassCache.find(c => c.id === currentClassId)?.name || ''; renderStudentDropdown(); openModal('add-existing-student-modal'); });
+            document.getElementById('add-contact-btn').addEventListener('click', () => { document.querySelector('#add-contact-subtitle span').textContent = allStudentsCache.find(s => s.id === currentStudentId)?.name || ''; openModal('add-contact-modal'); });
             document.getElementById('nav-col-1').addEventListener('click', () => { showCol('col-1-section'); setActiveNav('nav-col-1'); });
             document.getElementById('nav-col-2').addEventListener('click', () => { showCol('col-2-section'); setActiveNav('nav-col-2'); });
             document.getElementById('nav-contacts').addEventListener('click', () => { showCol('col-3-section'); setActiveNav('nav-contacts'); });
 
-            // --- Listener for Manual Mapping ---
-            document.getElementById('col-1-list').addEventListener('click', (e) => { if (e.target.classList.contains('map-stripe-btn')) { const studentId = e.target.dataset.studentId; const inputElement = document.getElementById(`map-${studentId}`); if (studentId && inputElement) { handleMapStripeId(studentId, inputElement.value); } } });
-            document.getElementById('col-2-list').addEventListener('click', (e) => { if (e.target.classList.contains('map-stripe-btn')) { const studentId = e.target.dataset.studentId; const inputElement = document.getElementById(`map-${studentId}`); if (studentId && inputElement) { handleMapStripeId(studentId, inputElement.value); } } });
-            
-            // --- NEW: Listener for Account Context Selector ---
-            document.getElementById('account-context-select').addEventListener('change', () => {
-                if (currentStudentId) {
-                     loadStudentBillingData(currentStudentId); // Reload billing data when context changes
-                }
-            });
-            // ---------------------------------------------
-
-            window.auth = auth; window.handleMakeAdmin = handleMakeAdmin; console.log("App setup complete.");
+            // --- Expose functions to window for console access ---
+            window.auth = auth; // Expose auth for getting UID
+            window.handleMakeAdmin = handleMakeAdmin; // Expose for bootstrapping
+            console.log("App setup complete.");
         });
     </script>
 
