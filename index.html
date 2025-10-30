@@ -48,7 +48,7 @@
 <div id="app" class="hidden min-h-screen flex flex-col">
   <header class="bg-gray-900 text-white">
     <div class="container mx-auto p-3 flex items-center justify-between">
-      <h2 class="font-semibold">After‑School Manager</h2>
+      <h2 class="font-semibold">After-School Manager</h2>
       <div class="flex items-center gap-3">
         <span id="user-email" class="text-sm text-gray-300"></span>
         <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-sm">Sign out</button>
@@ -279,8 +279,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // ---- Config (PUT YOUR REAL CONFIG HERE) ----
+// Replace with your working keys (keep the same ones you used to log in successfully)
 const firebaseConfig = {
-  apiKey: "AIzaSyAYDMyMAw7wf3i28C-hQ_iRZRVdMiXmaLk",
+  apiKey: "YOUR_API_KEY",
   authDomain: "dance-classes-97ad7.firebaseapp.com",
   projectId: "dance-classes-97ad7",
   storageBucket: "dance-classes-97ad7.appspot.com",
@@ -367,12 +368,14 @@ $("view-by-class").addEventListener("click", () => {
   currentView = "class";
   $("view-by-class").classList.add("bg-white","text-blue-700","shadow-sm");
   $("view-by-student").classList.remove("bg-white","text-blue-700","shadow-sm");
+  $("primary-add-btn").textContent = "Add Class";
   renderPrimary();
 });
 $("view-by-student").addEventListener("click", () => {
   currentView = "student";
   $("view-by-student").classList.add("bg-white","text-blue-700","shadow-sm");
   $("view-by-class").classList.remove("bg-white","text-blue-700","shadow-sm");
+  $("primary-add-btn").textContent = "Add Student";
   renderPrimary();
 });
 
@@ -405,7 +408,6 @@ function stopListeners() {
 function renderPrimary() {
   if (currentView === "class") {
     $("col1-title").textContent = "Classes";
-    $("primary-add-btn").textContent = "Add Class";
     $("col2-title").textContent = "Students";
     $("col2-subtitle").textContent = "Select a class";
     $("col2-btns").classList.remove("hidden");
@@ -414,7 +416,6 @@ function renderPrimary() {
     renderCol3Empty();
   } else {
     $("col1-title").textContent = "All Students";
-    $("primary-add-btn").textContent = "Add Student";
     $("col2-title").textContent = "Enrolled In";
     $("col2-subtitle").textContent = "Select a student";
     $("col2-btns").classList.add("hidden");
@@ -470,7 +471,7 @@ function renderCol1Students() {
 function renderCol2Empty(isClassView) {
   $("col2-subtitle").textContent = isClassView ? "Select a class" : "Select a student";
   $("col2-list").innerHTML = "";
-  $("add-new-student-btn").disabled = isClassView;
+  $("add-new-student-btn").disabled = isClassView; // enabled after a class is selected
   $("add-existing-student-btn").disabled = isClassView;
 }
 
@@ -649,24 +650,9 @@ $("edit-student-form").addEventListener("submit", async (e)=>{
   } catch(err){ console.error(err); toast("Failed to update student","error"); }
 });
 
-async function deleteStudent(id, name){
-  if (!confirm(`Delete student "${name}" and all contacts?`)) return;
-  try {
-    const batch = writeBatch(db);
-    allClasses.forEach(c => {
-      if ((c.students||[]).includes(id)) batch.update(doc(classesCol(), c.id), { students: arrayRemove(id) });
-    });
-    const sDoc = await getDoc(doc(studentsCol(), id));
-    if (sDoc.exists()) {
-      const data = sDoc.data();
-      (data.parents||[]).forEach(pid => batch.delete(doc(parentsCol(), pid)));
-    }
-    batch.delete(doc(studentsCol(), id));
-    await batch.commit();
-    if (currentStudentId===id) { currentStudentId=null; renderCol3Empty(); }
-    toast("Student deleted");
-  } catch(err){ console.error(err); toast("Delete failed","error"); }
-}
+// ---- OPEN ADD NEW STUDENT MODAL (fix) ----
+document.getElementById("add-new-student-btn")
+  .addEventListener("click", () => openModal("add-student-modal"));
 
 // ---- Enroll existing student to selected class ----
 $("add-existing-student-btn").addEventListener("click", async ()=>{
