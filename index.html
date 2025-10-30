@@ -122,7 +122,7 @@
 
     <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-100 p-4">
         <div class="w-full max-w-md p-8 bg-white rounded-lg shadow-xl">
-             <form id="login-form" onsubmit="return false;">
+             <form id="login-form">
                 <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Sign In</h2>
                 <div class="space-y-4">
                     <div>
@@ -574,12 +574,6 @@
     
     
     <script type="module">
-document.addEventListener('DOMContentLoaded', () => {
-  if (window.location.search === '?' || window.location.search.length > 0) {
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
-});
-
         
         // --- HARDCODED CONFIGURATION ---
         const HARDCODED_CONFIG = {
@@ -634,35 +628,183 @@ document.addEventListener('DOMContentLoaded', () => {
         const getParentsCol = () => collection(db, `organizations/${organizationId}/parents`);
 
         // --- Toast Notification ---
-const toast = (message, type = 'success', duration = 3000) => {
-  const toastEl = document.getElementById('toast');
-  const iconEl = document.getElementById('toast-icon');
-  const msgEl = document.getElementById('toast-message');
-  if (!toastEl || !iconEl || !msgEl) return;
+        const toast = (message, type = 'success', duration = 3000) => { /* ... unchanged ... */ }
 
-  // Reset icon classes
-  iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg';
+        // --- Modal Controls ---
+        const openModal = (modalId) => document.getElementById(modalId)?.classList.add('flex');
+        const closeModal = (modalId) => document.getElementById(modalId)?.classList.remove('flex');
 
-  // Color by type
-  if (type === 'error') {
-    iconEl.classList.add('text-red-600', 'bg-red-100');
-  } else if (type === 'warning') {
-    iconEl.classList.add('text-yellow-600', 'bg-yellow-100');
-  } else {
-    iconEl.classList.add('text-green-600', 'bg-green-100');
-  }
+        // --- Render Functions ---
+        const renderViewByClass = () => { currentView = 'class'; document.getElementById('col-1-title').textContent = 'Classes'; document.getElementById('col-1-add-btn').textContent = 'Add Class'; document.getElementById('col-2-title').textContent = 'Students'; document.getElementById('col-2-btn-group').classList.remove('hidden'); document.getElementById('email-class-btn').classList.remove('hidden'); document.getElementById('nav-col-1-title').textContent = 'Classes'; document.getElementById('nav-col-2-title').textContent = 'Students'; document.getElementById('view-by-class').classList.add('bg-white', 'text-blue-700', 'shadow-sm'); document.getElementById('view-by-student').classList.remove('bg-white', 'text-blue-700', 'shadow-sm'); currentClassId = null; currentStudentId = null; resetCol2(); resetCol3(); renderCol1ClassList(); }
+        const renderViewByStudent = () => { currentView = 'student'; document.getElementById('col-1-title').textContent = 'All Students'; document.getElementById('col-1-add-btn').textContent = 'Add Student'; document.getElementById('col-2-title').textContent = 'Enrolled In'; document.getElementById('col-2-btn-group').classList.add('hidden'); document.getElementById('email-class-btn').classList.add('hidden'); document.getElementById('nav-col-1-title').textContent = 'Students'; document.getElementById('nav-col-2-title').textContent = 'Classes'; document.getElementById('view-by-student').classList.add('bg-white', 'text-blue-700', 'shadow-sm'); document.getElementById('view-by-class').classList.remove('bg-white', 'text-blue-700', 'shadow-sm'); currentClassId = null; currentStudentId = null; resetCol2(); resetCol3(); renderCol1StudentList(); }
+        
+        const renderCol1ClassList = () => {
+             const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
+             if (allClassCache.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No classes found. Add one!</p>'; return; }
+             const sortedClasses = [...allClassCache].sort((a, b) => a.name.localeCompare(b.name));
+             sortedClasses.forEach(c => {
+                 const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentClassId === c.id ? 'bg-blue-50 border-blue-300' : ''}`; el.dataset.id = c.id;
+                 el.innerHTML = `
+                     <div class="flex justify-between items-center">
+                         <span class="font-medium text-gray-800">${c.name}</span>
+                         <div class="flex items-center space-x-2">
+                             <button class="edit-class-btn icon-btn edit" data-id="${c.id}" title="Edit Class"><i class="fas fa-pencil-alt fa-xs"></i></button>
+                             <button class="delete-class-btn icon-btn" data-id="${c.id}" title="Delete Class"><i class="fas fa-times fa-sm"></i></button>
+                         </div>
+                     </div>
+                     <p class="text-sm text-gray-600">${c.teacher}</p>`;
+                 el.addEventListener('click', () => selectClass(c.id, c.name));
+                 el.querySelector('.edit-class-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditClassModal(c.id); });
+                 el.querySelector('.delete-class-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteClass(c.id, c.name); });
+                 listEl.appendChild(el);
+             });
+        }
 
-  msgEl.textContent = message || '';
-  toastEl.classList.remove('hidden');
-  toastEl.classList.add('flex');
+        // --- UPDATED: Render Col 1 (Students) - Check stripeInfo map ---
+        const renderCol1StudentList = () => {
+           const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
+           if (allStudentsCache.length === 0) { /* ... no students message ... */ return; }
+           const sortedStudents = [...allStudentsCache].sort((a, b) => a.name.localeCompare(b.name));
+            
+           sortedStudents.forEach(s => {
+               const el = document.createElement('div'); 
+               el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; 
+               el.dataset.id = s.id;
 
-  window.clearTimeout(window.__toastTimer);
-  window.__toastTimer = window.setTimeout(() => {
-    toastEl.classList.add('hidden');
-    toastEl.classList.remove('flex');
-    iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg'; // reset
-  }, duration || 3000);
-};
+               // --- UPDATED: Manual Map & Display Existing IDs ---
+               let stripeSectionHtml = '';
+               const hasHalleId = s.stripeInfo?.[ACCOUNT_ID_HALLE];
+               const hasState48Id = s.stripeInfo?.[ACCOUNT_ID_STATE48];
+
+               // Display existing IDs
+                if (hasHalleId || hasState48Id) {
+                    stripeSectionHtml += '<div class="stripe-id-display">';
+                    if (hasHalleId) stripeSectionHtml += `<div><span class="stripe-id-label">Halle:</span> ${hasHalleId}</div>`;
+                    if (hasState48Id) stripeSectionHtml += `<div><span class="stripe-id-label">State48:</span> ${hasState48Id}</div>`;
+                    stripeSectionHtml += '</div>';
+                }
+               
+               // Show manual map input if EITHER ID is missing (adjust condition if needed)
+               if (!hasHalleId || !hasState48Id) {
+                   stripeSectionHtml += `
+                       <div class="manual-map-section">
+                           <label for="map-${s.id}" class="text-xs text-gray-500 block mb-1">Add Missing Stripe ID:</label>
+                           <div class="flex gap-1">
+                               <input type="text" id="map-${s.id}" placeholder="cus_..." class="flex-grow border border-gray-300 rounded px-1 py-0.5 text-xs">
+                               <button class="map-stripe-btn bg-gray-200 hover:bg-gray-300 px-2 rounded text-xs" data-student-id="${s.id}">Save</button>
+                           </div>
+                       </div>`;
+               }
+               
+               el.innerHTML = `
+                   <div class="flex justify-between items-center">
+                       <span class="font-medium text-gray-800">${s.name}</span>
+                       <div class="flex items-center space-x-2">
+                            <button class="edit-student-btn icon-btn edit" data-id="${s.id}" title="Edit Student"><i class="fas fa-pencil-alt fa-xs"></i></button>
+                            <button class="invoice-student-btn icon-btn" data-student-id="${s.id}" data-student-name="${s.name}" title="Invoice Student"><i class="fas fa-file-invoice-dollar fa-xs text-green-600"></i></button> 
+                           <button class="delete-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Delete Student"><i class="fas fa-times fa-sm"></i></button>
+                       </div>
+                   </div>
+                   ${stripeSectionHtml}`; // Add the Stripe section
+                
+               el.addEventListener('click', () => selectStudent(s.id, s.name));
+               el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
+               el.querySelector('.delete-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteStudent(s.id, s.name); });
+               el.querySelector('.invoice-student-btn').addEventListener('click', (e) => { e.stopPropagation(); promptInvoiceParentSelection(s.id, s.name); });
+               
+               listEl.appendChild(el);
+           });
+        }
+
+        // --- UPDATED: Render Col 2 (Students in a Class) - Check stripeInfo map ---
+        const renderCol2StudentList = (classId) => {
+            const listEl = document.getElementById('col-2-list'); const classData = allClassCache.find(c => c.id === classId);
+            if (!classData || !classData.students || classData.students.length === 0) { /* ... no students message ... */ return; }
+            const studentIds = classData.students; const studentsInClass = allStudentsCache.filter(s => studentIds.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name));
+            listEl.innerHTML = '';
+
+            studentsInClass.forEach(s => {
+                const el = document.createElement('div'); 
+                el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId === s.id ? 'bg-blue-50 border-blue-300' : ''}`; 
+                el.dataset.id = s.id;
+
+                // --- UPDATED: Manual Map & Display Existing IDs ---
+                let stripeSectionHtml = '';
+                const hasHalleId = s.stripeInfo?.[ACCOUNT_ID_HALLE];
+                const hasState48Id = s.stripeInfo?.[ACCOUNT_ID_STATE48];
+
+                if (hasHalleId || hasState48Id) {
+                    stripeSectionHtml += '<div class="stripe-id-display">';
+                    if (hasHalleId) stripeSectionHtml += `<div><span class="stripe-id-label">Halle:</span> ${hasHalleId}</div>`;
+                    if (hasState48Id) stripeSectionHtml += `<div><span class="stripe-id-label">State48:</span> ${hasState48Id}</div>`;
+                    stripeSectionHtml += '</div>';
+                }
+               
+                if (!hasHalleId || !hasState48Id) {
+                    stripeSectionHtml += `
+                       <div class="manual-map-section">
+                           <label for="map-${s.id}" class="text-xs text-gray-500 block mb-1">Add Missing Stripe ID:</label>
+                           <div class="flex gap-1">
+                               <input type="text" id="map-${s.id}" placeholder="cus_..." class="flex-grow border border-gray-300 rounded px-1 py-0.5 text-xs">
+                               <button class="map-stripe-btn bg-gray-200 hover:bg-gray-300 px-2 rounded text-xs" data-student-id="${s.id}">Save</button>
+                           </div>
+                       </div>`;
+                }
+                
+                el.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-gray-800">${s.name}</span>
+                        <div class="flex items-center space-x-2">
+                             <button class="edit-student-btn icon-btn edit" data-id="${s.id}" title="Edit Student"><i class="fas fa-pencil-alt fa-xs"></i></button>
+                             <button class="invoice-student-btn icon-btn" data-student-id="${s.id}" data-student-name="${s.name}" title="Invoice Student"><i class="fas fa-file-invoice-dollar fa-xs text-green-600"></i></button> 
+                            <button class="remove-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Remove from class"><i class="fas fa-times fa-sm"></i></button>
+                        </div>
+                    </div>
+                    ${stripeSectionHtml}`; // Add the Stripe section
+
+                el.addEventListener('click', () => selectStudent(s.id, s.name));
+                 el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
+                 el.querySelector('.remove-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleRemoveStudent(s.id, s.name); });
+                 el.querySelector('.invoice-student-btn').addEventListener('click', (e) => { e.stopPropagation(); promptInvoiceParentSelection(s.id, s.name); });
+                 
+                listEl.appendChild(el);
+            });
+        }
+        
+        const renderCol2ClassList = (studentId) => { /* ... unchanged ... */ }
+        const renderStudentDropdown = () => { /* ... unchanged ... */ }
+        const renderContactList = (contacts) => { /* ... unchanged ... */ }
+        const renderUserList = (users) => { /* ... unchanged ... */ }
+        const resetCol2 = () => { /* ... unchanged ... */ }
+        const resetCol3 = () => { /* ... unchanged ... */ }
+        
+        // --- Data Listeners ---
+        const listenForClasses = () => { /* ... unchanged ... */ }
+        const listenForAllStudents = () => { /* ... unchanged ... */ }
+        const listenForContacts = (studentId) => { /* ... unchanged ... */ }
+
+        // --- UI Selectors ---
+        const selectClass = (classId, className) => { /* ... unchanged ... */ }
+        const selectStudent = (studentId, studentName) => { 
+            console.log("Selected student:", studentId, studentName); 
+            currentStudentId = studentId; 
+            document.querySelectorAll('#col-1-list > div, #col-2-list > div').forEach(el => { el.classList.toggle('bg-blue-50', el.dataset.id === studentId); el.classList.toggle('border-blue-300', el.dataset.id === studentId); }); 
+            document.getElementById('contact-student-subtitle').textContent = `For: ${studentName}`; 
+            document.getElementById('add-contact-btn').disabled = false; 
+            listenForContacts(studentId); 
+            loadStudentBillingData(studentId); // Now fetches based on account selector
+            if (currentView === 'student') { 
+                document.getElementById('col-2-subtitle').textContent = `For: ${studentName}`; 
+                renderCol2ClassList(studentId); 
+            } 
+            showCol('col-3-section'); 
+            setActiveNav('nav-contacts'); 
+            const listEl = document.getElementById('contact-list'); 
+            if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); 
+        }
+
+        // --- Open Edit Modals ---
+        const openEditClassModal = (classId) => { /* ... unchanged ... */ };
         const openEditStudentModal = (studentId) => { /* ... unchanged ... */ };
         const openEditContactModal = (contactId) => { /* ... unchanged ... */ };
 
@@ -707,7 +849,7 @@ const toast = (message, type = 'success', duration = 3000) => {
                         if(chunk.length === 0) continue; 
                         const q = query(getParentsCol(), where('__name__', 'in', chunk)); 
                         const querySnapshot = await getDocs(q); 
-                        querySnapshot.docs.forEach(doc => contacts.push(doc.data()); 
+                        querySnapshot.docs.forEach(doc => contacts.push(doc.data())); 
                     } 
                     bccList = contacts.map(c => c.email).filter(Boolean); 
                 } catch(err) { /* ... handle BCC error ... */ return; } 
@@ -736,34 +878,142 @@ const toast = (message, type = 'success', duration = 3000) => {
         const setActiveNav = (navId) => { /* ... unchanged ... */ }
         
         // --- Authentication ---
-        const handleLogin = async (e) => {
-  e.preventDefault();
-  const email = document.getElementById('login-email')?.value || '';
-  const password = document.getElementById('login-password')?.value || '';
-  const errorEl = document.getElementById('login-error');
-  const btn = document.getElementById('login-btn');
-  if (errorEl) errorEl.textContent = '';
-  if (btn) btn.disabled = true;
+        const handleLogin = (e) => { /* ... unchanged ... */ };
+        const handleSignOut = () => { /* ... unchanged ... */ };
 
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-    // strip any query string like '?'
-    if (window.location.search) {
-      window.history.replaceState({}, document.title, window.location.pathname);
+        // --- User Management ---
+        const openUserManagementModal = async () => { /* ... unchanged ... */ };
+        const fetchUsers = async () => { /* ... unchanged ... */ };
+        const handleCreateUser = async (e) => { /* ... unchanged ... */ };
+        const handleDeleteUser = async (uidToDelete, emailToDelete) => { /* ... unchanged ... */ };
+        const handleMakeAdmin = async (uidToMakeAdmin, emailToMakeAdmin) => { /* ... unchanged ... */ };
+        const handleUpdateUserName = async (uidToUpdate, currentName) => { /* ... unchanged ... */ };
+
+        // --- === UPDATED BILLING FUNCTIONS (Multi-Account) START === ---
+
+         /**
+          * Gets the currently selected Stripe account identifier from the UI.
+          * @returns {string} 'halle_dance' or 'state48arts.org'
+          */
+        function determineAccountContext() {
+            const selector = document.getElementById('account-context-select');
+            // !! Add error handling if selector not found !!
+            return selector.value; 
+        }
+
+        /**
+         * Gets the selected Stripe account identifier from the Invoice Modal.
+         * @returns {string|null} 'halle_dance', 'state48arts.org', or null if not selected
+         */
+        function determineAccountContextForInvoice() {
+            const selector = document.getElementById('invoice-account-select');
+            return selector.value || null; // Return null if no value selected
+        }
+
+        /**
+         * Fetches and displays billing data for the selected student AND selected account context.
+         * @param {string} studentId - The Firestore ID of the student.
+         */
+        async function loadStudentBillingData(studentId) {
+            if (!currentUser) { console.error("Not authenticated."); return; }
+            const authToken = await getIdToken(currentUser);
+            const invoiceList = document.getElementById('invoice-list-container');
+            const subList = document.getElementById('subscription-list-container');
+            const invoiceLabel = document.getElementById('invoice-account-label');
+            const subLabel = document.getElementById('subscription-account-label');
+
+            // --- Get Selected Account Context ---
+            const accountIdentifier = determineAccountContext(); 
+            const accountName = accountIdentifier === ACCOUNT_ID_HALLE ? "Halle Dance" : "State48Arts.org";
+            invoiceLabel.textContent = `For: ${accountName}`;
+            subLabel.textContent = `For: ${accountName}`;
+            // ------------------------------------
+
+            invoiceList.innerHTML = '<p id="invoices-loading-message" class="text-gray-500 text-center">Loading invoices...</p>';
+            subList.innerHTML = '<p id="subscriptions-loading-message" class="text-gray-500 text-center">Loading subscriptions...</p>';
+            
+            const headers = new Headers({'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json'});
+            const API_BASE_URL = HARDCODED_CONFIG.serverUrl;
+
+            try { // Fetch Invoices
+                // --- Pass accountIdentifier in URL ---
+                const response = await fetch(`${API_BASE_URL}/get-student-invoices/${studentId}/${accountIdentifier}`, { headers });
+                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Failed: ${response.statusText}`); }
+                const { invoices } = await response.json(); invoiceList.innerHTML = '';
+                if (invoices.length === 0) { invoiceList.innerHTML = `<p class="text-gray-500 text-center">No invoices found for ${accountName}.</p>`; } 
+                else { invoices.forEach(invoice => { invoiceList.appendChild(createInvoiceElement(invoice)); }); }
+            } catch (error) { invoiceList.innerHTML = `<p class="error-message">Could not load invoices. ${error.message}</p>`; }
+
+            try { // Fetch Subscriptions
+                // --- Pass accountIdentifier in URL ---
+                const response = await fetch(`${API_BASE_URL}/get-student-subscriptions/${studentId}/${accountIdentifier}`, { headers });
+                if (!response.ok) { const res = await response.json(); throw new Error(res.error || `Failed: ${response.statusText}`); }
+                const { subscriptions } = await response.json(); subList.innerHTML = '';
+                if (subscriptions.length === 0) { subList.innerHTML = `<p class="text-gray-500 text-center">No subscriptions found for ${accountName}.</p>`; } 
+                else { subscriptions.forEach(sub => { subList.appendChild(createSubscriptionElement(sub)); }); }
+            } catch (error) { subList.innerHTML = `<p class="error-message">Could not load subscriptions. ${error.message}</p>`; }
+        }
+
+        function createInvoiceElement(invoice) { /* ... unchanged ... */ }
+        function createSubscriptionElement(subscription) { /* ... unchanged ... */ }
+        
+        // --- UPDATED MANUAL MAP FUNCTION (Asks for Account) ---
+const handleMapStripeId = async (studentId, stripeCustomerIdInput) => {
+    if (!studentId || !stripeCustomerIdInput || !stripeCustomerIdInput.startsWith('cus_')) {
+        toast('Please enter a valid Stripe Customer ID (starts with cus_).', 'error');
+        return;
     }
-    // show app shell (onAuthStateChanged will also manage this)
-    const authScreen = document.getElementById('auth-screen');
-    const appShell = document.getElementById('app-shell');
-    if (authScreen) authScreen.style.display = 'none';
-    if (appShell) appShell.style.display = 'flex';
-    toast('Signed in!', 'success');
-  } catch (err) {
-    console.error('Login error:', err);
-    if (errorEl) errorEl.textContent = err.message || 'Login failed';
-    toast('Login failed', 'error');
-  } finally {
-    if (btn) btn.disabled = false;
-  }
+    if (!currentUser) { toast('Not authenticated.', 'error'); return; }
+
+    // --- Ask user which account this ID is for ---
+    const accountIdentifier = prompt(`Which account does this ID belong to? Enter '${ACCOUNT_ID_HALLE}' or '${ACCOUNT_ID_STATE48}':`);
+    if (accountIdentifier !== ACCOUNT_ID_HALLE && accountIdentifier !== ACCOUNT_ID_STATE48) {
+        toast('Invalid account identifier entered. Mapping cancelled.', 'error');
+        return;
+    }
+    // ------------------------------------------
+
+    console.log(`Attempting manual map: Student ${studentId} -> Stripe ${stripeCustomerIdInput} on account ${accountIdentifier}`);
+    const mapButton = document.querySelector(`.map-stripe-btn[data-student-id="${studentId}"]`);
+    if (mapButton) mapButton.textContent = 'Saving...'; // Basic loading state
+
+    try {
+        const idToken = await getIdToken(currentUser);
+        const serverUrl = HARDCODED_CONFIG.serverUrl;
+
+        // NOTE: Ensure NO TRAILING COMMAS inside this object {}
+        const response = await fetch(`${serverUrl}/map-stripe-customer`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ studentId, stripeCustomerId: stripeCustomerIdInput, accountIdentifier }) 
+        });
+
+        const result = await response.json();
+        if (!response.ok) { throw new Error(result.error || `Server error: ${response.status}`); }
+
+        toast(result.message, 'success');
+        
+        // Update local cache
+        const studentIndex = allStudentsCache.findIndex(s => s.id === studentId);
+        if (studentIndex !== -1) {
+            if (!allStudentsCache[studentIndex].stripeInfo) {
+                 allStudentsCache[studentIndex].stripeInfo = {};
+            }
+            allStudentsCache[studentIndex].stripeInfo[accountIdentifier] = stripeCustomerIdInput;
+        }
+        
+        // Re-render relevant list
+        if (currentView === 'student') renderCol1StudentList(); 
+        else if (currentView === 'class' && currentClassId) renderCol2StudentList(currentClassId); 
+        
+        if (currentStudentId === studentId) loadStudentBillingData(studentId);
+
+    } catch (error) {
+        console.error("Manual Map Error:", error);
+        toast(`Mapping failed: ${error.message}`, 'error');
+    } finally {
+         if (mapButton) mapButton.textContent = 'Save'; // Reset button text
+    }
 };
 // --- END MANUAL MAP FUNCTION ---
 
@@ -869,7 +1119,8 @@ const toast = (message, type = 'success', duration = 3000) => {
             document.getElementById('view-by-class').addEventListener('click', renderViewByClass);
             document.getElementById('view-by-student').addEventListener('click', renderViewByStudent);
             document.getElementById('email-class-btn').addEventListener('click', handleEmailClass);
-            document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.modal));document.getElementById('add-class-form').addEventListener('submit', handleAddClass);
+            document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.modal)));
+            document.getElementById('add-class-form').addEventListener('submit', handleAddClass);
             document.getElementById('add-new-student-form').addEventListener('submit', handleAddNewStudent);
             document.getElementById('add-existing-student-form').addEventListener('submit', handleAddExistingStudent);
             document.getElementById('add-contact-form').addEventListener('submit', handleAddContact);
