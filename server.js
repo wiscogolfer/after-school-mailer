@@ -1,26 +1,23 @@
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import Stripe from "stripe";
-import * as admin from "firebase-admin";
+import nodemailer from "nodemailer";
+
+// Firebase Admin modular SDK imports
+import { initializeApp as adminInit, applicationDefault, cert, getApps } from "firebase-admin/app";
+import { getAuth as getAdminAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
 
 dotenv.config();
 
 /**
- * ENV you must set locally or on your host (e.g., Render):
- * - PORT=8080
- * - ALLOWED_ORIGIN=https://after-school-mailer.onrender.com
- * - ORGANIZATION_ID=State-48-Dance
- * - STRIPE_API_KEY_HALLE=sk_live_...
- * - STRIPE_API_KEY_STATE48=sk_live_...
- * - SMTP_HOST=
- * - SMTP_PORT=587
- * - SMTP_USER=
- * - SMTP_PASS=
- * 
- * Firebase Admin credential:
- * - GOOGLE_APPLICATION_CREDENTIALS points to a service account json
- *   OR you can set FIREBASE_SERVICE_ACCOUNT (base64 json) and decode it here.
+ * Render env you should have set:
+ * - PORT, ALLOWED_ORIGIN, ORGANIZATION_ID
+ * - STRIPE_API_KEY_HALLE, STRIPE_API_KEY_STATE48
+ * - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+ * - Either GOOGLE_APPLICATION_CREDENTIALS (Render Secret File) OR FIREBASE_SERVICE_ACCOUNT (base64 JSON)
  */
 
 const app = express();
@@ -30,21 +27,24 @@ app.use(cors({
   credentials: true
 }));
 
-// ---- Firebase Admin init ----
-if (!admin.apps.length) {
-  try {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-      const sa = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, "base64").toString("utf8"));
-      admin.initializeApp({ credential: admin.credential.cert(sa) });
-    } else {
-      admin.initializeApp(); // Uses GOOGLE_APPLICATION_CREDENTIALS
-    }
-  } catch (e) {
-    console.error("Firebase admin init error:", e);
-    process.exit(1);
+// ---- Firebase Admin init (modular) ----
+function initFirebaseAdmin() {
+  if (getApps().length) return; // already initialized
+
+  // Prefer explicit service account if provided via FIREBASE_SERVICE_ACCOUNT (base64 JSON)
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    const sa = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, "base64").toString("utf8"));
+    adminInit({ credential: cert(sa) });
+    return;
   }
+
+  // Otherwise use the default credentials (e.g., GOOGLE_APPLICATION_CREDENTIALS)
+  adminInit({ credential: applicationDefault() });
 }
-const db = admin.firestore();
+
+initFirebaseAdmin();
+const adminAuth = getAdminAuth();
+const db = getFirestore();
 
 // ---- Helpers ----
 const ORGANIZATION_ID = process.env.ORGANIZATION_ID || "State-48-Dance";
@@ -66,7 +66,7 @@ const verifyFirebaseToken = async (req, res, next) => {
     const header = req.headers.authorization || "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : null;
     if (!token) return res.status(401).json({ error: "Missing bearer token" });
-    const decoded = await admin.auth().verifyIdToken(token);
+    const decoded = await adminAuth.verifyIdToken(token);
     req.user = decoded;
     next();
   } catch (e) {
@@ -75,8 +75,7 @@ const verifyFirebaseToken = async (req, res, next) => {
   }
 };
 
-// ---- Mailer (nodemailer) ----
-import nodemailer from "nodemailer";
+// ---- Mailer ----
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT || 587),
@@ -90,7 +89,6 @@ const transporter = nodemailer.createTransport({
 // ---- Routes ----
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
-// Send email
 app.post("/send-email", verifyFirebaseToken, async (req, res) => {
   try {
     const { to, bcc, replyTo, subject, text } = req.body || {};
@@ -113,7 +111,6 @@ app.post("/send-email", verifyFirebaseToken, async (req, res) => {
   }
 });
 
-// Helper: fetch student's mapped stripe customer ID for the given account
 async function fetchMappedCustomerId(studentId, accountIdentifier) {
   const ref = db.doc(`organizations/${ORGANIZATION_ID}/students/${studentId}`);
   const snap = await ref.get();
@@ -124,7 +121,6 @@ async function fetchMappedCustomerId(studentId, accountIdentifier) {
   return cid;
 }
 
-// Get invoices for a student + account
 app.get("/get-student-invoices/:studentId/:accountIdentifier", verifyFirebaseToken, async (req, res) => {
   try {
     const { studentId, accountIdentifier } = req.params;
@@ -138,7 +134,6 @@ app.get("/get-student-invoices/:studentId/:accountIdentifier", verifyFirebaseTok
   }
 });
 
-// Get subscriptions for a student + account
 app.get("/get-student-subscriptions/:studentId/:accountIdentifier", verifyFirebaseToken, async (req, res) => {
   try {
     const { studentId, accountIdentifier } = req.params;
@@ -152,7 +147,6 @@ app.get("/get-student-subscriptions/:studentId/:accountIdentifier", verifyFireba
   }
 });
 
-// Create & finalize a one-off invoice
 app.post("/create-invoice", verifyFirebaseToken, async (req, res) => {
   try {
     const { studentId, amount, description, accountIdentifier } = req.body || {};
@@ -161,20 +155,11 @@ app.post("/create-invoice", verifyFirebaseToken, async (req, res) => {
     }
     const stripe = accountToStripe(accountIdentifier);
     const customer = await fetchMappedCustomerId(studentId, accountIdentifier);
-
-    // amount is dollars, convert to cents
     const unit_amount = Math.round(Number(amount) * 100);
     if (!Number.isFinite(unit_amount) || unit_amount <= 0) throw new Error("Invalid amount");
-
-    const ii = await stripe.invoiceItems.create({
-      customer,
-      currency: "usd",
-      unit_amount,
-      description
-    });
+    const ii = await stripe.invoiceItems.create({ customer, currency: "usd", unit_amount, description });
     const invoice = await stripe.invoices.create({ customer, auto_advance: false });
     const finalized = await stripe.invoices.finalizeInvoice(invoice.id);
-
     res.json({ invoice: finalized, item: ii });
   } catch (e) {
     console.error("/create-invoice error:", e);
@@ -182,7 +167,6 @@ app.post("/create-invoice", verifyFirebaseToken, async (req, res) => {
   }
 });
 
-// Manually map a stripe customer id to a student for an account
 app.post("/map-stripe-customer", verifyFirebaseToken, async (req, res) => {
   try {
     const { studentId, stripeCustomerId, accountIdentifier } = req.body || {};
