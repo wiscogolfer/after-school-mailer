@@ -1,32 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>After‑School Manager</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>After-School Manager — Classes, Students & Parents</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .modal { display: none; }
+    .modal.flex { display: flex; }
+    .scrolling-list { max-height: 60vh; }
+    .scrolling-list::-webkit-scrollbar { width: 6px; }
+    .scrolling-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+    .scrolling-list::-webkit-scrollbar-thumb { background: #c5c5c5; border-radius: 10px; }
+    .scrolling-list::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+  </style>
 </head>
-<body class="bg-gray-100 font-[Inter]">
+<body class="bg-gray-100">
 
 <!-- Toast -->
-<div id="toast" class="fixed top-4 right-4 hidden items-center w-full max-w-xs p-4 text-gray-700 bg-white rounded-lg shadow">
+<div id="toast" class="fixed top-4 right-4 hidden items-center w-full max-w-xs p-4 text-gray-700 bg-white rounded-lg shadow z-50">
   <div id="toast-icon" class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg"></div>
   <div id="toast-message" class="ml-3 text-sm font-normal"></div>
 </div>
 
-<!-- Login -->
+<!-- Auth -->
 <div id="auth" class="min-h-screen flex items-center justify-center">
   <div class="bg-white rounded-xl shadow p-6 w-full max-w-sm">
     <h1 class="text-xl font-bold text-gray-900 mb-4">Sign in</h1>
     <form id="login-form" class="space-y-3">
       <div>
         <label class="block text-sm text-gray-600">Email</label>
-        <input id="email" type="email" class="w-full border rounded p-2">
+        <input id="email" type="email" class="w-full border rounded p-2" required>
       </div>
       <div>
         <label class="block text-sm text-gray-600">Password</label>
-        <input id="password" type="password" class="w-full border rounded p-2">
+        <input id="password" type="password" class="w-full border rounded p-2" required>
       </div>
       <button id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded">Sign in</button>
       <p id="login-error" class="text-xs text-red-600 h-4"></p>
@@ -35,7 +45,7 @@
 </div>
 
 <!-- App -->
-<div id="app" class="hidden">
+<div id="app" class="hidden min-h-screen flex flex-col">
   <header class="bg-gray-900 text-white">
     <div class="container mx-auto p-3 flex items-center justify-between">
       <h2 class="font-semibold">After‑School Manager</h2>
@@ -46,21 +56,229 @@
     </div>
   </header>
 
-  <main class="container mx-auto p-4">
-    <h3 class="text-lg font-semibold mb-4">Welcome</h3>
-    <p class="text-gray-700">App loaded successfully.</p>
+  <main class="container mx-auto p-4 grid md:grid-cols-3 gap-4 flex-1">
+    <!-- Column 1: Classes / Students master -->
+    <section class="bg-white p-4 rounded-lg shadow flex flex-col">
+      <div class="flex justify-between items-center mb-3">
+        <div class="flex p-1 bg-gray-200 rounded-lg">
+          <button id="view-by-class" class="px-3 py-1.5 text-sm font-medium bg-white text-blue-700 rounded-md shadow-sm">By Class</button>
+          <button id="view-by-student" class="px-3 py-1.5 text-sm font-medium text-gray-700">By Student</button>
+        </div>
+        <button id="primary-add-btn" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm">Add Class</button>
+      </div>
+      <div id="col1-title" class="text-lg font-semibold mb-2">Classes</div>
+      <div id="col1-list" class="scrolling-list overflow-y-auto space-y-2"></div>
+    </section>
+
+    <!-- Column 2: Students in class / Classes for student -->
+    <section class="bg-white p-4 rounded-lg shadow flex flex-col">
+      <div class="flex justify-between items-center mb-3">
+        <div>
+          <div id="col2-title" class="text-lg font-semibold">Students</div>
+          <div id="col2-subtitle" class="text-sm text-gray-500">Select a class</div>
+        </div>
+        <div id="col2-btns" class="flex items-center gap-2">
+          <button id="add-existing-student-btn" class="bg-gray-200 text-gray-800 px-3 py-1.5 rounded text-sm" disabled>Add Existing</button>
+          <button id="add-new-student-btn" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm" disabled>Add New</button>
+        </div>
+      </div>
+      <div id="col2-list" class="scrolling-list overflow-y-auto space-y-2"></div>
+    </section>
+
+    <!-- Column 3: Parent contacts for selected student -->
+    <section class="bg-white p-4 rounded-lg shadow flex flex-col">
+      <div class="flex justify-between items-center mb-3">
+        <div>
+          <div class="text-lg font-semibold">Parents / Contacts</div>
+          <div id="col3-subtitle" class="text-sm text-gray-500">Select a student</div>
+        </div>
+        <button id="add-contact-btn" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm" disabled>Add Contact</button>
+      </div>
+      <div id="col3-list" class="scrolling-list overflow-y-auto space-y-2"></div>
+    </section>
   </main>
 </div>
 
+<!-- Modals -->
+<!-- Add Class -->
+<div id="add-class-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
+  <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="text-lg font-semibold">Add Class</h3>
+      <button class="close-modal text-gray-500" data-modal="add-class-modal">&times;</button>
+    </div>
+    <form id="add-class-form" class="space-y-3">
+      <div>
+        <label class="block text-sm text-gray-600">Class Name</label>
+        <input id="class-name" type="text" class="w-full border rounded p-2" required>
+      </div>
+      <div>
+        <label class="block text-sm text-gray-600">Teacher</label>
+        <input id="teacher-name" type="text" class="w-full border rounded p-2" required>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="close-modal border px-3 py-1.5 rounded" data-modal="add-class-modal">Cancel</button>
+        <button class="bg-blue-600 text-white px-3 py-1.5 rounded">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Class -->
+<div id="edit-class-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
+  <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="text-lg font-semibold">Edit Class</h3>
+      <button class="close-modal text-gray-500" data-modal="edit-class-modal">&times;</button>
+    </div>
+    <form id="edit-class-form" class="space-y-3">
+      <input type="hidden" id="edit-class-id">
+      <div>
+        <label class="block text-sm text-gray-600">Class Name</label>
+        <input id="edit-class-name" type="text" class="w-full border rounded p-2" required>
+      </div>
+      <div>
+        <label class="block text-sm text-gray-600">Teacher</label>
+        <input id="edit-teacher-name" type="text" class="w-full border rounded p-2" required>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="close-modal border px-3 py-1.5 rounded" data-modal="edit-class-modal">Cancel</button>
+        <button class="bg-blue-600 text-white px-3 py-1.5 rounded">Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add New Student -->
+<div id="add-student-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
+  <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="text-lg font-semibold">Add New Student</h3>
+      <button class="close-modal text-gray-500" data-modal="add-student-modal">&times;</button>
+    </div>
+    <form id="add-student-form" class="space-y-3">
+      <div>
+        <label class="block text-sm text-gray-600">Student Name</label>
+        <input id="student-name" type="text" class="w-full border rounded p-2" required>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="close-modal border px-3 py-1.5 rounded" data-modal="add-student-modal">Cancel</button>
+        <button class="bg-blue-600 text-white px-3 py-1.5 rounded">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Existing Student to Class -->
+<div id="add-existing-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
+  <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="text-lg font-semibold">Add Existing Student</h3>
+      <button class="close-modal text-gray-500" data-modal="add-existing-modal">&times;</button>
+    </div>
+    <form id="add-existing-form" class="space-y-3">
+      <div>
+        <label class="block text-sm text-gray-600">Select Student</label>
+        <select id="existing-student-select" class="w-full border rounded p-2" required></select>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="close-modal border px-3 py-1.5 rounded" data-modal="add-existing-modal">Cancel</button>
+        <button class="bg-blue-600 text-white px-3 py-1.5 rounded">Add</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Student -->
+<div id="edit-student-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
+  <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="text-lg font-semibold">Edit Student</h3>
+      <button class="close-modal text-gray-500" data-modal="edit-student-modal">&times;</button>
+    </div>
+    <form id="edit-student-form" class="space-y-3">
+      <input type="hidden" id="edit-student-id">
+      <div>
+        <label class="block text-sm text-gray-600">Student Name</label>
+        <input id="edit-student-name" type="text" class="w-full border rounded p-2" required>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="close-modal border px-3 py-1.5 rounded" data-modal="edit-student-modal">Cancel</button>
+        <button class="bg-blue-600 text-white px-3 py-1.5 rounded">Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add / Edit Contact -->
+<div id="add-contact-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
+  <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="text-lg font-semibold">Add Contact</h3>
+      <button class="close-modal text-gray-500" data-modal="add-contact-modal">&times;</button>
+    </div>
+    <form id="add-contact-form" class="space-y-3">
+      <div>
+        <label class="block text-sm text-gray-600">Name</label>
+        <input id="contact-name" type="text" class="w-full border rounded p-2" required>
+      </div>
+      <div>
+        <label class="block text-sm text-gray-600">Email</label>
+        <input id="contact-email" type="email" class="w-full border rounded p-2" required>
+      </div>
+      <div>
+        <label class="block text-sm text-gray-600">Phone</label>
+        <input id="contact-phone" type="tel" class="w-full border rounded p-2">
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="close-modal border px-3 py-1.5 rounded" data-modal="add-contact-modal">Cancel</button>
+        <button class="bg-blue-600 text-white px-3 py-1.5 rounded">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="edit-contact-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
+  <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+    <div class="flex justify-between items-center mb-3">
+      <h3 class="text-lg font-semibold">Edit Contact</h3>
+      <button class="close-modal text-gray-500" data-modal="edit-contact-modal">&times;</button>
+    </div>
+    <form id="edit-contact-form" class="space-y-3">
+      <input type="hidden" id="edit-contact-id">
+      <div>
+        <label class="block text-sm text-gray-600">Name</label>
+        <input id="edit-contact-name" type="text" class="w-full border rounded p-2" required>
+      </div>
+      <div>
+        <label class="block text-sm text-gray-600">Email</label>
+        <input id="edit-contact-email" type="email" class="w-full border rounded p-2" required>
+      </div>
+      <div>
+        <label class="block text-sm text-gray-600">Phone</label>
+        <input id="edit-contact-phone" type="tel" class="w-full border rounded p-2">
+      </div>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="close-modal border px-3 py-1.5 rounded" data-modal="edit-contact-modal">Cancel</button>
+        <button class="bg-blue-600 text-white px-3 py-1.5 rounded">Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script type="module">
-// Firebase CDN
+// ---- Firebase CDN ----
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import {
   initializeAuth, browserLocalPersistence, signInWithEmailAndPassword,
   signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import {
+  getFirestore, collection, doc, getDoc, getDocs, addDoc, setDoc, updateDoc, deleteDoc,
+  onSnapshot, query, where, writeBatch, arrayUnion, arrayRemove
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// TODO: update values below with your Firebase config
+// ---- Config (PUT YOUR REAL CONFIG HERE) ----
 const firebaseConfig = {
   apiKey: "AIzaSyAYDMyMAw7wf3i28C-hQ_iRZRVdMiXmaLk",
   authDomain: "dance-classes-97ad7.firebaseapp.com",
@@ -68,40 +286,64 @@ const firebaseConfig = {
   storageBucket: "dance-classes-97ad7.appspot.com",
   messagingSenderId: "1041555303856",
   appId: "1:1041555303856:web:5b80e0497eacaf161b7a75",
-  measurementId: "G-8GL7YEGBBQ"
 };
 
+// ---- App constants ----
+const ORGANIZATION_ID = "State-48-Dance"; // <- change if needed
 
-// Init Firebase
+// ---- Init ----
 const app = initializeApp(firebaseConfig);
 const auth = initializeAuth(app, { persistence: browserLocalPersistence });
+const db = getFirestore(app);
 
-const $ = id => document.getElementById(id);
-const show = el => el.classList.remove("hidden");
-const hide = el => el.classList.add("hidden");
+// ---- Helpers ----
+const $ = (id) => document.getElementById(id);
+const show = (el) => el.classList.remove("hidden");
+const hide = (el) => el.classList.add("hidden");
+const openModal = (id) => $(id)?.classList.add("flex");
+const closeModal = (id) => $(id)?.classList.remove("flex");
 
 function toast(message, type="success", duration=2500) {
   const t = $("toast"), icon = $("toast-icon"), msg = $("toast-message");
   icon.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg';
-  icon.classList.add(type==="error"?"text-red-600 bg-red-100":"text-green-600 bg-green-100");
+  if (type === "error") icon.classList.add("text-red-600","bg-red-100");
+  else icon.classList.add("text-green-600","bg-green-100");
   msg.textContent = message;
-  t.classList.remove("hidden");
-  t.classList.add("flex");
-  setTimeout(() => { t.classList.add("hidden"); t.classList.remove("flex"); }, duration);
+  t.classList.remove("hidden"); t.classList.add("flex");
+  setTimeout(()=>{ t.classList.add("hidden"); t.classList.remove("flex"); }, duration);
 }
 
-onAuthStateChanged(auth, user => {
+// ---- Paths ----
+const classesCol = () => collection(db, `organizations/${ORGANIZATION_ID}/classes`);
+const studentsCol = () => collection(db, `organizations/${ORGANIZATION_ID}/students`);
+const parentsCol = () => collection(db, `organizations/${ORGANIZATION_ID}/parents`);
+
+// ---- App state ----
+let currentView = "class"; // "class" | "student"
+let currentClassId = null;
+let currentStudentId = null;
+let allClasses = [];
+let allStudents = [];
+let unsubscribeClasses = null;
+let unsubscribeStudents = null;
+
+// ---- Auth wiring ----
+onAuthStateChanged(auth, (user) => {
   if (user) {
-    hide($("auth"));
-    show($("app"));
-    $("user-email").textContent = user.email;
+    hide($("auth")); show($("app"));
+    $("user-email").textContent = user.email || "";
+    startListeners();
+    renderPrimary();
   } else {
-    show($("auth"));
-    hide($("app"));
+    show($("auth")); hide($("app"));
+    stopListeners();
+    allClasses = []; allStudents = [];
+    currentClassId = null; currentStudentId = null;
+    renderPrimary();
   }
 });
 
-$("login-form").addEventListener("submit", async e => {
+$("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const btn = $("login-btn"); const err = $("login-error");
   btn.disabled = true; err.textContent="";
@@ -110,7 +352,7 @@ $("login-form").addEventListener("submit", async e => {
     if (location.search) history.replaceState({}, "", location.pathname);
     toast("Signed in");
   } catch(ex) {
-    err.textContent = ex.message;
+    err.textContent = ex.message || "Login failed";
     toast("Login failed","error");
   } finally { btn.disabled = false; }
 });
@@ -118,6 +360,421 @@ $("login-form").addEventListener("submit", async e => {
 $("logout-btn").addEventListener("click", async () => {
   await signOut(auth);
   toast("Signed out");
+});
+
+// ---- View switching ----
+$("view-by-class").addEventListener("click", () => {
+  currentView = "class";
+  $("view-by-class").classList.add("bg-white","text-blue-700","shadow-sm");
+  $("view-by-student").classList.remove("bg-white","text-blue-700","shadow-sm");
+  renderPrimary();
+});
+$("view-by-student").addEventListener("click", () => {
+  currentView = "student";
+  $("view-by-student").classList.add("bg-white","text-blue-700","shadow-sm");
+  $("view-by-class").classList.remove("bg-white","text-blue-700","shadow-sm");
+  renderPrimary();
+});
+
+// ---- Listeners ----
+function startListeners() {
+  if (!unsubscribeClasses) {
+    unsubscribeClasses = onSnapshot(classesCol(), (snap) => {
+      allClasses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderPrimary();
+      if (currentView === "class" && currentClassId) renderCol2ForClass(currentClassId);
+      if (currentView === "student" && currentStudentId) renderCol2ForStudent(currentStudentId);
+    });
+  }
+  if (!unsubscribeStudents) {
+    unsubscribeStudents = onSnapshot(studentsCol(), (snap) => {
+      allStudents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderPrimary();
+      if (currentView === "class" && currentClassId) renderCol2ForClass(currentClassId);
+      if (currentView === "student" && currentStudentId) renderCol2ForStudent(currentStudentId);
+      if (currentStudentId) renderContacts(currentStudentId); // keep contacts refreshed
+    });
+  }
+}
+function stopListeners() {
+  if (unsubscribeClasses) { unsubscribeClasses(); unsubscribeClasses = null; }
+  if (unsubscribeStudents) { unsubscribeStudents(); unsubscribeStudents = null; }
+}
+
+// ---- Rendering ----
+function renderPrimary() {
+  if (currentView === "class") {
+    $("col1-title").textContent = "Classes";
+    $("primary-add-btn").textContent = "Add Class";
+    $("col2-title").textContent = "Students";
+    $("col2-subtitle").textContent = "Select a class";
+    $("col2-btns").classList.remove("hidden");
+    renderCol1Classes();
+    renderCol2Empty(true);
+    renderCol3Empty();
+  } else {
+    $("col1-title").textContent = "All Students";
+    $("primary-add-btn").textContent = "Add Student";
+    $("col2-title").textContent = "Enrolled In";
+    $("col2-subtitle").textContent = "Select a student";
+    $("col2-btns").classList.add("hidden");
+    renderCol1Students();
+    renderCol2Empty(false);
+    renderCol3Empty();
+  }
+}
+
+function renderCol1Classes() {
+  const list = $("col1-list"); list.innerHTML = "";
+  if (allClasses.length === 0) { list.innerHTML = `<p class="text-gray-500 text-center">No classes yet.</p>`; return; }
+  [...allClasses].sort((a,b)=>a.name.localeCompare(b.name)).forEach(c => {
+    const el = document.createElement("div");
+    el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentClassId===c.id?"bg-blue-50 border-blue-300":""}`;
+    el.innerHTML = `
+      <div class="flex justify-between items-center">
+        <span class="font-medium text-gray-800">${c.name}</span>
+        <div class="flex gap-2">
+          <button class="edit-class px-2 py-1 text-sm bg-gray-200 rounded" title="Edit">Edit</button>
+          <button class="del-class px-2 py-1 text-sm bg-red-600 text-white rounded" title="Delete">Del</button>
+        </div>
+      </div>
+      <p class="text-sm text-gray-600">${c.teacher || ""}</p>`;
+    el.addEventListener("click", ()=>selectClass(c.id, c.name));
+    el.querySelector(".edit-class").addEventListener("click",(e)=>{ e.stopPropagation(); openEditClass(c.id); });
+    el.querySelector(".del-class").addEventListener("click",(e)=>{ e.stopPropagation(); deleteClass(c.id, c.name); });
+    list.appendChild(el);
+  });
+}
+
+function renderCol1Students() {
+  const list = $("col1-list"); list.innerHTML = "";
+  if (allStudents.length === 0) { list.innerHTML = `<p class="text-gray-500 text-center">No students yet.</p>`; return; }
+  [...allStudents].sort((a,b)=>a.name.localeCompare(b.name)).forEach(s => {
+    const el = document.createElement("div");
+    el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId===s.id?"bg-blue-50 border-blue-300":""}`;
+    el.innerHTML = `
+      <div class="flex justify-between items-center">
+        <span class="font-medium text-gray-800">${s.name}</span>
+        <div class="flex gap-2">
+          <button class="edit-student px-2 py-1 text-sm bg-gray-200 rounded" title="Edit">Edit</button>
+          <button class="del-student px-2 py-1 text-sm bg-red-600 text-white rounded" title="Delete">Del</button>
+        </div>
+      </div>`;
+    el.addEventListener("click", ()=>selectStudent(s.id, s.name));
+    el.querySelector(".edit-student").addEventListener("click",(e)=>{ e.stopPropagation(); openEditStudent(s.id); });
+    el.querySelector(".del-student").addEventListener("click",(e)=>{ e.stopPropagation(); deleteStudent(s.id, s.name); });
+    list.appendChild(el);
+  });
+}
+
+function renderCol2Empty(isClassView) {
+  $("col2-subtitle").textContent = isClassView ? "Select a class" : "Select a student";
+  $("col2-list").innerHTML = "";
+  $("add-new-student-btn").disabled = isClassView;
+  $("add-existing-student-btn").disabled = isClassView;
+}
+
+function renderCol2ForClass(classId) {
+  const list = $("col2-list"); list.innerHTML = "";
+  const c = allClasses.find(x=>x.id===classId);
+  if (!c || !c.students || c.students.length===0) { list.innerHTML = `<p class="text-gray-500 text-center">No students in this class.</p>`; return; }
+  const students = allStudents.filter(s => c.students.includes(s.id)).sort((a,b)=>a.name.localeCompare(b.name));
+  students.forEach(s => {
+    const el = document.createElement("div");
+    el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId===s.id?"bg-blue-50 border-blue-300":""}`;
+    el.innerHTML = `
+      <div class="flex justify-between items-center">
+        <span class="font-medium text-gray-800">${s.name}</span>
+        <div class="flex gap-2">
+          <button class="edit-student px-2 py-1 text-sm bg-gray-200 rounded" title="Edit">Edit</button>
+          <button class="remove-student px-2 py-1 text-sm bg-yellow-600 text-white rounded" title="Remove">Remove</button>
+        </div>
+      </div>`;
+    el.addEventListener("click", ()=>selectStudent(s.id, s.name));
+    el.querySelector(".edit-student").addEventListener("click",(e)=>{ e.stopPropagation(); openEditStudent(s.id); });
+    el.querySelector(".remove-student").addEventListener("click",(e)=>{ e.stopPropagation(); removeStudentFromClass(s.id, s.name); });
+    list.appendChild(el);
+  });
+}
+
+function renderCol2ForStudent(studentId) {
+  const list = $("col2-list"); list.innerHTML = "";
+  const classes = allClasses.filter(c => (c.students||[]).includes(studentId)).sort((a,b)=>a.name.localeCompare(b.name));
+  if (classes.length===0) { list.innerHTML = `<p class="text-gray-500 text-center">Not enrolled in any classes.</p>`; return; }
+  classes.forEach(c => {
+    const el = document.createElement("div");
+    el.className = `p-3 rounded-lg border border-gray-200`;
+    el.textContent = `${c.name} — ${c.teacher||""}`;
+    list.appendChild(el);
+  });
+}
+
+function renderContacts(studentId) {
+  const list = $("col3-list"); list.innerHTML = "";
+  const s = allStudents.find(x=>x.id===studentId);
+  $("col3-subtitle").textContent = s ? `For: ${s.name}` : "Select a student";
+  $("add-contact-btn").disabled = !studentId;
+  if (!s || !s.parents || s.parents.length===0) { list.innerHTML = `<p class="text-gray-500 text-center">No contacts for this student.</p>`; return; }
+
+  // Fetch parent docs in chunks of 30 using where in
+  const ids = s.parents;
+  (async () => {
+    try {
+      let contacts = [];
+      for (let i=0;i<ids.length;i+=30) {
+        const chunk = ids.slice(i,i+30);
+        const q = query(parentsCol(), where("__name__", "in", chunk));
+        const qs = await getDocs(q);
+        qs.forEach(d => contacts.push({ id: d.id, ...d.data() }));
+      }
+      contacts.sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+      if (contacts.length===0) { list.innerHTML = `<p class="text-gray-500 text-center">No contacts for this student.</p>`; return; }
+      contacts.forEach(c => {
+        const el = document.createElement("div");
+        el.className = "p-3 rounded-lg border border-gray-200";
+        el.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="font-medium text-gray-800">${c.name||""}</div>
+              <div class="text-sm text-gray-600">${c.email||""}</div>
+              <div class="text-sm text-gray-600">${c.phone||""}</div>
+            </div>
+            <div class="flex gap-2">
+              <button class="edit-contact px-2 py-1 text-sm bg-gray-200 rounded">Edit</button>
+              <button class="del-contact px-2 py-1 text-sm bg-red-600 text-white rounded">Del</button>
+            </div>
+          </div>`;
+        el.querySelector(".edit-contact").addEventListener("click", ()=>openEditContact(c));
+        el.querySelector(".del-contact").addEventListener("click", ()=>deleteContact(c.id));
+        list.appendChild(el);
+      });
+    } catch(err) {
+      console.error(err); toast("Failed to load contacts","error");
+    }
+  })();
+}
+
+// ---- Selections ----
+function selectClass(id, name) {
+  currentClassId = id; currentStudentId = null;
+  $("col2-subtitle").textContent = `For: ${name}`;
+  $("add-new-student-btn").disabled = false;
+  $("add-existing-student-btn").disabled = false;
+  renderCol2ForClass(id);
+  renderCol3Empty();
+}
+function selectStudent(id, name) {
+  currentStudentId = id; currentClassId = currentView==="class" ? currentClassId : null;
+  $("col3-subtitle").textContent = `For: ${name}`;
+  if (currentView==="student") renderCol2ForStudent(id);
+  renderContacts(id);
+}
+
+// ---- CRUD: Classes ----
+$("primary-add-btn").addEventListener("click", () => {
+  if (currentView==="class") openModal("add-class-modal");
+  else openModal("add-student-modal");
+});
+$("add-class-form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const name = $("class-name").value.trim();
+  const teacher = $("teacher-name").value.trim();
+  try {
+    await addDoc(classesCol(), { name, teacher, students: [] });
+    closeModal("add-class-modal"); e.target.reset(); toast("Class added");
+  } catch(err){ console.error(err); toast("Failed to add class","error"); }
+});
+function openEditClass(id){
+  const c = allClasses.find(x=>x.id===id); if(!c) return;
+  $("edit-class-id").value = id;
+  $("edit-class-name").value = c.name || "";
+  $("edit-teacher-name").value = c.teacher || "";
+  openModal("edit-class-modal");
+}
+$("edit-class-form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const id = $("edit-class-id").value;
+  const name = $("edit-class-name").value.trim();
+  const teacher = $("edit-teacher-name").value.trim();
+  try {
+    await updateDoc(doc(classesCol(), id), { name, teacher });
+    closeModal("edit-class-modal"); toast("Class updated");
+  } catch(err){ console.error(err); toast("Failed to update","error"); }
+});
+async function deleteClass(id, name){
+  if (!confirm(`Delete class "${name}"?`)) return;
+  try {
+    const batch = writeBatch(db);
+    const sDocs = await getDocs(studentsCol());
+    sDocs.forEach(d => {
+      const data = d.data();
+      if ((data.classes||[]).includes(id)) batch.update(d.ref, { classes: arrayRemove(id) });
+    });
+    batch.delete(doc(classesCol(), id));
+    await batch.commit();
+    if (currentClassId===id) { currentClassId=null; renderCol2Empty(true); }
+    toast("Class deleted");
+  } catch(err){ console.error(err); toast("Delete failed","error"); }
+}
+
+// ---- CRUD: Students ----
+$("add-student-form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const name = $("student-name").value.trim();
+  try {
+    const studentRef = await addDoc(studentsCol(), { name, parents: [], classes: [] });
+    if (currentView==="class" && currentClassId) {
+      const batch = writeBatch(db);
+      batch.update(doc(classesCol(), currentClassId), { students: arrayUnion(studentRef.id) });
+      batch.update(studentRef, { classes: arrayUnion(currentClassId) });
+      await batch.commit();
+    }
+    closeModal("add-student-modal"); e.target.reset(); toast("Student added");
+  } catch(err){ console.error(err); toast("Failed to add student","error"); }
+});
+
+function openEditStudent(id){
+  const s = allStudents.find(x=>x.id===id); if(!s) return;
+  $("edit-student-id").value = id;
+  $("edit-student-name").value = s.name || "";
+  openModal("edit-student-modal");
+}
+$("edit-student-form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const id = $("edit-student-id").value;
+  const name = $("edit-student-name").value.trim();
+  try {
+    await updateDoc(doc(studentsCol(), id), { name });
+    closeModal("edit-student-modal"); toast("Student updated");
+  } catch(err){ console.error(err); toast("Failed to update student","error"); }
+});
+
+async function deleteStudent(id, name){
+  if (!confirm(`Delete student "${name}" and all contacts?`)) return;
+  try {
+    const batch = writeBatch(db);
+    allClasses.forEach(c => {
+      if ((c.students||[]).includes(id)) batch.update(doc(classesCol(), c.id), { students: arrayRemove(id) });
+    });
+    const sDoc = await getDoc(doc(studentsCol(), id));
+    if (sDoc.exists()) {
+      const data = sDoc.data();
+      (data.parents||[]).forEach(pid => batch.delete(doc(parentsCol(), pid)));
+    }
+    batch.delete(doc(studentsCol(), id));
+    await batch.commit();
+    if (currentStudentId===id) { currentStudentId=null; renderCol3Empty(); }
+    toast("Student deleted");
+  } catch(err){ console.error(err); toast("Delete failed","error"); }
+}
+
+// ---- Enroll existing student to selected class ----
+$("add-existing-student-btn").addEventListener("click", async ()=>{
+  if (!currentClassId) return;
+  await populateExistingStudentSelect();
+  openModal("add-existing-modal");
+});
+async function populateExistingStudentSelect(){
+  const select = $("existing-student-select");
+  select.innerHTML = "";
+  const c = allClasses.find(x=>x.id===currentClassId);
+  const enrolled = new Set(c?.students||[]);
+  const options = allStudents.filter(s=>!enrolled.has(s.id)).sort((a,b)=>a.name.localeCompare(b.name));
+  if (options.length===0) {
+    select.innerHTML = `<option value="">No available students</option>`;
+    return;
+  }
+  options.forEach(s=>{
+    const opt = document.createElement("option");
+    opt.value = s.id; opt.textContent = s.name;
+    select.appendChild(opt);
+  });
+}
+$("add-existing-form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const sid = $("existing-student-select").value;
+  if (!sid || !currentClassId) return;
+  try {
+    const batch = writeBatch(db);
+    batch.update(doc(classesCol(), currentClassId), { students: arrayUnion(sid) });
+    batch.update(doc(studentsCol(), sid), { classes: arrayUnion(currentClassId) });
+    await batch.commit();
+    closeModal("add-existing-modal");
+    toast("Student added to class");
+  } catch(err){ console.error(err); toast("Failed to add to class","error"); }
+});
+
+async function removeStudentFromClass(studentId, studentName){
+  if (!currentClassId) return;
+  if (!confirm(`Remove ${studentName} from this class?`)) return;
+  try {
+    const batch = writeBatch(db);
+    batch.update(doc(classesCol(), currentClassId), { students: arrayRemove(studentId) });
+    batch.update(doc(studentsCol(), studentId), { classes: arrayRemove(currentClassId) });
+    await batch.commit();
+    if (currentStudentId===studentId) renderCol3Empty();
+    toast("Removed from class");
+  } catch(err){ console.error(err); toast("Failed to remove","error"); }
+}
+
+// ---- Contacts ----
+$("add-contact-btn").addEventListener("click", ()=>{
+  if (!currentStudentId) return;
+  openModal("add-contact-modal");
+});
+$("add-contact-form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  if (!currentStudentId) return;
+  const name = $("contact-name").value.trim();
+  const email = $("contact-email").value.trim();
+  const phone = $("contact-phone").value.trim();
+  try {
+    const parentRef = await addDoc(parentsCol(), { name, email, phone });
+    await updateDoc(doc(studentsCol(), currentStudentId), { parents: arrayUnion(parentRef.id) });
+    closeModal("add-contact-modal"); e.target.reset(); toast("Contact added");
+  } catch(err){ console.error(err); toast("Failed to add contact","error"); }
+});
+
+function openEditContact(contact){
+  $("edit-contact-id").value = contact.id;
+  $("edit-contact-name").value = contact.name || "";
+  $("edit-contact-email").value = contact.email || "";
+  $("edit-contact-phone").value = contact.phone || "";
+  openModal("edit-contact-modal");
+}
+$("edit-contact-form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const id = $("edit-contact-id").value;
+  const name = $("edit-contact-name").value.trim();
+  const email = $("edit-contact-email").value.trim();
+  const phone = $("edit-contact-phone").value.trim();
+  try {
+    await updateDoc(doc(parentsCol(), id), { name, email, phone });
+    closeModal("edit-contact-modal"); toast("Contact updated");
+  } catch(err){ console.error(err); toast("Failed to update contact","error"); }
+});
+async function deleteContact(id){
+  if (!currentStudentId) return;
+  if (!confirm("Delete this contact?")) return;
+  try {
+    const batch = writeBatch(db);
+    batch.update(doc(studentsCol(), currentStudentId), { parents: arrayRemove(id) });
+    batch.delete(doc(parentsCol(), id));
+    await batch.commit();
+    toast("Contact deleted");
+  } catch(err){ console.error(err); toast("Failed to delete contact","error"); }
+}
+
+// ---- Utility renders ----
+function renderCol3Empty(){
+  $("col3-subtitle").textContent = "Select a student";
+  $("add-contact-btn").disabled = true;
+  $("col3-list").innerHTML = "";
+}
+
+// ---- Close modal buttons ----
+document.querySelectorAll(".close-modal").forEach(btn => {
+  btn.addEventListener("click", ()=> closeModal(btn.dataset.modal));
 });
 </script>
 
