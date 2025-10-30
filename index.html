@@ -644,20 +644,24 @@
              const sortedClasses = [...allClassCache].sort((a, b) => a.name.localeCompare(b.name));
              sortedClasses.forEach(c => {
                  const el = document.createElement('div'); el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentClassId === c.id ? 'bg-blue-50 border-blue-300' : ''}`; el.dataset.id = c.id;
-                 el.innerHTML = `
-                     <div class="flex justify-between items-center">
-                         <span class="font-medium text-gray-800">${c.name}</span>
-                         <div class="flex items-center space-x-2">
-                             <button class="edit-class-btn icon-btn edit" data-id="${c.id}" title="Edit Class"><i class="fas fa-pencil-alt fa-xs"></i></button>
-                             <button class="delete-class-btn icon-btn" data-id="${c.id}" title="Delete Class"><i class="fas fa-times fa-sm"></i></button>
-                         </div>
-                     </div>
-                     <p class="text-sm text-gray-600">${c.teacher}</p>`;
-                 el.addEventListener('click', () => selectClass(c.id, c.name));
-                 el.querySelector('.edit-class-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditClassModal(c.id); });
-                 el.querySelector('.delete-class-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteClass(c.id, c.name); });
-                 listEl.appendChild(el);
-             });
+                 
+                el.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-gray-800">${s.name}</span>
+                        <div class="flex items-center space-x-2">
+                            <button class="edit-student-btn icon-btn" title="Edit Student"><i class="fas fa-pencil-alt fa-xs"></i></button>
+                            <button class="invoice-student-btn icon-btn" title="Create Invoice"><i class="fas fa-file-invoice-dollar fa-xs text-green-600"></i></button>
+                            <button class="delete-student-btn icon-btn" title="Delete Student"><i class="fas fa-times fa-sm"></i></button>
+                        </div>
+                    </div>
+                    ${stripeSectionHtml}`; // Add the Stripe section
+                
+                el.addEventListener('click', () => selectStudent(s.id, s.name));
+                el.querySelector('.edit-student-btn').addEventListener('click', (e) => { e.stopPropagation(); openEditStudentModal(s.id); });
+                el.querySelector('.delete-student-btn').addEventListener('click', (e) => { e.stopPropagation(); handleDeleteStudent(s.id, s.name); });
+                el.querySelector('.invoice-student-btn').addEventListener('click', (e) => { e.stopPropagation(); promptInvoiceParentSelection(s.id, s.name); });
+                
+                listEl.appendChild(el);});
         }
 
         // --- UPDATED: Render Col 1 (Students) - Check stripeInfo map ---
