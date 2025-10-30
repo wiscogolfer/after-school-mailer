@@ -1,91 +1,93 @@
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import { Resend } from 'resend';
+import express from "express";
+import cors from "cors";
+import "dotenv/config";
+import { Resend } from "resend";
+import admin from "firebase-admin";
+
+if (!admin.apps.length) {
+  try {
+    const svc = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "{}");
+    admin.initializeApp({ credential: admin.credential.cert(svc) });
+  } catch (e) { console.error("Firebase init failed:", e.message); }
+}
 
 const app = express();
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json());
+const allowed = new Set(["https://classesapp.state48arts.org","http://localhost:5173","http://localhost:3000","http://127.0.0.1:5173","http://127.0.0.1:3000"]);
+app.use(cors({ origin(origin, cb){ if(!origin) return cb(null,true); if(allowed.has(origin)) return cb(null,true); cb(new Error("Not allowed by CORS")); }}));
 
-// ---- CORS setup that ALLOWS the Authorization header ----
-const allowList = (process.env.ALLOWED_ORIGIN || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
+app.get("/", (_req,res)=>res.json({ok:true}));
 
-const corsOptionsDelegate = (req, cb) => {
-  const origin = req.header('Origin');
-  const isAllowed = allowList.length === 0 || allowList.includes(origin);
-  console.log(`[CORS] Origin: ${origin} -> ${isAllowed ? 'allowed' : 'blocked'}`);
-  cb(null, {
-    origin: isAllowed,
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'], // <-- allow Authorization
-    maxAge: 86400
-  });
-};
-
-// Log requests for visibility
-app.use((req, _res, next) => {
-  console.log(`[REQ] ${req.method} ${req.url} from ${req.header('Origin') || 'no-origin'}`);
-  next();
-});
-
-// Explicit preflight and global cors with Authorization allowed
-app.options('/send-email', cors(corsOptionsDelegate));
-app.use(cors(corsOptionsDelegate));
-
-// ---- Resend ----
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.FROM_ADDRESS || 'noreply@example.com';
-
-app.get('/', (_req, res) => res.send('Resend mailer OK'));
-
-app.post('/send-email', cors(corsOptionsDelegate), async (req, res) => {
-  try {
-    const { to, bcc, subject, text, html, replyTo } = req.body || {};
-    console.log('[SEND] Payload summary:', {
-      hasTo: !!to,
-      bccCount: Array.isArray(bcc) ? bcc.length : 0,
-      subject: !!subject,
-      textLen: text?.length || 0,
-      htmlLen: html?.length || 0,
-      replyTo
-    });
-
-    if (!subject || !(text || html)) {
-      return res.status(400).json({ error: 'subject and text/html are required' });
-    }
-    if (!to && (!bcc || !Array.isArray(bcc) || bcc.length === 0)) {
-      return res.status(400).json({ error: 'Provide either "to" or non-empty "bcc" array' });
-    }
-
-    const msg = {
-      from: FROM,
-      to: to ? [to] : undefined,
-      bcc: bcc && bcc.length ? bcc : undefined,
-      subject,
-      text: text || undefined,
-      html: html || undefined,
-      reply_to: replyTo?.email
-        ? (replyTo.name ? `${replyTo.name} <${replyTo.email}>` : replyTo.email)
-        : undefined
-    };
-
-    const { data, error } = await resend.emails.send(msg);
-    if (error) {
-      console.error('[SEND][Resend error]', error);
-      return res.status(502).json({ error: error.message || 'Resend send failed' });
-    }
-    console.log('[SEND] Success:', data);
-    return res.json({ id: data?.id || 'ok' });
-  } catch (err) {
-    console.error('[SEND][Server error]', err);
-    return res.status(500).json({ error: 'Server error' });
-  }
+app.post("/send-email", async (req,res)=>{
+  try{
+    const { to, bcc, subject, text, replyTo } = req.body || {};
+    if ((!to && (!bcc || !bcc.length)) || !subject || !text) return res.status(400).json({ error: "Missing to/bcc, subject, or text" });
+    const fromAddress = process.env.FROM_EMAIL || "contact@state48theatre.com";
+    const payload = { from: fromAddress, to: to ? [to] : ["undisclosed-recipients:;"], subject, text };
+    if (Array.isArray(bcc) && bcc.length) payload.bcc = bcc;
+    if (replyTo?.email) payload.reply_to = replyTo.name ? `${replyTo.name} <${replyTo.email}>` : replyTo.email;
+    const result = await resend.emails.send(payload);
+    if (result.error) return res.status(500).json({ error: String(result.error) });
+    res.json({ ok:true, id: result.id || null });
+  }catch(err){ res.status(500).json({ error: err.message }); }
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`Mailer listening on :${port}`);
-  console.log('Allowed origins:', allowList.length ? allowList : '(any)');
+const verifyBearer = async (req)=>{
+  const h=req.get("Authorization")||""; const t=h.startsWith("Bearer ")?h.slice(7):null;
+  if(!t) throw new Error("Missing bearer token");
+  return await admin.auth().verifyIdToken(t);
+};
+const requireAdmin = async (req)=>{ const dec=await verifyBearer(req); if(!dec.admin) throw new Error("Admin privileges required"); return dec; };
+
+app.get("/list-users", async (req,res)=>{
+  try{
+    await requireAdmin(req);
+    const users=[]; let token=undefined;
+    do{ const page=await admin.auth().listUsers(1000, token); page.users.forEach(u=>users.push({uid:u.uid,email:u.email||null,displayName:u.displayName||null,isAdmin:!!(u.customClaims&&u.customClaims.admin)})); token=page.pageToken; }while(token);
+    res.json({ users });
+  }catch(err){ res.status(401).json({ error: err.message }); }
 });
+
+app.post("/create-user", async (req,res)=>{
+  try{
+    await requireAdmin(req);
+    const { name, email, password } = req.body || {};
+    if(!name||!email||!password) return res.status(400).json({ error: "name, email, password required" });
+    const user=await admin.auth().createUser({ email, password, displayName: name });
+    res.json({ ok:true, uid:user.uid, email:user.email, displayName:user.displayName });
+  }catch(err){ res.status(400).json({ error: err.message }); }
+});
+
+app.post("/delete-user", async (req,res)=>{
+  try{
+    await requireAdmin(req);
+    const { uid } = req.body || {};
+    if(!uid) return res.status(400).json({ error: "uid required" });
+    await admin.auth().deleteUser(uid);
+    res.json({ ok:true });
+  }catch(err){ res.status(400).json({ error: err.message }); }
+});
+
+app.post("/set-admin", async (req,res)=>{
+  try{
+    await requireAdmin(req);
+    const { uidToMakeAdmin } = req.body || {};
+    if(!uidToMakeAdmin) return res.status(400).json({ error: "uidToMakeAdmin required" });
+    await admin.auth().setCustomUserClaims(uidToMakeAdmin, { admin: true });
+    res.json({ ok:true });
+  }catch(err){ res.status(400).json({ error: err.message }); }
+});
+
+app.post("/update-user-name", async (req,res)=>{
+  try{
+    await requireAdmin(req);
+    const { uid, newName } = req.body || {};
+    if(!uid||!newName) return res.status(400).json({ error: "uid and newName required" });
+    await admin.auth().updateUser(uid, { displayName: newName });
+    res.json({ ok:true });
+  }catch(err){ res.status(400).json({ error: err.message }); }
+});
+
+const port = process.env.PORT || 8080;
+app.listen(port, ()=>console.log("Listening on", port));
