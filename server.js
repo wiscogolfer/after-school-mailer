@@ -17,6 +17,9 @@ import Stripe from "stripe";
 import bodyParser from "body-parser";
 
 // ---------- Firebase Admin init ----------
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+
 function getServiceAccountFromEnv() {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "";
   if (!raw) return null;
@@ -26,15 +29,28 @@ function getServiceAccountFromEnv() {
 }
 
 const svc = getServiceAccountFromEnv();
+
+let db; // <<< important
+
 if (!getApps().length) {
   if (!svc?.project_id) {
     console.error('Firebase init failed: Service account object must contain a string "project_id" property.');
   } else {
-    initializeApp({ credential: cert(svc), projectId: svc.project_id });
+    initializeApp({
+      credential: cert(svc),
+      projectId: svc.project_id
+    });
     console.log("Firebase Admin initialized:", svc.project_id);
   }
 }
-const db = getFirestore();
+
+// Only allow server to run if Firebase initialized
+if (getApps().length) {
+  db = getFirestore();
+} else {
+  console.error("❌ Firebase Admin failed — shutting down server");
+  process.exit(1);
+}
 
 // ---------- Express app ----------
 const app = express();
