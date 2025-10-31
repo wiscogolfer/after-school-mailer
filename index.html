@@ -2,13 +2,14 @@
 <html lang="en" class="h-full bg-gray-100">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>After-School Program Manager</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+
   <style>
     html { scroll-behavior: smooth; }
     body { font-family: 'Inter', sans-serif; }
@@ -18,6 +19,8 @@
     .scrolling-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
     .scrolling-list::-webkit-scrollbar-thumb { background: #c5c5c5; border-radius: 10px; }
     .scrolling-list::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     #app-shell { display: none; }
     .icon-btn { background: none; border: none; padding: 0.25rem; cursor: pointer; color: #9ca3af; }
     .icon-btn:hover { color: #dc2626; }
@@ -26,7 +29,10 @@
 </head>
 
 <body class="h-full flex flex-col pb-16 md:pb-0">
-  <!-- Auth -->
+  <!-- Tiny on-screen debug banner -->
+  <div id="debug" style="position:fixed;top:8px;left:8px;padding:8px 10px;background:#111;color:#fff;border-radius:6px;font:12px/1.3 monospace;z-index:99999;opacity:.9;display:none"></div>
+
+  <!-- Auth screen -->
   <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-100 p-4">
     <div class="w-full max-w-md p-8 bg-white rounded-lg shadow-xl">
       <form id="login-form">
@@ -34,15 +40,15 @@
         <div class="space-y-4">
           <div>
             <label for="login-email" class="block text-sm font-medium text-gray-700">Email address</label>
-            <input type="email" id="login-email" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"/>
+            <input type="email" id="login-email" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
           </div>
           <div>
             <label for="login-password" class="block text-sm font-medium text-gray-700">Password</label>
-            <input type="password" id="login-password" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"/>
+            <input type="password" id="login-password" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
           </div>
         </div>
         <div class="mt-6">
-          <button id="login-btn" type="submit" class="w-full flex justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+          <button id="login-btn" type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
             Sign In
           </button>
         </div>
@@ -51,18 +57,17 @@
     </div>
   </div>
 
-  <!-- Toast -->
-  <div id="toast" class="fixed top-5 right-5 z-70 hidden items-center w-full max-w-xs p-4 text-gray-700 bg-white rounded-lg shadow">
-    <div id="toast-icon" class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-600 bg-green-100 rounded-lg"></div>
-    <div id="toast-message" class="ml-3 text-sm font-normal"></div>
-  </div>
-
-  <!-- App -->
   <div id="app-shell" class="h-full flex flex-col">
+    <div id="toast" class="fixed top-5 right-5 z-70 hidden items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-lg shadow" role="alert">
+      <div id="toast-icon" class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg"></div>
+      <div id="toast-message" class="ml-3 text-sm font-normal">Item moved successfully.</div>
+    </div>
+
+    <!-- Header -->
     <div class="bg-gray-800 p-2 text-white">
       <div class="container mx-auto flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
         <div class="flex items-center space-x-3">
-          <img src="https://state48arts.org/wp-content/uploads/2025/05/cropped-8459414c-5a7e-4a6b-b582-2f92ab56bc79-2-1-279x300.png" alt="Logo" class="h-10 w-10 rounded-full flex-shrink-0"/>
+          <img src="https://state48arts.org/wp-content/uploads/2025/05/cropped-8459414c-5a7e-4a6b-b582-2f92ab56bc79-2-1-279x300.png" alt="Logo" class="h-10 w-10 rounded-full flex-shrink-0">
           <h1 class="text-lg font-semibold whitespace-nowrap">State 48 After School Class Management</h1>
         </div>
         <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 self-end sm:self-center">
@@ -79,7 +84,7 @@
       </div>
     </div>
 
-    <!-- Top controls -->
+    <!-- Content -->
     <div class="flex-1 container mx-auto p-4 h-full">
       <div class="mb-4 flex justify-between items-center">
         <div class="flex p-1 bg-gray-200 rounded-lg">
@@ -91,18 +96,19 @@
         </button>
       </div>
 
-      <!-- 3-column grid -->
       <div id="main-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
-        <!-- Col 1: Classes / Students -->
+        <!-- Col 1 -->
         <section id="col-1-section" class="bg-white p-4 rounded-lg shadow-lg flex flex-col h-full md:flex">
           <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
             <h2 id="col-1-title" class="text-2xl font-bold text-gray-800">Classes</h2>
-            <button id="col-1-add-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">Add Class</button>
+            <button id="col-1-add-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">
+              Add Class
+            </button>
           </div>
           <div id="col-1-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0 pb-16 md:pb-0"></div>
         </section>
 
-        <!-- Col 2: Students of Class / Classes of Student -->
+        <!-- Col 2 -->
         <section id="col-2-section" class="bg-white p-4 rounded-lg shadow-lg flex-col h-full hidden md:flex">
           <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
             <div>
@@ -110,14 +116,18 @@
               <p id="col-2-subtitle" class="text-sm text-gray-500">Select a class</p>
             </div>
             <div id="col-2-btn-group" class="flex gap-2">
-              <button id="add-existing-student-btn" class="bg-gray-200 text-gray-800 px-3 py-2 rounded-lg font-medium hover:bg-gray-300 transition text-sm" disabled>Add Existing</button>
-              <button id="add-new-student-btn" class="bg-blue-600 text-white px-3 py-2 rounded-lg font-medium hover:bg-blue-700 transition text-sm" disabled>Add New</button>
+              <button id="add-existing-student-btn" class="bg-gray-200 text-gray-800 px-3 py-2 rounded-lg font-medium hover:bg-gray-300 transition text-sm" disabled>
+                Add Existing
+              </button>
+              <button id="add-new-student-btn" class="bg-blue-600 text-white px-3 py-2 rounded-lg font-medium hover:bg-blue-700 transition text-sm" disabled>
+                Add New
+              </button>
             </div>
           </div>
           <div id="col-2-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0 pb-16 md:pb-0"></div>
         </section>
 
-        <!-- Col 3: Parents/Contacts + STRIPE MAPPING (moved here) -->
+        <!-- Col 3 -->
         <section id="col-3-section" class="bg-white p-4 rounded-lg shadow-lg flex-col h-full hidden md:flex">
           <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
             <div>
@@ -128,361 +138,214 @@
               Add Contact
             </button>
           </div>
-
-          <!-- STRIPE SECTION: visible when a student is selected -->
-          <div id="stripe-panel" class="mb-4 p-4 border rounded-lg bg-gray-50 hidden">
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="font-semibold text-gray-800">Stripe Mapping & Billing</h3>
-              <span id="stripe-student-name" class="text-sm text-gray-500"></span>
-            </div>
-
-            <!-- Org tabs -->
-            <div class="flex gap-2 mb-3">
-              <button data-org="State-48-Dance" class="org-tab px-3 py-1.5 rounded-md text-sm bg-white border">State-48-Dance</button>
-              <button data-org="State-48-Theatre" class="org-tab px-3 py-1.5 rounded-md text-sm bg-white border">State-48-Theatre</button>
-            </div>
-
-            <!-- Current mapping -->
-            <div class="text-sm mb-2">
-              <div>Mapped customer (Dance): <span id="mapped-dance" class="font-mono text-gray-800">—</span></div>
-              <div>Mapped customer (Theatre): <span id="mapped-theatre" class="font-mono text-gray-800">—</span></div>
-            </div>
-
-            <!-- Search + results -->
-            <div class="mt-3">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Search customers (email or name)</label>
-              <div class="flex gap-2">
-                <input id="stripe-search-input" type="text" class="flex-1 border rounded-md p-2 text-sm" placeholder="e.g. parent@email.com"/>
-                <button id="stripe-search-btn" class="px-3 py-2 bg-blue-600 text-white rounded-md text-sm">Search</button>
-              </div>
-              <p id="stripe-search-status" class="text-xs text-gray-600 mt-1 h-4"></p>
-              <div id="stripe-results" class="mt-2 space-y-2 max-h-40 overflow-auto"></div>
-            </div>
-
-            <!-- Quick create invoice -->
-            <div class="mt-4 border-t pt-3">
-              <h4 class="font-medium text-gray-800 mb-2">Create Invoice</h4>
-              <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
-                <select id="invoice-org" class="border rounded-md p-2 text-sm sm:col-span-2">
-                  <option value="State-48-Dance">State-48-Dance</option>
-                  <option value="State-48-Theatre">State-48-Theatre</option>
-                </select>
-                <input id="invoice-amount" type="number" min="0.01" step="0.01" placeholder="Amount (e.g., 25.00)" class="border rounded-md p-2 text-sm sm:col-span-1"/>
-                <input id="invoice-desc" type="text" placeholder="Description" class="border rounded-md p-2 text-sm sm:col-span-2"/>
-              </div>
-              <div class="mt-2">
-                <button id="create-invoice-btn" class="px-3 py-2 bg-green-600 text-white rounded-md text-sm">Create & Send</button>
-                <span id="invoice-status" class="text-xs text-gray-600 ml-2"></span>
-              </div>
-            </div>
-
-            <!-- History -->
-            <div class="mt-4 border-t pt-3">
-              <div class="flex items-center justify-between">
-                <h4 class="font-medium text-gray-800">Billing History</h4>
-                <select id="history-org" class="border rounded-md p-1.5 text-sm">
-                  <option value="State-48-Dance">State-48-Dance</option>
-                  <option value="State-48-Theatre">State-48-Theatre</option>
-                </select>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                <div>
-                  <h5 class="text-sm font-semibold text-gray-700 mb-1">Invoices</h5>
-                  <div id="invoice-list" class="text-sm max-h-40 overflow-auto space-y-2 border rounded-md p-2 bg-white"></div>
-                </div>
-                <div>
-                  <h5 class="text-sm font-semibold text-gray-700 mb-1">Subscriptions</h5>
-                  <div id="subs-list" class="text-sm max-h-40 overflow-auto space-y-2 border rounded-md p-2 bg-white"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Contacts list -->
           <div id="contact-list" class="scrolling-list flex-1 overflow-y-auto space-y-2 min-h-0 pb-16 md:pb-0"></div>
-<!-- === Stripe panel (inserted) === -->
-<hr class="my-6">
-
-<div id="stripe-panel" class="space-y-4">
-  <div class="flex items-center justify-between">
-    <h3 class="text-lg font-semibold text-gray-800">Billing (Stripe)</h3>
-    <span id="stripe-status" class="text-xs text-gray-500"></span>
-  </div>
-
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Organization</label>
-      <select id="stripe-org" class="mt-1 w-full border border-gray-300 rounded-md p-2">
-        <option value="State-48-Dance">Halle Dance</option>
-        <option value="State-48-Theatre">State 48 Theatre</option>
-      </select>
-    </div>
-    <div class="sm:col-span-2">
-      <label class="block text-sm font-medium text-gray-700">Mapped Customer</label>
-      <div class="mt-1 flex items-center gap-2">
-        <span id="stripe-mapped-display" class="text-sm text-gray-700">—</span>
-        <button id="stripe-clear-mapping" class="text-xs text-red-600 hover:underline hidden">Clear</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-    <div class="sm:col-span-2">
-      <label class="block text-sm font-medium text-gray-700">Search Customer (email or name)</label>
-      <div class="mt-1 flex gap-2">
-        <input id="stripe-search-q" class="flex-1 border border-gray-300 rounded-md p-2" placeholder="e.g. parent@email.com">
-        <button id="stripe-search-btn" class="bg-gray-800 text-white px-3 py-2 rounded-md text-sm">Search</button>
-      </div>
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Actions</label>
-      <button id="stripe-map-selected" class="mt-1 w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm disabled:opacity-50" disabled>
-        Map Selected → Student
-      </button>
-    </div>
-  </div>
-
-  <div id="stripe-search-results" class="border border-gray-200 rounded-md p-2 hidden">
-    <p class="text-xs text-gray-500 mb-2">Search Results (pick one):</p>
-    <div id="stripe-search-list" class="space-y-1"></div>
-  </div>
-
-  <div class="rounded-lg border border-gray-200 p-4">
-    <h4 class="font-medium text-gray-800 mb-3">Create Invoice</h4>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Amount (USD)</label>
-        <input id="invoice-amount" type="number" step="0.01" min="0.01" class="mt-1 w-full border border-gray-300 rounded-md p-2" placeholder="25.00">
-      </div>
-      <div class="sm:col-span-2">
-        <label class="block text-sm font-medium text-gray-700">Description</label>
-        <input id="invoice-description" class="mt-1 w-full border border-gray-300 rounded-md p-2" placeholder="October Class Fee">
-      </div>
-    </div>
-    <div class="mt-3 flex justify-end">
-      <button id="create-invoice-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm disabled:opacity-50" disabled>
-        Create & Send Invoice
-      </button>
-    </div>
-    <p id="invoice-status" class="text-xs text-gray-500 mt-2"></p>
-  </div>
-
-  <div class="rounded-lg border border-gray-200 p-4">
-    <div class="flex items-center justify-between">
-      <h4 class="font-medium text-gray-800">Invoice History</h4>
-      <button id="refresh-history-btn" class="text-sm text-gray-700 hover:underline">Refresh</button>
-    </div>
-    <div id="stripe-history" class="mt-2 text-sm text-gray-700">
-      <p class="text-gray-500">No data yet.</p>
-    </div>
-  </div>
-</div>
-<!-- === /Stripe panel (inserted) === -->
-
         </section>
       </div>
     </div>
 
-    <!-- Bottom Nav (mobile) -->
+    <!-- Bottom nav (mobile) -->
     <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white shadow-inner p-2 border-t border-gray-200">
       <div class="flex justify-around">
         <button id="nav-col-1" class="flex flex-col items-center p-2 text-blue-600" data-col="col-1-section">
-          <i class="fa-solid fa-layer-group w-6 h-6"></i>
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg>
           <span id="nav-col-1-title" class="text-xs">Classes</span>
         </button>
         <button id="nav-col-2" class="flex flex-col items-center p-2 text-gray-500" data-col="col-2-section">
-          <i class="fa-solid fa-user-graduate w-6 h-6"></i>
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0115 11h2a1 1 0 01.998 1.084A6.958 6.958 0 0118 16a1 1 0 01-1 1h-4.07zM6 11a5 5 0 015 5v1a1 1 0 01-1 1H1a1 1 0 01-1-1v-1a5 5 0 015-5z"></path></svg>
           <span id="nav-col-2-title" class="text-xs">Students</span>
         </button>
         <button id="nav-contacts" class="flex flex-col items-center p-2 text-gray-500" data-col="col-3-section">
-          <i class="fa-solid fa-people-roof w-6 h-6"></i>
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C6.477 18 2 13.523 2 8V3z"></path></svg>
           <span class="text-xs">Contacts</span>
         </button>
       </div>
     </nav>
   </div>
 
-  <!-- Modals -->
-  <!-- Add/Edit Class -->
+  <!-- Add Class Modal -->
   <div id="add-class-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
     <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Add New Class</h3>
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Add New Class</h3>
         <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="add-class-modal">&times;</button>
       </div>
       <form id="add-class-form">
         <div class="space-y-4">
           <div>
             <label for="class-name" class="block text-sm font-medium text-gray-700">Class Name</label>
-            <input type="text" id="class-name" class="mt-1 block w-full border rounded-md p-2" required/>
+            <input type="text" id="class-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
           </div>
           <div>
             <label for="teacher-name" class="block text-sm font-medium text-gray-700">Teacher Name</label>
-            <input type="text" id="teacher-name" class="mt-1 block w-full border rounded-md p-2" required/>
+            <input type="text" id="teacher-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
           </div>
         </div>
         <div class="mt-6 flex justify-end gap-3">
-          <button type="button" class="close-modal-btn bg-white border px-4 py-2 rounded-lg hover:bg-gray-50" data-modal="add-class-modal">Cancel</button>
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Save Class</button>
+          <button type="button" class="close-modal-btn bg-white border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" data-modal="add-class-modal">Cancel</button>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">Save Class</button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- Edit Class Modal -->
   <div id="edit-class-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
     <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Edit Class</h3>
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Edit Class</h3>
         <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="edit-class-modal">&times;</button>
       </div>
       <form id="edit-class-form">
-        <input type="hidden" id="edit-class-id"/>
+        <input type="hidden" id="edit-class-id">
         <div class="space-y-4">
           <div>
             <label for="edit-class-name" class="block text-sm font-medium text-gray-700">Class Name</label>
-            <input type="text" id="edit-class-name" class="mt-1 block w-full border rounded-md p-2" required/>
+            <input type="text" id="edit-class-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
           </div>
           <div>
             <label for="edit-teacher-name" class="block text-sm font-medium text-gray-700">Teacher Name</label>
-            <input type="text" id="edit-teacher-name" class="mt-1 block w-full border rounded-md p-2" required/>
+            <input type="text" id="edit-teacher-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
           </div>
         </div>
         <div class="mt-6 flex justify-end gap-3">
-          <button type="button" class="close-modal-btn bg-white border px-4 py-2 rounded-lg hover:bg-gray-50" data-modal="edit-class-modal">Cancel</button>
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Update Class</button>
+          <button type="button" class="close-modal-btn bg-white border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" data-modal="edit-class-modal">Cancel</button>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">Update Class</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Add/Edit Student -->
+  <!-- Add New Student Modal -->
   <div id="add-new-student-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
     <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Add New Student</h3>
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Add New Student</h3>
         <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="add-new-student-modal">&times;</button>
       </div>
       <form id="add-new-student-form">
         <div>
           <label for="new-student-name" class="block text-sm font-medium text-gray-700">Student Name</label>
-          <input type="text" id="new-student-name" class="mt-1 block w-full border rounded-md p-2" required/>
+          <input type="text" id="new-student-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
         </div>
         <div class="mt-6 flex justify-end gap-3">
-          <button type="button" class="close-modal-btn bg-white border px-4 py-2 rounded-lg hover:bg-gray-50" data-modal="add-new-student-modal">Cancel</button>
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Save Student</button>
+          <button type="button" class="close-modal-btn bg-white border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" data-modal="add-new-student-modal">Cancel</button>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">Save Student</button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- Edit Student Modal -->
   <div id="edit-student-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
     <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Edit Student</h3>
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Edit Student</h3>
         <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="edit-student-modal">&times;</button>
       </div>
       <form id="edit-student-form">
-        <input type="hidden" id="edit-student-id"/>
+        <input type="hidden" id="edit-student-id">
         <div>
           <label for="edit-student-name" class="block text-sm font-medium text-gray-700">Student Name</label>
-          <input type="text" id="edit-student-name" class="mt-1 block w-full border rounded-md p-2" required/>
+          <input type="text" id="edit-student-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
         </div>
         <div class="mt-6 flex justify-end gap-3">
-          <button type="button" class="close-modal-btn bg-white border px-4 py-2 rounded-lg hover:bg-gray-50" data-modal="edit-student-modal">Cancel</button>
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Update Student</button>
+          <button type="button" class="close-modal-btn bg-white border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" data-modal="edit-student-modal">Cancel</button>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">Update Student</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Add/Edit Existing Student to Class -->
+  <!-- Add Existing Student Modal -->
   <div id="add-existing-student-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
     <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Add Existing Student</h3>
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Add Existing Student</h3>
         <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="add-existing-student-modal">&times;</button>
       </div>
       <p id="add-existing-student-subtitle" class="text-sm text-gray-600 mb-4">Adding to class: <span class="font-medium"></span></p>
       <form id="add-existing-student-form">
         <div>
           <label for="existing-student-select" class="block text-sm font-medium text-gray-700">Select Student</label>
-          <select id="existing-student-select" class="mt-1 block w-full border rounded-md p-2" required>
+          <select id="existing-student-select" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
             <option value="">Loading students...</option>
           </select>
         </div>
         <div class="mt-6 flex justify-end gap-3">
-          <button type="button" class="close-modal-btn bg-white border px-4 py-2 rounded-lg hover:bg-gray-50" data-modal="add-existing-student-modal">Cancel</button>
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Add to Class</button>
+          <button type="button" class="close-modal-btn bg-white border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" data-modal="add-existing-student-modal">Cancel</button>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">Add to Class</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Add/Edit Contact -->
+  <!-- Add Contact Modal -->
   <div id="add-contact-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
     <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Add New Contact</h3>
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Add New Contact</h3>
         <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="add-contact-modal">&times;</button>
       </div>
+      <p id="add-contact-subtitle" class="text-sm text-gray-600 mb-4">Adding contact for: <span class="font-medium"></span></p>
       <form id="add-contact-form">
         <div class="space-y-4">
           <div>
             <label for="contact-name" class="block text-sm font-medium text-gray-700">Contact Name</label>
-            <input type="text" id="contact-name" class="mt-1 block w-full border rounded-md p-2" required/>
+            <input type="text" id="contact-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
           </div>
           <div>
             <label for="contact-email" class="block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" id="contact-email" class="mt-1 block w-full border rounded-md p-2" required/>
+            <input type="email" id="contact-email" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
           </div>
           <div>
             <label for="contact-phone" class="block text-sm font-medium text-gray-700">Phone</label>
-            <input type="tel" id="contact-phone" class="mt-1 block w-full border rounded-md p-2"/>
+            <input type="tel" id="contact-phone" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
           </div>
         </div>
         <div class="mt-6 flex justify-end gap-3">
-          <button type="button" class="close-modal-btn bg-white border px-4 py-2 rounded-lg hover:bg-gray-50" data-modal="add-contact-modal">Cancel</button>
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Save Contact</button>
+          <button type="button" class="close-modal-btn bg-white border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" data-modal="add-contact-modal">Cancel</button>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">Save Contact</button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- Edit Contact Modal -->
   <div id="edit-contact-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
-    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+    <div class="relative top-20 mx-auto p-5 border w/full max-w-md shadow-lg rounded-md bg-white">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Edit Contact</h3>
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Edit Contact</h3>
         <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="edit-contact-modal">&times;</button>
       </div>
       <form id="edit-contact-form">
-        <input type="hidden" id="edit-contact-id"/>
+        <input type="hidden" id="edit-contact-id">
         <div class="space-y-4">
           <div>
             <label for="edit-contact-name" class="block text-sm font-medium text-gray-700">Contact Name</label>
-            <input type="text" id="edit-contact-name" class="mt-1 block w-full border rounded-md p-2" required/>
+            <input type="text" id="edit-contact-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
           </div>
           <div>
             <label for="edit-contact-email" class="block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" id="edit-contact-email" class="mt-1 block w-full border rounded-md p-2" required/>
+            <input type="email" id="edit-contact-email" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
           </div>
           <div>
             <label for="edit-contact-phone" class="block text-sm font-medium text-gray-700">Phone</label>
-            <input type="tel" id="edit-contact-phone" class="mt-1 block w-full border rounded-md p-2"/>
+            <input type="tel" id="edit-contact-phone" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
           </div>
         </div>
         <div class="mt-6 flex justify-end gap-3">
-          <button type="button" class="close-modal-btn bg-white border px-4 py-2 rounded-lg hover:bg-gray-50" data-modal="edit-contact-modal">Cancel</button>
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Update Contact</button>
+          <button type="button" class="close-modal-btn bg-white border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" data-modal="edit-contact-modal">Cancel</button>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">Update Contact</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Email compose -->
+  <!-- Email Modal -->
   <div id="email-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
     <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Compose Email</h3>
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Compose Email</h3>
         <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="email-modal">&times;</button>
       </div>
       <form id="email-form">
@@ -490,48 +353,125 @@
         <div class="space-y-4">
           <div id="email-to-wrapper">
             <label for="email-to" class="block text-sm font-medium text-gray-700">To:</label>
-            <input type="email" id="email-to" class="mt-1 block w-full border rounded-md p-2 bg-gray-100" readonly/>
+            <input type="email" id="email-to" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100" readonly>
           </div>
           <div id="email-bcc-wrapper">
             <label for="email-bcc" class="block text-sm font-medium text-gray-700">BCC:</label>
-            <input type="text" id="email-bcc" class="mt-1 block w-full border rounded-md p-2 bg-gray-100" readonly/>
+            <input type="text" id="email-bcc" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100" readonly>
           </div>
           <div>
             <label for="email-subject" class="block text-sm font-medium text-gray-700">Subject:</label>
-            <input type="text" id="email-subject" class="mt-1 block w-full border rounded-md p-2" required/>
+            <input type="text" id="email-subject" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
           </div>
           <div>
             <label for="email-body" class="block text-sm font-medium text-gray-700">Message:</label>
-            <textarea id="email-body" rows="8" class="mt-1 block w-full border rounded-md p-2" required></textarea>
+            <textarea id="email-body" rows="8" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></textarea>
           </div>
         </div>
         <div class="mt-6 flex justify-between items-center gap-3">
           <span id="email-status" class="text-sm text-gray-500"></span>
           <div class="flex gap-3">
-            <button type="button" class="close-modal-btn bg-white border px-4 py-2 rounded-lg hover:bg-gray-50" data-modal="email-modal">Cancel</button>
-            <button type="submit" id="send-email-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Send Email</button>
+            <button type="button" class="close-modal-btn bg-white border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" data-modal="email-modal">Cancel</button>
+            <button type="submit" id="send-email-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">Send Email</button>
           </div>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- User management modal kept out for brevity: if you used it, keep your previous version -->
+  <!-- User Management Modal -->
+  <div id="user-management-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-medium leading-6 text-gray-900">Manage Users</h3>
+        <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="user-management-modal">&times;</button>
+      </div>
 
-  <!-- Firebase + App -->
+      <form id="add-user-form" class="mb-6 pb-6 border-b border-gray-200">
+        <h4 class="text-lg font-medium text-gray-800 mb-3">Add New User</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+          <div>
+            <label for="new-user-name" class="block text-sm font-medium text-gray-700">Name</label>
+            <input type="text" id="new-user-name" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+          </div>
+          <div>
+            <label for="new-user-email" class="block text-sm font-medium text-gray-700">Email</label>
+            <input type="email" id="new-user-email" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+          </div>
+          <div>
+            <label for="new-user-password" class="block text-sm font-medium text-gray-700">Password</label>
+            <input type="password" id="new-user-password" minlength="6" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+          </div>
+          <button type="submit" id="add-user-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition sm:w-auto">Add User</button>
+        </div>
+        <p id="add-user-status" class="text-xs mt-2 h-4"></p>
+      </form>
+
+      <div>
+        <h4 class="text-lg font-medium text-gray-800 mb-3">Existing Users</h4>
+        <div id="user-list" class="scrolling-list max-h-60 overflow-y-auto space-y-2 pr-2">
+          <p class="text-gray-500">Loading users...</p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button type="button" class="close-modal-btn bg-white border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" data-modal="user-management-modal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invoice Modal -->
+  <div id="invoice-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Create Invoice</h3>
+        <button class="close-modal-btn text-gray-400 hover:text-gray-600" data-modal="invoice-modal">&times;</button>
+      </div>
+      <p id="invoice-subtitle" class="text-sm text-gray-600 mb-4">Creating invoice for: <span class="font-medium"></span></p>
+      <form id="create-invoice-form">
+        <input type="hidden" id="invoice-parent-id">
+        <div class="space-y-4">
+          <div>
+            <label for="invoice-amount" class="block text-sm font-medium text-gray-700">Amount (e.g., 25.00)</label>
+            <input type="number" id="invoice-amount" step="0.01" min="0.01" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+          </div>
+          <div>
+            <label for="invoice-description" class="block text-sm font-medium text-gray-700">Description</label>
+            <input type="text" id="invoice-description" placeholder="e.g., October Class Fee" class="mt-1 block w/full border border-gray-300 rounded-md shadow-sm p-2" required>
+          </div>
+        </div>
+        <p id="invoice-status" class="text-xs mt-4 h-4"></p>
+        <div class="mt-6 flex justify-end gap-3">
+          <button type="button" class="close-modal-btn bg-white border border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" data-modal="invoice-modal">Cancel</button>
+          <button type="submit" id="create-invoice-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition">Create Invoice</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main App Script -->
   <script type="module">
-    // ====== CONFIG ======
+    // --- Updated Firebase imports (stable v10.12.4) ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import {
+      getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence,
+      signInWithEmailAndPassword, signOut, getIdToken, getIdTokenResult
+    } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
+      onSnapshot, collection, query, where, getDocs, arrayUnion, arrayRemove, writeBatch
+    } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+    // Debug banner helpers
+    const __dbg = document.getElementById('debug');
+    const __showDebug = (m) => { if (!__dbg) return; __dbg.style.display = 'block'; __dbg.textContent = String(m); };
+    window.addEventListener('error', (e) => __showDebug(`JS Error: ${e.message}`));
+    window.addEventListener('unhandledrejection', (e) => __showDebug(`Promise Rejection: ${e.reason?.message || e.reason}`));
+
+    // --- HARDCODED CONFIGURATION ---
     const HARDCODED_CONFIG = {
-      // Backend server (Render) URL
-      serverUrl: "https://after-school-mailer.onrender.com",
-
-      // Default organization context for Firestore data (NOT Stripe)
+      serverUrl: "https://after-school-mailer.onrender.com", // your Resend backend on Render
       organizationId: "State-48-Dance",
-
-      // Stripe Orgs (for mapping UI tabs)
-      stripeOrgs: ["State-48-Dance", "State-48-Theatre"],
-
-      // Firebase web config
       firebase: {
         apiKey: "AIzaSyAYDMyMAw7wf3i28C-hQ_iRZRVdMiXmaLk",
         authDomain: "dance-classes-97ad7.firebaseapp.com",
@@ -540,265 +480,532 @@
       }
     };
 
-    // ====== Imports ======
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import {
-      getAuth, onAuthStateChanged, initializeAuth, browserLocalPersistence,
-      signInWithEmailAndPassword, signOut, getIdToken, getIdTokenResult
-    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import {
-      getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
-      onSnapshot, collection, query, where, getDocs, arrayUnion, arrayRemove, writeBatch
-    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    // Firebase services
+    let db;
+    let auth;
+    let userId = null;
+    let currentUser = null;
+    let isAdmin = false;
 
-    // ====== Globals ======
-    let db, auth, currentUser = null, userId = null, isAdmin = false;
-    let currentView = "class"; // or 'student'
-    const organizationId = HARDCODED_CONFIG.organizationId;
-
-    let allClassCache = [];
-    let allStudentsCache = [];
+    // App state caches
     let currentClassId = null;
     let currentStudentId = null;
-    let contactCache = new Map();
+    let currentView = 'class'; // 'class' | 'student'
+    let allStudentsCache = [];
+    let allClassCache = [];
+    const contactCache = new Map();
+    let unsubscribeClasses = null;
+    let unsubscribeAllStudents = null;
+    let unsubscribeContacts = null;
 
-    let unsubscribeClasses = null, unsubscribeAllStudents = null, unsubscribeContacts = null;
-
-    // ====== Utils ======
-    const toast = (message, type = "success", duration = 2500) => {
-      const toastEl = document.getElementById("toast");
-      const iconEl = document.getElementById("toast-icon");
-      const msgEl  = document.getElementById("toast-message");
-      if (!toastEl) return;
-      msgEl.textContent = message;
-      if (type === "success") {
-        iconEl.innerHTML = '<i class="fa-solid fa-check"></i>';
-        iconEl.className = "inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-600 bg-green-100 rounded-lg";
-      } else {
-        iconEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
-        iconEl.className = "inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-600 bg-red-100 rounded-lg";
-      }
-      toastEl.classList.remove("hidden");
-      setTimeout(() => toastEl.classList.add("hidden"), duration);
-    };
-
-    const getClassesCol = () => collection(db, `organizations/${organizationId}/classes`);
+    // Collections
+    const organizationId = HARDCODED_CONFIG.organizationId;
+    const getClassesCol  = () => collection(db, `organizations/${organizationId}/classes`);
     const getStudentsCol = () => collection(db, `organizations/${organizationId}/students`);
     const getParentsCol  = () => collection(db, `organizations/${organizationId}/parents`);
 
-    // ====== Renderers (Col 1 & 2 basic) ======
-    const renderCol1ClassList = () => {
-      const listEl = document.getElementById("col-1-list");
-      listEl.innerHTML = "";
-      if (!allClassCache.length) {
-        listEl.innerHTML = '<p class="text-gray-500 text-center">No classes found. Add one!</p>';
-        return;
+    // Toast
+    const toast = (message, type = 'success', duration = 3000) => {
+      const toastEl = document.getElementById('toast'); if (!toastEl) return;
+      const iconEl = document.getElementById('toast-icon'); const msgEl = document.getElementById('toast-message');
+      msgEl.textContent = message;
+      toastEl.classList.remove('hidden', 'bg-green-100', 'bg-red-100'); iconEl.classList.remove('text-green-500', 'text-red-500');
+      if (type === 'success') {
+        iconEl.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>`;
+        iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg';
+      } else {
+        iconEl.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>`;
+        iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg';
       }
-      [...allClassCache].sort((a,b)=>a.name.localeCompare(b.name)).forEach(c=>{
-        const el = document.createElement("div");
+      toastEl.classList.remove('hidden'); setTimeout(() => toastEl.classList.add('hidden'), duration);
+    };
+
+    // Modal helpers
+    const openModal  = (id) => document.getElementById(id)?.classList.add('flex');
+    const closeModal = (id) => document.getElementById(id)?.classList.remove('flex');
+
+    // View renderers
+    const resetCol2 = () => {
+      document.getElementById('col-2-subtitle').textContent = currentView === 'class' ? 'Select a class' : 'Select a student';
+      document.getElementById('col-2-list').innerHTML = '';
+      if (currentView === 'class') {
+        document.getElementById('add-new-student-btn').disabled = true;
+        document.getElementById('add-existing-student-btn').disabled = true;
+      }
+    };
+    const resetCol3 = () => {
+      document.getElementById('contact-student-subtitle').textContent = 'Select a student';
+      document.getElementById('contact-list').innerHTML = '';
+      document.getElementById('add-contact-btn').disabled = true;
+    };
+
+    const renderViewByClass = () => {
+      currentView = 'class';
+      document.getElementById('col-1-title').textContent = 'Classes';
+      document.getElementById('col-1-add-btn').textContent = 'Add Class';
+      document.getElementById('col-2-title').textContent = 'Students';
+      document.getElementById('col-2-btn-group').classList.remove('hidden');
+      document.getElementById('email-class-btn').classList.remove('hidden');
+      document.getElementById('nav-col-1-title').textContent = 'Classes';
+      document.getElementById('nav-col-2-title').textContent = 'Students';
+      document.getElementById('view-by-class').classList.add('bg-white','text-blue-700','shadow-sm');
+      document.getElementById('view-by-student').classList.remove('bg-white','text-blue-700','shadow-sm');
+      currentClassId = null; currentStudentId = null; resetCol2(); resetCol3(); renderCol1ClassList();
+    };
+
+    const renderViewByStudent = () => {
+      currentView = 'student';
+      document.getElementById('col-1-title').textContent = 'All Students';
+      document.getElementById('col-1-add-btn').textContent = 'Add Student';
+      document.getElementById('col-2-title').textContent = 'Enrolled In';
+      document.getElementById('col-2-btn-group').classList.add('hidden');
+      document.getElementById('email-class-btn').classList.add('hidden');
+      document.getElementById('nav-col-1-title').textContent = 'Students';
+      document.getElementById('nav-col-2-title').textContent = 'Classes';
+      document.getElementById('view-by-student').classList.add('bg-white','text-blue-700','shadow-sm');
+      document.getElementById('view-by-class').classList.remove('bg-white','text-blue-700','shadow-sm');
+      currentClassId = null; currentStudentId = null; resetCol2(); resetCol3(); renderCol1StudentList();
+    };
+
+    const renderCol1ClassList = () => {
+      const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
+      if (allClassCache.length === 0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No classes found. Add one!</p>'; return; }
+      const sorted = [...allClassCache].sort((a,b)=>a.name.localeCompare(b.name));
+      sorted.forEach(c=>{
+        const el = document.createElement('div');
         el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentClassId===c.id?'bg-blue-50 border-blue-300':''}`;
         el.dataset.id = c.id;
         el.innerHTML = `
           <div class="flex justify-between items-center">
             <span class="font-medium text-gray-800">${c.name}</span>
             <div class="flex items-center space-x-2">
-              <button class="edit-class-btn icon-btn edit" title="Edit"><i class="fa-solid fa-pen fa-xs"></i></button>
-              <button class="delete-class-btn icon-btn" title="Delete"><i class="fa-solid fa-xmark fa-sm"></i></button>
+              <button class="edit-class-btn icon-btn edit" data-id="${c.id}" title="Edit Class"><i class="fas fa-pencil-alt fa-xs"></i></button>
+              <button class="delete-class-btn icon-btn" data-id="${c.id}" title="Delete Class"><i class="fas fa-times fa-sm"></i></button>
             </div>
           </div>
-          <p class="text-sm text-gray-600">${c.teacher}</p>
-        `;
-        el.addEventListener("click", ()=>selectClass(c.id, c.name));
-        el.querySelector(".edit-class-btn").addEventListener("click", (e)=>{e.stopPropagation();openEditClassModal(c.id);});
-        el.querySelector(".delete-class-btn").addEventListener("click", (e)=>{e.stopPropagation();handleDeleteClass(c.id,c.name);});
+          <p class="text-sm text-gray-600">${c.teacher}</p>`;
+        el.addEventListener('click', ()=>selectClass(c.id, c.name));
+        el.querySelector('.edit-class-btn').addEventListener('click', (e)=>{ e.stopPropagation(); openEditClassModal(c.id); });
+        el.querySelector('.delete-class-btn').addEventListener('click', (e)=>{ e.stopPropagation(); handleDeleteClass(c.id, c.name); });
         listEl.appendChild(el);
       });
     };
 
     const renderCol1StudentList = () => {
-      const listEl = document.getElementById("col-1-list");
-      listEl.innerHTML = "";
-      if (!allStudentsCache.length) {
-        listEl.innerHTML = '<p class="text-gray-500 text-center">No students found. Add one!</p>';
-        return;
-      }
-      [...allStudentsCache].sort((a,b)=>a.name.localeCompare(b.name)).forEach(s=>{
-        const el = document.createElement("div");
+      const listEl = document.getElementById('col-1-list'); listEl.innerHTML='';
+      if (allStudentsCache.length===0) { listEl.innerHTML='<p class="text-gray-500 text-center">No students found. Add one!</p>'; return; }
+      const sorted = [...allStudentsCache].sort((a,b)=>a.name.localeCompare(b.name));
+      sorted.forEach(s=>{
+        const el = document.createElement('div');
         el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId===s.id?'bg-blue-50 border-blue-300':''}`;
         el.dataset.id = s.id;
         el.innerHTML = `
           <div class="flex justify-between items-center">
             <span class="font-medium text-gray-800">${s.name}</span>
             <div class="flex items-center space-x-2">
-              <button class="edit-student-btn icon-btn edit" title="Edit"><i class="fa-solid fa-pen fa-xs"></i></button>
-              <button class="delete-student-btn icon-btn" title="Delete"><i class="fa-solid fa-xmark fa-sm"></i></button>
+              <button class="edit-student-btn icon-btn edit" data-id="${s.id}" title="Edit Student"><i class="fas fa-pencil-alt fa-xs"></i></button>
+              <button class="delete-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Delete Student"><i class="fas fa-times fa-sm"></i></button>
             </div>
-          </div>
-        `;
-        el.addEventListener("click", ()=>selectStudent(s.id,s.name));
-        el.querySelector(".edit-student-btn").addEventListener("click",(e)=>{e.stopPropagation();openEditStudentModal(s.id);});
-        el.querySelector(".delete-student-btn").addEventListener("click",(e)=>{e.stopPropagation();handleDeleteStudent(s.id,s.name);});
+          </div>`;
+        el.addEventListener('click', ()=>selectStudent(s.id, s.name));
+        el.querySelector('.edit-student-btn').addEventListener('click', (e)=>{ e.stopPropagation(); openEditStudentModal(s.id); });
+        el.querySelector('.delete-student-btn').addEventListener('click', (e)=>{ e.stopPropagation(); handleDeleteStudent(s.id, s.name); });
         listEl.appendChild(el);
       });
     };
 
     const renderCol2StudentList = (classId) => {
-      const listEl = document.getElementById("col-2-list");
+      const listEl = document.getElementById('col-2-list');
       const classData = allClassCache.find(c=>c.id===classId);
-      if (!classData || !classData.students?.length) {
-        listEl.innerHTML = '<p class="text-gray-500 text-center">No students in this class.</p>'; return;
-      }
-      const students = allStudentsCache.filter(s=>classData.students.includes(s.id)).sort((a,b)=>a.name.localeCompare(b.name));
-      listEl.innerHTML = "";
+      if (!classData || !classData.students || classData.students.length===0) { listEl.innerHTML = '<p class="text-gray-500 text-center">No students in this class.</p>'; return; }
+      const ids = classData.students;
+      const students = allStudentsCache.filter(s=>ids.includes(s.id)).sort((a,b)=>a.name.localeCompare(b.name));
+      listEl.innerHTML='';
       students.forEach(s=>{
-        const el = document.createElement("div");
+        const el = document.createElement('div');
         el.className = `p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 ${currentStudentId===s.id?'bg-blue-50 border-blue-300':''}`;
         el.dataset.id = s.id;
         el.innerHTML = `
           <div class="flex justify-between items-center">
             <span class="font-medium text-gray-800">${s.name}</span>
             <div class="flex items-center space-x-2">
-              <button class="edit-student-btn icon-btn edit" title="Edit"><i class="fa-solid fa-pen fa-xs"></i></button>
-              <button class="remove-student-btn icon-btn" title="Remove from class"><i class="fa-solid fa-xmark fa-sm"></i></button>
+              <button class="edit-student-btn icon-btn edit" data-id="${s.id}" title="Edit Student"><i class="fas fa-pencil-alt fa-xs"></i></button>
+              <button class="remove-student-btn icon-btn" data-id="${s.id}" data-name="${s.name}" title="Remove from class"><i class="fas fa-times fa-sm"></i></button>
             </div>
-          </div>
-        `;
-        el.addEventListener("click", ()=>selectStudent(s.id,s.name));
-        el.querySelector(".edit-student-btn").addEventListener("click",(e)=>{e.stopPropagation();openEditStudentModal(s.id);});
-        el.querySelector(".remove-student-btn").addEventListener("click",(e)=>{e.stopPropagation();handleRemoveStudent(s.id,s.name);});
+          </div>`;
+        el.addEventListener('click', ()=>selectStudent(s.id, s.name));
+        el.querySelector('.edit-student-btn').addEventListener('click', (e)=>{ e.stopPropagation(); openEditStudentModal(s.id); });
+        el.querySelector('.remove-student-btn').addEventListener('click', (e)=>{ e.stopPropagation(); handleRemoveStudent(s.id, s.name); });
         listEl.appendChild(el);
       });
     };
 
     const renderCol2ClassList = (studentId) => {
-      const listEl = document.getElementById("col-2-list");
-      const classesForStudent = allClassCache.filter(c => c.students?.includes(studentId))
-        .sort((a,b)=>a.name.localeCompare(b.name));
-      listEl.innerHTML = classesForStudent.length
-        ? classesForStudent.map(c=>`<div class="p-3 rounded-lg border border-gray-200"><div class="font-medium">${c.name}</div><div class="text-sm text-gray-600">${c.teacher}</div></div>`).join("")
-        : '<p class="text-gray-500 text-center">Not enrolled in any classes.</p>';
+      const listEl = document.getElementById('col-2-list');
+      const classes = allClassCache.filter(c=>c.students && c.students.includes(studentId)).sort((a,b)=>a.name.localeCompare(b.name));
+      if (classes.length===0) { listEl.innerHTML='<p class="text-gray-500 text-center">Not enrolled in any classes.</p>'; return; }
+      listEl.innerHTML='';
+      classes.forEach(c=>{
+        const el = document.createElement('div');
+        el.className='p-3 rounded-lg border border-gray-200';
+        el.dataset.id = c.id;
+        el.innerHTML = `<span class="font-medium text-gray-800">${c.name}</span><p class="text-sm text-gray-600">${c.teacher}</p>`;
+        listEl.appendChild(el);
+      });
     };
 
-    // ====== Contacts & STRIPE RENDER ======
-    function showStripePanel(studentName) {
-      const panel = document.getElementById("stripe-panel");
-      const nameEl = document.getElementById("stripe-student-name");
-      nameEl.textContent = studentName ? `For: ${studentName}` : "";
-      panel.classList.remove("hidden");
-    }
-    function hideStripePanel() {
-      document.getElementById("stripe-panel").classList.add("hidden");
-      document.getElementById("stripe-results").innerHTML = "";
-      document.getElementById("stripe-search-status").textContent = "";
-      document.getElementById("invoice-status").textContent = "";
-      document.getElementById("invoice-amount").value = "";
-      document.getElementById("invoice-desc").value = "";
-    }
-    function renderContactList(contacts) {
-      const listEl = document.getElementById("contact-list");
-      listEl.innerHTML = "";
-      if (!contacts.length) {
-        listEl.innerHTML = '<p class="text-gray-500 text-center">No contacts for this student.</p>'; return;
-      }
+    const renderStudentDropdown = () => {
+      const selectEl = document.getElementById('existing-student-select');
+      if (!selectEl) { console.error("Element 'existing-student-select' not found."); return; }
+      selectEl.innerHTML = '<option value="">Select a student...</option>';
+      if (!currentClassId) return;
+      const classData = allClassCache.find(c=>c.id===currentClassId); if (!classData) return;
+      const enrolled = classData.students || [];
+      const available = allStudentsCache.filter(s=>!enrolled.includes(s.id)).sort((a,b)=>a.name.localeCompare(b.name));
+      if (available.length===0) { selectEl.innerHTML='<option value="">No other students available</option>'; return; }
+      available.forEach(s=>{ const opt=document.createElement('option'); opt.value=s.id; opt.textContent=s.name; selectEl.appendChild(opt); });
+    };
+
+    const renderContactList = (contacts) => {
+      const listEl = document.getElementById('contact-list');
+      listEl.innerHTML='';
       const sorted = [...contacts].sort((a,b)=>a.name.localeCompare(b.name));
+      if (sorted.length===0) { listEl.innerHTML='<p class="text-gray-500 text-center">No contacts for this student.</p>'; return; }
       sorted.forEach(c=>{
-        const el = document.createElement("div");
-        el.className = "p-3 rounded-lg border border-gray-200";
+        const el = document.createElement('div');
+        el.className = 'p-3 rounded-lg border border-gray-200';
         el.innerHTML = `
           <div class="flex justify-between items-start">
             <div>
               <span class="font-medium text-gray-800">${c.name}</span>
               <p class="text-sm text-gray-600">${c.email}</p>
-              <p class="text-sm text-gray-600">${c.phone||""}</p>
+              <p class="text-sm text-gray-600">${c.phone || ''}</p>
               <div class="mt-2 space-x-3">
                 <button class="email-contact-btn text-sm text-blue-600 hover:underline" data-email="${c.email}" data-name="${c.name}">Email</button>
+                <button class="invoice-contact-btn text-sm text-green-600 hover:underline" data-parent-id="${c.id}" data-parent-name="${c.name}">Invoice</button>
               </div>
             </div>
             <div class="flex items-center space-x-2 flex-shrink-0">
-              <button class="edit-contact-btn icon-btn edit" title="Edit"><i class="fa-solid fa-pen fa-xs"></i></button>
-              <button class="delete-contact-btn icon-btn" title="Delete"><i class="fa-solid fa-xmark fa-sm"></i></button>
+              <button class="edit-contact-btn icon-btn edit" data-id="${c.id}" title="Edit Contact"><i class="fas fa-pencil-alt fa-xs"></i></button>
+              <button class="delete-contact-btn icon-btn" data-id="${c.id}" data-name="${c.name}" title="Delete Contact"><i class="fas fa-times fa-sm"></i></button>
             </div>
-          </div>
-        `;
-        el.querySelector(".email-contact-btn").addEventListener("click",(e)=>{e.stopPropagation(); openEmailModal({to:c.email});});
-        el.querySelector(".edit-contact-btn").addEventListener("click",(e)=>{e.stopPropagation(); openEditContactModal(c.id);});
-        el.querySelector(".delete-contact-btn").addEventListener("click",(e)=>{e.stopPropagation(); handleDeleteContact(c.id,c.name);});
+          </div>`;
+        el.querySelector('.edit-contact-btn').addEventListener('click', (e)=>{ e.stopPropagation(); openEditContactModal(c.id); });
+        el.querySelector('.delete-contact-btn').addEventListener('click', (e)=>{ e.stopPropagation(); handleDeleteContact(c.id, c.name); });
+        el.querySelector('.email-contact-btn').addEventListener('click', (e)=>{ e.stopPropagation(); openEmailModal({ to: c.email }); });
+        el.querySelector('.invoice-contact-btn').addEventListener('click', (e)=>{ e.stopPropagation(); openInvoiceModal(c.id, c.name); });
         listEl.appendChild(el);
       });
-    }
+    };
 
-    // Keep small helper calls we need for contacts listener
-    async function fetchContactsForStudent(studentId) {
+    // Listeners to Firestore
+    const listenForClasses = () => {
+      if (unsubscribeClasses) unsubscribeClasses();
+      unsubscribeClasses = onSnapshot(getClassesCol(), (snapshot)=>{
+        allClassCache = [];
+        snapshot.forEach(d=> allClassCache.push({ id: d.id, ...d.data() }));
+        if (currentView==='class') renderCol1ClassList();
+        if (currentView==='student' && currentStudentId) renderCol2ClassList(currentStudentId);
+      }, (err)=>{ console.error("Classes listen error:", err); toast('Failed to load classes.', 'error'); });
+    };
+
+    const listenForAllStudents = () => {
+      if (unsubscribeAllStudents) unsubscribeAllStudents();
+      unsubscribeAllStudents = onSnapshot(getStudentsCol(), (snapshot)=>{
+        allStudentsCache = [];
+        snapshot.forEach(d=> allStudentsCache.push({ id: d.id, ...d.data() }));
+        if (currentView==='student') renderCol1StudentList();
+        if (currentView==='class' && currentClassId) { renderCol2StudentList(currentClassId); renderStudentDropdown(); }
+        if (currentStudentId) listenForContacts(currentStudentId);
+      }, (err)=>{ console.error("Students listen error:", err); toast('Failed to load students.', 'error'); });
+    };
+
+    const listenForContacts = (studentId) => {
+      if (unsubscribeContacts) unsubscribeContacts();
+      contactCache.clear();
+      if (!studentId) { renderContactList([]); return; }
       const studentRef = doc(getStudentsCol(), studentId);
-      const studentDoc = await getDoc(studentRef);
-      const parentIds = studentDoc.exists() ? (studentDoc.data().parents || []) : [];
-      const contacts = [];
-      for (let i=0; i<parentIds.length; i+=30) {
-        const chunk = parentIds.slice(i,i+30);
-        if (!chunk.length) continue;
-        const qy = query(getParentsCol(), where("__name__","in",chunk));
-        const snap = await getDocs(qy);
-        snap.forEach(d=>{
-          const c = { id: d.id, ...d.data() };
-          contactCache.set(d.id, c);
-          contacts.push(c);
-        });
-      }
-      return contacts;
-    }
+      unsubscribeContacts = onSnapshot(studentRef, async (studentDoc)=>{
+        if (!studentDoc.exists()) { renderContactList([]); return; }
+        const studentData = studentDoc.data();
+        const parentIds = studentData.parents || [];
+        if (parentIds.length===0) { renderContactList([]); return; }
+        try {
+          const contacts = [];
+          for (let i=0;i<parentIds.length;i+=30) {
+            const chunk = parentIds.slice(i, i+30);
+            if (!chunk.length) continue;
+            const q = query(getParentsCol(), where('__name__','in', chunk));
+            const qs = await getDocs(q);
+            qs.docs.forEach(d=>{
+              const c = { id: d.id, ...d.data() };
+              contacts.push(c);
+              contactCache.set(d.id, c);
+            });
+          }
+          renderContactList(contacts);
+        } catch (e) {
+          console.error("Fetch contacts error:", e);
+          toast('Failed to load contacts.', 'error');
+          renderContactList([]);
+        }
+      }, (err)=>{ console.error("Contacts listen error:", err); toast('Failed to load contacts.', 'error'); renderContactList([]); });
+    };
 
-    // ====== Email UI ======
-    function openEmailModal({to, bcc}) {
-      const toEl   = document.getElementById("email-to");
-      const bccEl  = document.getElementById("email-bcc");
-      const reply  = document.getElementById("reply-to-email");
-      reply.textContent = currentUser?.displayName || currentUser?.email || "Unknown";
+    // Selection
+    const selectClass = (classId, className) => {
+      currentClassId = classId; currentStudentId = null;
+      document.querySelectorAll('#col-1-list > div').forEach(el=>{
+        el.classList.toggle('bg-blue-50', el.dataset.id===classId);
+        el.classList.toggle('border-blue-300', el.dataset.id===classId);
+      });
+      document.getElementById('col-2-subtitle').textContent = `For: ${className}`;
+      document.getElementById('add-new-student-btn').disabled = false;
+      document.getElementById('add-existing-student-btn').disabled = false;
+      renderStudentDropdown();
+      renderCol2StudentList(classId);
+      resetCol3();
+      showCol('col-2-section');
+      setActiveNav('nav-col-2');
+    };
+
+    const selectStudent = (studentId, studentName) => {
+      currentStudentId = studentId;
+      document.querySelectorAll('#col-1-list > div, #col-2-list > div').forEach(el=>{
+        el.classList.toggle('bg-blue-50', el.dataset.id===studentId);
+        el.classList.toggle('border-blue-300', el.dataset.id===studentId);
+      });
+      document.getElementById('contact-student-subtitle').textContent = `For: ${studentName}`;
+      document.getElementById('add-contact-btn').disabled = false;
+      listenForContacts(studentId);
+      if (currentView==='student') {
+        document.getElementById('col-2-subtitle').textContent = `For: ${studentName}`;
+        renderCol2ClassList(studentId);
+      }
+      showCol('col-3-section');
+      setActiveNav('nav-contacts');
+      const listEl = document.getElementById('contact-list');
+      if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    // Open Edit modals
+    const openEditClassModal   = (classId) => { const c = allClassCache.find(x=>x.id===classId); if(!c){ toast('Class not found.','error'); return;} document.getElementById('edit-class-id').value = classId; document.getElementById('edit-class-name').value = c.name; document.getElementById('edit-teacher-name').value = c.teacher; openModal('edit-class-modal'); };
+    const openEditStudentModal = (studentId) => { const s = allStudentsCache.find(x=>x.id===studentId); if(!s){ toast('Student not found.','error'); return;} document.getElementById('edit-student-id').value = studentId; document.getElementById('edit-student-name').value = s.name; openModal('edit-student-modal'); };
+    const openEditContactModal = (contactId) => { const c = contactCache.get(contactId); if(!c){ toast('Contact not found.','error'); return;} document.getElementById('edit-contact-id').value = contactId; document.getElementById('edit-contact-name').value = c.name; document.getElementById('edit-contact-email').value = c.email; document.getElementById('edit-contact-phone').value = c.phone || ''; openModal('edit-contact-modal'); };
+
+    // Data Handlers
+    const handleAddClass = async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+      const name = document.getElementById('class-name').value;
+      const teacher = document.getElementById('teacher-name').value;
+      try { await addDoc(getClassesCol(), { name, teacher, students: [] }); closeModal('add-class-modal'); e.target.reset(); toast('Class added!','success'); }
+      catch(err){ console.error(err); toast(`Failed: ${err.message}`,'error'); }
+      finally { btn.disabled = false; }
+    };
+
+    const handleUpdateClass = async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+      const id = document.getElementById('edit-class-id').value;
+      const name = document.getElementById('edit-class-name').value;
+      const teacher = document.getElementById('edit-teacher-name').value;
+      if (!id || !name || !teacher) { btn.disabled=false; toast('Missing fields.','error'); return; }
+      try { await updateDoc(doc(getClassesCol(), id), { name, teacher }); closeModal('edit-class-modal'); toast('Class updated!','success'); }
+      catch(err){ console.error(err); toast(`Update failed: ${err.message}`,'error'); }
+      finally { btn.disabled = false; }
+    };
+
+    const handleDeleteClass = async (classId, className) => {
+      if (!confirm(`Delete class "${className}"?`)) return;
+      try {
+        const batch = writeBatch(db);
+        const c = allClassCache.find(x=>x.id===classId);
+        if (c?.students) {
+          const refs = c.students.map(sid=>doc(getStudentsCol(), sid));
+          const docs = await Promise.all(refs.map(getDoc));
+          docs.forEach(sd=>{ if(sd.exists()) batch.update(sd.ref, { classes: arrayRemove(classId) }); });
+        }
+        batch.delete(doc(getClassesCol(), classId));
+        await batch.commit();
+        toast('Class deleted.','success');
+        if (currentClassId===classId) { resetCol2(); resetCol3(); }
+      } catch(err) {
+        console.error(err); toast('Failed to delete class.','error');
+      }
+    };
+
+    const handleAddNewStudent = async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+      const name = document.getElementById('new-student-name').value;
+      if (!name) { btn.disabled=false; return; }
+      try {
+        const ref = await addDoc(getStudentsCol(), { name, parents: [], classes: [] });
+        if (currentView==='class' && currentClassId) {
+          const batch = writeBatch(db);
+          batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(ref.id) });
+          batch.update(ref, { classes: arrayUnion(currentClassId) });
+          await batch.commit();
+        }
+        closeModal('add-new-student-modal'); e.target.reset(); toast('Student added!','success');
+      } catch(err) {
+        console.error(err); toast('Failed to add student.','error');
+      } finally { btn.disabled=false; }
+    };
+
+    const handleUpdateStudent = async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+      const id = document.getElementById('edit-student-id').value;
+      const name = document.getElementById('edit-student-name').value;
+      if (!id || !name) { btn.disabled=false; toast('Missing name.','error'); return; }
+      try { await updateDoc(doc(getStudentsCol(), id), { name }); closeModal('edit-student-modal'); toast('Student updated!','success'); }
+      catch(err){ console.error(err); toast(`Update failed: ${err.message}`,'error'); }
+      finally { btn.disabled=false; }
+    };
+
+    const handleAddExistingStudent = async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+      const sid = document.getElementById('existing-student-select').value;
+      if (!sid || !currentClassId) { btn.disabled=false; return; }
+      try {
+        const batch = writeBatch(db);
+        batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(sid) });
+        batch.update(doc(getStudentsCol(), sid), { classes: arrayUnion(currentClassId) });
+        await batch.commit();
+        closeModal('add-existing-student-modal'); e.target.reset(); toast('Student added to class!','success');
+      } catch(err){ console.error(err); toast('Failed to add student.','error'); }
+      finally { btn.disabled=false; }
+    };
+
+    const handleRemoveStudent = async (sid, name) => {
+      if (!currentClassId || !confirm(`Remove ${name} from this class?`)) return;
+      try {
+        const batch = writeBatch(db);
+        batch.update(doc(getClassesCol(), currentClassId), { students: arrayRemove(sid) });
+        batch.update(doc(getStudentsCol(), sid), { classes: arrayRemove(currentClassId) });
+        await batch.commit();
+        toast('Student removed.','success');
+        if (currentStudentId===sid) resetCol3();
+      } catch(err){ console.error(err); toast('Failed to remove student.','error'); }
+    };
+
+    const handleDeleteStudent = async (sid, name) => {
+      if (!confirm(`PERMANENTLY DELETE ${name}? This will remove them from all classes and delete all their contacts. This cannot be undone.`)) return;
+      try {
+        const batch = writeBatch(db);
+        const sRef = doc(getStudentsCol(), sid);
+        const sSnap = await getDoc(sRef);
+        if (sSnap.exists()) {
+          const data = sSnap.data();
+          (data.parents||[]).forEach(pid => batch.delete(doc(getParentsCol(), pid)));
+          (data.classes||[]).forEach(cid => batch.update(doc(getClassesCol(), cid), { students: arrayRemove(sid) }));
+        }
+        batch.delete(sRef);
+        await batch.commit();
+        toast('Student deleted.','success');
+        if (currentStudentId===sid) { resetCol2(); resetCol3(); }
+      } catch(err){ console.error(err); toast('Failed to delete student.','error'); }
+    };
+
+    const handleAddContact = async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+      const name = document.getElementById('contact-name').value;
+      const email= document.getElementById('contact-email').value;
+      const phone= document.getElementById('contact-phone').value;
+      if (!name || !email || !currentStudentId) { btn.disabled=false; return; }
+      try {
+        const pRef = await addDoc(getParentsCol(), { name, email, phone });
+        await updateDoc(doc(getStudentsCol(), currentStudentId), { parents: arrayUnion(pRef.id) });
+        closeModal('add-contact-modal'); e.target.reset(); toast('Contact added!','success');
+      } catch(err){ console.error(err); toast('Failed to add contact.','error'); }
+      finally { btn.disabled=false; }
+    };
+
+    const handleUpdateContact = async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true;
+      const id = document.getElementById('edit-contact-id').value;
+      const name = document.getElementById('edit-contact-name').value;
+      const email= document.getElementById('edit-contact-email').value;
+      const phone= document.getElementById('edit-contact-phone').value;
+      if (!id || !name || !email) { btn.disabled=false; toast('Missing name or email.','error'); return; }
+      try { await updateDoc(doc(getParentsCol(), id), { name, email, phone }); closeModal('edit-contact-modal'); toast('Contact updated!','success'); }
+      catch(err){ console.error(err); toast(`Update failed: ${err.message}`,'error'); }
+      finally { btn.disabled=false; }
+    };
+
+    const handleDeleteContact = async (id, name) => {
+      if (!currentStudentId || !confirm(`Delete contact ${name}?`)) return;
+      try {
+        const batch = writeBatch(db);
+        batch.update(doc(getStudentsCol(), currentStudentId), { parents: arrayRemove(id) });
+        batch.delete(doc(getParentsCol(), id));
+        await batch.commit();
+        toast('Contact deleted.','success');
+      } catch(err){ console.error(err); toast('Failed to delete contact.','error'); }
+    };
+
+    // Email
+    const openEmailModal = ({ to, bcc }) => {
+      const toEl = document.getElementById('email-to');
+      const bccEl = document.getElementById('email-bcc');
+      const replyToEl = document.getElementById('reply-to-email');
+      replyToEl.textContent = currentUser?.displayName || currentUser?.email || 'Unknown';
+
       if (to) {
         toEl.value = to;
-        document.getElementById("email-to-wrapper").classList.remove("hidden");
-        bccEl.value = "";
-        document.getElementById("email-bcc-wrapper").classList.add("hidden");
-      } else if (bcc) {
-        toEl.value = "";
-        document.getElementById("email-to-wrapper").classList.add("hidden");
-        bccEl.value = `BCC: ${bcc.length} recipient(s)`;
-        document.getElementById("email-bcc-wrapper").classList.remove("hidden");
+        document.getElementById('email-to-wrapper').classList.remove('hidden');
+        bccEl.value = '';
+        document.getElementById('email-bcc-wrapper').classList.add('hidden');
       }
-      document.getElementById("email-subject").value = "";
-      document.getElementById("email-body").value = "";
-      document.getElementById("email-status").textContent = "";
-      document.getElementById("send-email-btn").disabled = false;
-      openModal("email-modal");
-    }
+      if (bcc) {
+        toEl.value = '';
+        document.getElementById('email-to-wrapper').classList.add('hidden');
+        bccEl.value = `BCC: ${bcc.length} recipient(s)`;
+        document.getElementById('email-bcc-wrapper').classList.remove('hidden');
+      }
+      document.getElementById('email-subject').value = '';
+      document.getElementById('email-body').value = '';
+      document.getElementById('email-status').textContent = '';
+      document.getElementById('send-email-btn').disabled = false;
+      openModal('email-modal');
+    };
 
-    async function handleEmailClass() {
+    const handleEmailClass = async () => {
       if (!currentClassId) return;
       const classData = allClassCache.find(c=>c.id===currentClassId);
-      if (!classData?.students?.length) { toast("No students in class.","error"); return; }
-      const studentIds = classData.students;
-      const parentIds = allStudentsCache.filter(s=>studentIds.includes(s.id)).flatMap(s=>s.parents||[]);
-      const uniqueParentIds = [...new Set(parentIds)];
-      const contacts = [];
-      for (let i=0; i<uniqueParentIds.length; i+=30) {
-        const chunk = uniqueParentIds.slice(i,i+30);
-        if (!chunk.length) continue;
-        const qy = query(getParentsCol(), where("__name__","in",chunk));
-        const snap = await getDocs(qy);
-        snap.forEach(d=>contacts.push(d.data()));
-      }
-      const bccEmails = contacts.map(c=>c.email).filter(Boolean);
-      if (!bccEmails.length) { toast("No valid emails found.","error"); return; }
-      openEmailModal({ bcc: bccEmails });
-    }
+      if (!classData?.students?.length) { toast('No students in class.','error'); return; }
+      const ids = classData.students;
+      const parentIds = allStudentsCache.filter(s=>ids.includes(s.id)).flatMap(s=>s.parents || []);
+      if (!parentIds.length) { toast('No parent contacts found.','error'); return; }
+      const unique = [...new Set(parentIds)];
+      try {
+        const contacts = [];
+        for (let i=0;i<unique.length;i+=30) {
+          const chunk = unique.slice(i,i+30); if(!chunk.length) continue;
+          const q = query(getParentsCol(), where('__name__','in', chunk));
+          const qs = await getDocs(q);
+          qs.docs.forEach(d => contacts.push(d.data()));
+        }
+        const bccEmails = contacts.map(c=>c.email).filter(Boolean);
+        if (!bccEmails.length) { toast('No valid emails found.','error'); return; }
+        openEmailModal({ bcc: bccEmails });
+      } catch(err){ console.error(err); toast('Failed to get emails.','error'); }
+    };
 
-    async function handleSendEmail(e) {
+    const handleSendEmail = async (e) => {
       e.preventDefault();
-      const btn = document.getElementById("send-email-btn");
-      const status = document.getElementById("email-status");
-      btn.disabled = true; status.textContent = "Sending...";
+      const btn = document.getElementById('send-email-btn');
+      const status = document.getElementById('email-status');
+      btn.disabled = true; status.textContent = 'Sending...';
       const serverUrl = HARDCODED_CONFIG.serverUrl;
-      const to = document.getElementById("email-to").value;
-      const bccVal = document.getElementById("email-bcc").value;
+      const toVal = document.getElementById('email-to').value;
+      const bccVal = document.getElementById('email-bcc').value;
+
       const replyToEmail = currentUser?.email || null;
       const replyToName  = currentUser?.displayName || replyToEmail;
 
@@ -806,814 +1013,416 @@
       if (bccVal) {
         try {
           const classData = allClassCache.find(c=>c.id===currentClassId);
-          const studentIds = classData.students;
-          const parentIds = allStudentsCache.filter(s=>studentIds.includes(s.id)).flatMap(s=>s.parents||[]);
-          const uniqueParentIds = [...new Set(parentIds)];
+          const ids = classData.students;
+          const parentIds = allStudentsCache.filter(s=>ids.includes(s.id)).flatMap(s=>s.parents || []);
+          const unique = [...new Set(parentIds)];
           const contacts = [];
-          for (let i=0;i<uniqueParentIds.length;i+=30){
-            const chunk = uniqueParentIds.slice(i,i+30);
-            if (!chunk.length) continue;
-            const qy = query(getParentsCol(), where("__name__","in",chunk));
-            const snap = await getDocs(qy);
-            snap.forEach(d=>contacts.push(d.data()));
+          for (let i=0;i<unique.length;i+=30) {
+            const chunk = unique.slice(i,i+30); if(!chunk.length) continue;
+            const q = query(getParentsCol(), where('__name__','in', chunk));
+            const qs = await getDocs(q);
+            qs.docs.forEach(d=> contacts.push(d.data()));
           }
           bccList = contacts.map(c=>c.email).filter(Boolean);
         } catch (err) {
-          status.textContent = "Failed.";
+          console.error("BCC build error:", err);
+          toast('Failed build BCC list','error');
+          status.textContent = 'Failed.';
           btn.disabled = false;
-          toast("Failed to build BCC list","error");
           return;
         }
       }
 
       const payload = {
-        to: to || null,
+        to: toVal || null,
         bcc: bccList,
         replyTo: { email: replyToEmail, name: replyToName },
-        subject: document.getElementById("email-subject").value,
-        text: document.getElementById("email-body").value
+        subject: document.getElementById('email-subject').value,
+        text: document.getElementById('email-body').value
       };
 
       try {
         const resp = await fetch(`${serverUrl}/send-email`, {
-          method: "POST",
-          headers: { "Content-Type":"application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         if (!resp.ok) {
-          const r = await resp.json().catch(()=>({}));
-          throw new Error(r.error || `Server ${resp.status}`);
+          let msg = `Server ${resp.status}`;
+          try { const r = await resp.json(); if (r?.error) msg = r.error; } catch {}
+          throw new Error(msg);
         }
-        status.textContent = "Sent!";
-        toast("Email sent!","success");
-        setTimeout(()=>closeModal("email-modal"), 800);
-      } catch(err) {
-        status.textContent = "Failed.";
-        toast(`Failed: ${err.message}`,"error");
+        toast('Email sent!','success');
+        status.textContent = 'Sent!';
+        setTimeout(()=> closeModal('email-modal'), 1000);
+      } catch (err) {
+        console.error("Send Email Error:", err);
+        toast(`Failed: ${err.message}`,'error');
+        status.textContent = 'Failed.';
       } finally {
         btn.disabled = false;
       }
-    }
+    };
 
-    // ====== STRIPE helpers (moved to Contacts column) ======
-    let activeStripeOrg = HARDCODED_CONFIG.stripeOrgs[0];
-
-    function wireStripeOrgTabs() {
-      document.querySelectorAll(".org-tab").forEach(btn=>{
-        btn.addEventListener("click", ()=>{
-          document.querySelectorAll(".org-tab").forEach(b=>b.classList.remove("bg-blue-600","text-white","border-blue-600"));
-          btn.classList.add("bg-blue-600","text-white","border-blue-600");
-          activeStripeOrg = btn.dataset.org;
-          // refresh history for active org
-          refreshStripeHistory(activeStripeOrg);
-        });
-      });
-      // default active
-      const first = document.querySelector(`.org-tab[data-org="${activeStripeOrg}"]`);
-      if (first) first.click();
-    }
-
-    function setMappedDisplays(studentDoc) {
-      const d = studentDoc?.stripe?.customers?.["State-48-Dance"] || "—";
-      const t = studentDoc?.stripe?.customers?.["State-48-Theatre"] || "—";
-      document.getElementById("mapped-dance").textContent = d;
-      document.getElementById("mapped-theatre").textContent = t;
-    }
-
-    async function stripeSearchCustomers() {
-      const q = (document.getElementById("stripe-search-input").value || "").trim();
-      const statusEl = document.getElementById("stripe-search-status");
-      const resultsEl = document.getElementById("stripe-results");
-      resultsEl.innerHTML = ""; statusEl.textContent = "";
-      if (!q) return;
+    // User mgmt (server endpoints assumed already implemented)
+    const openUserManagementModal = async () => { openModal('user-management-modal'); await fetchUsers(); };
+    const fetchUsers = async () => {
+      const listEl = document.getElementById('user-list');
+      listEl.innerHTML = '<p class="text-gray-500">Loading users...</p>';
+      if (!currentUser) { listEl.innerHTML='<p class="text-red-500">Not authenticated.</p>'; return; }
       try {
         const idToken = await getIdToken(currentUser);
-        statusEl.textContent = "Searching...";
-        const r = await fetch(`${HARDCODED_CONFIG.serverUrl}/stripe/search-customers?orgId=${encodeURIComponent(activeStripeOrg)}&q=${encodeURIComponent(q)}`, {
-          headers: { "Authorization": `Bearer ${idToken}` }
+        const serverUrl = HARDCODED_CONFIG.serverUrl;
+        const response = await fetch(`${serverUrl}/list-users`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${idToken}` }
         });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || `Search failed (${r.status})`);
-        statusEl.textContent = `${data.data.length} result(s)`;
-        data.data.forEach(c=>{
-          const row = document.createElement("div");
-          row.className = "flex items-center justify-between border rounded-md p-2 bg-white";
-          row.innerHTML = `
-            <div class="min-w-0">
-              <div class="font-medium truncate">${c.name || "No Name"}</div>
-              <div class="text-xs text-gray-600 truncate">${c.email || "No Email"}</div>
-              <div class="text-xs text-gray-500 font-mono">${c.id}</div>
-            </div>
-            <button class="map-btn px-3 py-1.5 bg-emerald-600 text-white rounded-md text-xs">Map to Student</button>
-          `;
-          row.querySelector(".map-btn").addEventListener("click", ()=> mapStripeCustomer(activeStripeOrg, currentStudentId, c.id));
-          resultsEl.appendChild(row);
-        });
-      } catch (e) {
-        statusEl.textContent = e.message;
-        toast(e.message, "error");
-      }
-    }
-
-    async function mapStripeCustomer(orgId, studentId, customerId) {
-      if (!studentId) { toast("Select a student first.","error"); return; }
-      try {
-        const idToken = await getIdToken(currentUser);
-        const r = await fetch(`${HARDCODED_CONFIG.serverUrl}/stripe/map-customer`,{
-          method:"POST",
-          headers:{
-            "Content-Type":"application/json",
-            "Authorization":`Bearer ${idToken}`
-          },
-          body: JSON.stringify({ orgId, studentId, customerId })
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || `Map failed (${r.status})`);
-        toast("Mapped!","success");
-        // refresh student to update mapping labels
-        if (currentStudentId) {
-          const sSnap = await getDoc(doc(getStudentsCol(), currentStudentId));
-          if (sSnap.exists()) setMappedDisplays(sSnap.data());
+        if (!response.ok) {
+          let msg = `Server ${response.status}`; try { const r = await response.json(); if (r?.error) msg = r.error; } catch {}
+          throw new Error(msg);
         }
-        refreshStripeHistory(orgId);
-      } catch (e) {
-        toast(e.message, "error");
+        const { users } = await response.json();
+        renderUserList(users);
+      } catch (err) {
+        console.error("Fetch Users Error:", err);
+        listEl.innerHTML = `<p class="text-red-500">Error: ${err.message}</p>`;
+        toast('Failed load users.','error');
       }
-    }
+    };
 
-    async function refreshStripeHistory(orgId) {
-      // needs mapped customer id from current student
-      if (!currentStudentId) return;
-      const sSnap = await getDoc(doc(getStudentsCol(), currentStudentId));
-      const student = sSnap.exists() ? sSnap.data() : null;
-      const customerId = student?.stripe?.customers?.[orgId] || null;
-      const invoiceList = document.getElementById("invoice-list");
-      const subsList    = document.getElementById("subs-list");
-      invoiceList.innerHTML = ""; subsList.innerHTML = "";
-      if (!customerId) {
-        invoiceList.innerHTML = '<div class="text-gray-500">No customer mapped.</div>';
-        subsList.innerHTML    = '<div class="text-gray-500">No customer mapped.</div>';
-        return;
-      }
-      try {
-        const idToken = await getIdToken(currentUser);
-        // invoices
-        const inv = await fetch(`${HARDCODED_CONFIG.serverUrl}/stripe/list-invoices?orgId=${encodeURIComponent(orgId)}&customerId=${encodeURIComponent(customerId)}`,{
-          headers:{ "Authorization":`Bearer ${idToken}` }
-        });
-        const invData = await inv.json();
-        if (inv.ok) {
-          invoiceList.innerHTML = invData.data.length
-            ? invData.data.map(i=>`
-              <div class="border rounded-md p-2 bg-white">
-                <div class="text-sm"><span class="font-medium">#${i.number || i.id}</span> • <span class="uppercase">${i.currency}</span> ${(i.total/100).toFixed(2)}</div>
-                <div class="text-xs text-gray-600">Status: ${i.status}</div>
-                ${i.hostedInvoiceUrl ? `<a class="text-xs text-blue-600 underline" href="${i.hostedInvoiceUrl}" target="_blank">View</a>` : ""}
-              </div>`).join("")
-            : '<div class="text-gray-500">No invoices.</div>';
-        } else {
-          invoiceList.innerHTML = `<div class="text-red-600 text-sm">Invoices error: ${invData.error||inv.status}</div>`;
+    const renderUserList = (users) => {
+      const listEl = document.getElementById('user-list'); listEl.innerHTML='';
+      if (!users || !users.length) { listEl.innerHTML = '<p class="text-gray-500 text-center">No other users found.</p>'; return; }
+      const sorted = [...users].sort((a,b)=>{
+        if (a.uid===userId) return -1;
+        if (b.uid===userId) return  1;
+        return (a.email||'').localeCompare(b.email||'');
+      });
+      sorted.forEach(user=>{
+        const el = document.createElement('div');
+        el.className='p-3 rounded-lg border border-gray-200 flex justify-between items-center gap-4';
+        let adminStatus=''; let actionButton='';
+        if (user.isAdmin) {
+          adminStatus = '<span class="text-xs font-medium text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full">Admin</span>';
+        } else if (isAdmin) {
+          actionButton = `<button class="make-admin-btn text-green-600 hover:text-green-800 text-sm font-medium" data-uid="${user.uid}" data-email="${user.email||''}">Make Admin</button>`;
         }
-        // subs
-        const subs = await fetch(`${HARDCODED_CONFIG.serverUrl}/stripe/list-subscriptions?orgId=${encodeURIComponent(orgId)}&customerId=${encodeURIComponent(customerId)}`,{
-          headers:{ "Authorization":`Bearer ${idToken}` }
-        });
-        const subsData = await subs.json();
-        if (subs.ok) {
-          subsList.innerHTML = subsData.data.length
-            ? subsData.data.map(s=>`
-              <div class="border rounded-md p-2 bg-white">
-                <div class="text-sm"><span class="font-medium">Sub ${s.id}</span> • Status: ${s.status}</div>
-                <div class="text-xs text-gray-600">
-                  ${s.items.map(it=>`${(it.unitAmount/100).toFixed(2)} ${it.currency?.toUpperCase()||""} / ${it.interval||"n/a"} (${it.priceId})`).join("<br/>")}
-                </div>
-                <div class="text-xs text-gray-500">Renews/ends: ${new Date(s.currentPeriodEnd).toLocaleDateString()}</div>
-              </div>`).join("")
-            : '<div class="text-gray-500">No subscriptions.</div>';
-        } else {
-          subsList.innerHTML = `<div class="text-red-600 text-sm">Subscriptions error: ${subsData.error||subs.status}</div>`;
-        }
-      } catch (e) {
-        invoiceList.innerHTML = `<div class="text-red-600 text-sm">${e.message}</div>`;
-        subsList.innerHTML    = `<div class="text-red-600 text-sm">${e.message}</div>`;
-      }
-    }
-
-    async function createInvoiceFromPanel() {
-      const orgId = document.getElementById("invoice-org").value;
-      const amt   = document.getElementById("invoice-amount").value;
-      const desc  = document.getElementById("invoice-desc").value;
-      const statusEl = document.getElementById("invoice-status");
-      statusEl.textContent = "Creating…";
-      try {
-        const idToken = await getIdToken(currentUser);
-        const r = await fetch(`${HARDCODED_CONFIG.serverUrl}/stripe/create-invoice`, {
-          method:"POST",
-          headers:{
-            "Content-Type":"application/json",
-            "Authorization":`Bearer ${idToken}`
-          },
-          body: JSON.stringify({ orgId, studentId: currentStudentId, amount: amt, description: desc })
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || `Create failed (${r.status})`);
-        statusEl.innerHTML = `Created <a class="text-blue-600 underline" target="_blank" href="${data.hostedInvoiceUrl||"#"}">${data.invoiceId}</a> • ${data.status}`;
-        toast("Invoice created","success");
-        refreshStripeHistory(orgId);
-      } catch (e) {
-        statusEl.textContent = e.message;
-        toast(e.message,"error");
-      }
-    }
-
-    // ====== Listeners ======
-    function listenForClasses() {
-      if (unsubscribeClasses) unsubscribeClasses();
-      unsubscribeClasses = onSnapshot(getClassesCol(), (snap)=>{
-        allClassCache = [];
-        snap.forEach(d=>allClassCache.push({ id:d.id, ...d.data() }));
-        if (currentView==="class") renderCol1ClassList();
-        if (currentView==="student" && currentStudentId) renderCol2ClassList(currentStudentId);
-      }, ()=>toast("Failed to load classes.","error"));
-    }
-    function listenForAllStudents() {
-      if (unsubscribeAllStudents) unsubscribeAllStudents();
-      unsubscribeAllStudents = onSnapshot(getStudentsCol(), (snap)=>{
-        allStudentsCache = [];
-        snap.forEach(d=>allStudentsCache.push({ id:d.id, ...d.data() }));
-        if (currentView==="student") renderCol1StudentList();
-        if (currentView==="class" && currentClassId) renderCol2StudentList(currentClassId);
-        if (currentStudentId) { // refresh mapping labels if student was selected
-          const s = allStudentsCache.find(x=>x.id===currentStudentId);
-          if (s) setMappedDisplays(s);
-        }
-      }, ()=>toast("Failed to load students.","error"));
-    }
-    function listenForContacts(studentId) {
-      // snapshot per student not necessary for parents since we fetch list; keep simple fetch-refresh
-      fetchContactsForStudent(studentId).then(renderContactList).catch(()=>renderContactList([]));
-    }
-
-    // ====== Selectors / Actions ======
-    function resetCol2() {
-      document.getElementById("col-2-subtitle").textContent = currentView==="class" ? "Select a class" : "Select a student";
-      document.getElementById("col-2-list").innerHTML = "";
-      if (currentView==="class") {
-        document.getElementById("add-new-student-btn").disabled = true;
-        document.getElementById("add-existing-student-btn").disabled = true;
-      }
-    }
-    function resetCol3() {
-      document.getElementById("contact-student-subtitle").textContent = "Select a student";
-      document.getElementById("contact-list").innerHTML = "";
-      document.getElementById("add-contact-btn").disabled = true;
-      hideStripePanel();
-    }
-
-    function selectClass(classId, className) {
-      currentClassId = classId;
-      currentStudentId = null;
-      document.querySelectorAll("#col-1-list > div").forEach(el=>{
-        el.classList.toggle("bg-blue-50", el.dataset.id===classId);
-        el.classList.toggle("border-blue-300", el.dataset.id===classId);
-      });
-      document.getElementById("col-2-subtitle").textContent = `For: ${className}`;
-      document.getElementById("add-new-student-btn").disabled = false;
-      document.getElementById("add-existing-student-btn").disabled = false;
-      renderCol2StudentList(classId);
-      resetCol3();
-      showCol("col-2-section");
-      setActiveNav("nav-col-2");
-    }
-    function selectStudent(studentId, studentName) {
-      currentStudentId = studentId;
-      document.querySelectorAll("#col-1-list > div, #col-2-list > div").forEach(el=>{
-        el.classList.toggle("bg-blue-50", el.dataset.id===studentId);
-        el.classList.toggle("border-blue-300", el.dataset.id===studentId);
-      });
-      document.getElementById("contact-student-subtitle").textContent = `For: ${studentName}`;
-      document.getElementById("add-contact-btn").disabled = false;
-      showStripePanel(studentName);
-
-      // show mapping labels
-      const s = allStudentsCache.find(x=>x.id===studentId);
-      if (s) setMappedDisplays(s);
-
-      // load contacts
-      listenForContacts(studentId);
-
-      if (currentView==="student") {
-        document.getElementById("col-2-subtitle").textContent = `For: ${studentName}`;
-        renderCol2ClassList(studentId);
-      }
-      showCol("col-3-section");
-      setActiveNav("nav-contacts");
-      document.getElementById("contact-list")?.scrollIntoView({behavior:"smooth",block:"start"});
-
-      // refresh history for whichever org tab is active
-      refreshStripeHistory(activeStripeOrg);
-    }
-
-    // ====== CRUD Handlers (short versions; keep your existing if fuller) ======
-    async function handleAddClass(e){
-      e.preventDefault();
-      const name = document.getElementById("class-name").value.trim();
-      const teacher = document.getElementById("teacher-name").value.trim();
-      if (!name||!teacher) return;
-      await addDoc(getClassesCol(), { name, teacher, students: [] });
-      closeModal("add-class-modal"); e.target.reset(); toast("Class added");
-    }
-    async function handleUpdateClass(e){
-      e.preventDefault();
-      const id = document.getElementById("edit-class-id").value;
-      const name = document.getElementById("edit-class-name").value.trim();
-      const teacher = document.getElementById("edit-teacher-name").value.trim();
-      await updateDoc(doc(getClassesCol(), id), { name, teacher }); closeModal("edit-class-modal"); toast("Class updated");
-    }
-    async function handleDeleteClass(id, name){
-      if (!confirm(`Delete class "${name}"?`)) return;
-      // also remove from students
-      const c = allClassCache.find(x=>x.id===id);
-      const batch = writeBatch(db);
-      if (c?.students?.length) c.students.forEach(sid=> batch.update(doc(getStudentsCol(), sid), { classes: arrayRemove(id) }));
-      batch.delete(doc(getClassesCol(), id));
-      await batch.commit(); toast("Class deleted"); if (currentClassId===id) { resetCol2(); resetCol3(); }
-    }
-    async function handleAddNewStudent(e){
-      e.preventDefault();
-      const name = document.getElementById("new-student-name").value.trim();
-      if (!name) return;
-      const sRef = await addDoc(getStudentsCol(), { name, parents: [], classes: [] });
-      if (currentView==="class" && currentClassId) {
-        const batch = writeBatch(db);
-        batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(sRef.id) });
-        batch.update(sRef, { classes: arrayUnion(currentClassId) });
-        await batch.commit();
-      }
-      closeModal("add-new-student-modal"); e.target.reset(); toast("Student added");
-    }
-    async function handleUpdateStudent(e){
-      e.preventDefault();
-      const id = document.getElementById("edit-student-id").value;
-      const name = document.getElementById("edit-student-name").value.trim();
-      await updateDoc(doc(getStudentsCol(), id), { name }); closeModal("edit-student-modal"); toast("Student updated");
-    }
-    async function handleAddExistingStudent(e){
-      e.preventDefault();
-      const studentId = document.getElementById("existing-student-select").value;
-      if (!studentId || !currentClassId) return;
-      const batch = writeBatch(db);
-      batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(studentId) });
-      batch.update(doc(getStudentsCol(), studentId), { classes: arrayUnion(currentClassId) });
-      await batch.commit(); closeModal("add-existing-student-modal"); e.target.reset(); toast("Student added to class");
-    }
-    async function handleRemoveStudent(studentId, name){
-      if (!currentClassId || !confirm(`Remove ${name} from this class?`)) return;
-      const batch = writeBatch(db);
-      batch.update(doc(getClassesCol(), currentClassId), { students: arrayRemove(studentId) });
-      batch.update(doc(getStudentsCol(), studentId), { classes: arrayRemove(currentClassId) });
-      await batch.commit(); toast("Student removed"); if (currentStudentId===studentId) resetCol3();
-    }
-    async function handleDeleteStudent(studentId, name){
-      if (!confirm(`PERMANENTLY DELETE ${name}? This will remove from all classes and delete contacts.`)) return;
-      const sRef = doc(getStudentsCol(), studentId);
-      const s = await getDoc(sRef);
-      const batch = writeBatch(db);
-      if (s.exists()) {
-        const d = s.data();
-        (d.parents||[]).forEach(pid=> batch.delete(doc(getParentsCol(), pid)));
-        (d.classes||[]).forEach(cid=> batch.update(doc(getClassesCol(), cid), { students: arrayRemove(studentId) }));
-      }
-      batch.delete(sRef); await batch.commit(); toast("Student deleted"); if (currentStudentId===studentId) { resetCol2(); resetCol3(); }
-    }
-    async function handleAddContact(e){
-      e.preventDefault();
-      const name = document.getElementById("contact-name").value.trim();
-      const email= document.getElementById("contact-email").value.trim();
-      const phone= document.getElementById("contact-phone").value.trim();
-      if (!name||!email||!currentStudentId) return;
-      const parentRef = await addDoc(getParentsCol(), { name, email, phone });
-      await updateDoc(doc(getStudentsCol(), currentStudentId), { parents: arrayUnion(parentRef.id) });
-      closeModal("add-contact-modal"); e.target.reset(); toast("Contact added"); listenForContacts(currentStudentId);
-    }
-    async function handleUpdateContact(e){
-      e.preventDefault();
-      const id = document.getElementById("edit-contact-id").value;
-      const name = document.getElementById("edit-contact-name").value.trim();
-      const email= document.getElementById("edit-contact-email").value.trim();
-      const phone= document.getElementById("edit-contact-phone").value.trim();
-      await updateDoc(doc(getParentsCol(), id), { name, email, phone }); closeModal("edit-contact-modal"); toast("Contact updated"); listenForContacts(currentStudentId);
-    }
-    async function handleDeleteContact(id, name){
-      if (!currentStudentId || !confirm(`Delete contact ${name}?`)) return;
-      const batch = writeBatch(db);
-      batch.update(doc(getStudentsCol(), currentStudentId), { parents: arrayRemove(id) });
-      batch.delete(doc(getParentsCol(), id));
-      await batch.commit(); toast("Contact deleted"); listenForContacts(currentStudentId);
-    }
-
-    // ====== Modals / Nav ======
-    function openModal(id){ document.getElementById(id)?.classList.add("flex"); }
-    function closeModal(id){ document.getElementById(id)?.classList.remove("flex"); }
-    function showCol(id){ ["col-1-section","col-2-section","col-3-section"].forEach(cid=>document.getElementById(cid).classList.add("hidden")); document.getElementById(id).classList.remove("hidden"); }
-    function setActiveNav(id){ ["nav-col-1","nav-col-2","nav-contacts"].forEach(n=>document.getElementById(n).classList.replace("text-blue-600","text-gray-500")); document.getElementById(id).classList.replace("text-gray-500","text-blue-600"); }
-
-    function renderStudentDropdown(){
-      const selectEl = document.getElementById("existing-student-select");
-      if (!selectEl) return;
-      selectEl.innerHTML = '<option value="">Select a student...</option>';
-      if (!currentClassId) return;
-      const c = allClassCache.find(x=>x.id===currentClassId);
-      if (!c) return;
-      const inClass = c.students || [];
-      const available = allStudentsCache.filter(s=>!inClass.includes(s.id)).sort((a,b)=>a.name.localeCompare(b.name));
-      if (!available.length) { selectEl.innerHTML = '<option value="">No other students available</option>'; return; }
-      available.forEach(s=>{
-        const opt = document.createElement("option");
-        opt.value = s.id; opt.textContent = s.name;
-        selectEl.appendChild(opt);
-      });
-    }
-
-    function openEditClassModal(id){
-      const c = allClassCache.find(x=>x.id===id); if (!c) return toast("Class not found","error");
-      document.getElementById("edit-class-id").value = id;
-      document.getElementById("edit-class-name").value = c.name;
-      document.getElementById("edit-teacher-name").value = c.teacher;
-      openModal("edit-class-modal");
-    }
-    function openEditStudentModal(id){
-      const s = allStudentsCache.find(x=>x.id===id); if (!s) return toast("Student not found","error");
-      document.getElementById("edit-student-id").value = id;
-      document.getElementById("edit-student-name").value = s.name;
-      openModal("edit-student-modal");
-    }
-    function openEditContactModal(id){
-      const c = contactCache.get(id); if (!c) return toast("Contact not found","error");
-      document.getElementById("edit-contact-id").value   = id;
-      document.getElementById("edit-contact-name").value = c.name;
-      document.getElementById("edit-contact-email").value= c.email;
-      document.getElementById("edit-contact-phone").value= c.phone || "";
-      openModal("edit-contact-modal");
-    }
-
-    // ====== App Start ======
-    document.addEventListener("DOMContentLoaded", ()=>{
-      // Firebase init
-      const app = initializeApp(HARDCODED_CONFIG.firebase);
-      db = getFirestore(app);
-      auth = initializeAuth(app, { persistence: browserLocalPersistence });
-
-      onAuthStateChanged(auth, async (user)=>{
-        currentUser = user;
-        if (user) {
-          userId = user.uid;
-          document.getElementById("user-email-display").textContent = user.displayName || user.email;
-          try {
-            const res = await getIdTokenResult(user, true);
-            isAdmin = res.claims.admin === true;
-            document.getElementById("manage-users-btn").classList.toggle("hidden", !isAdmin);
-            document.getElementById("user-admin-status").classList.toggle("hidden", !isAdmin);
-          } catch { isAdmin = false; }
-
-          document.getElementById("app-shell").style.display = "flex";
-          document.getElementById("auth-screen").style.display = "none";
-
-          listenForClasses();
-          listenForAllStudents();
-
-          // Default View
-          renderViewByClass();
-
-        } else {
-          userId = null; isAdmin = false;
-          document.getElementById("app-shell").style.display = "none";
-          document.getElementById("auth-screen").style.display = "flex";
-          allClassCache = []; allStudentsCache = []; contactCache.clear();
-          document.getElementById("manage-users-btn").classList.add("hidden");
-          document.getElementById("user-admin-status").classList.add("hidden");
-        }
-      });
-
-      // View switches
-      document.getElementById("view-by-class").addEventListener("click", renderViewByClass);
-      document.getElementById("view-by-student").addEventListener("click", renderViewByStudent);
-
-      // Nav (mobile)
-      document.getElementById("nav-col-1").addEventListener("click", ()=>{ showCol("col-1-section"); setActiveNav("nav-col-1");});
-      document.getElementById("nav-col-2").addEventListener("click", ()=>{ showCol("col-2-section"); setActiveNav("nav-col-2");});
-      document.getElementById("nav-contacts").addEventListener("click", ()=>{ showCol("col-3-section"); setActiveNav("nav-contacts");});
-
-      // Auth actions
-      document.getElementById("login-form").addEventListener("submit", (e)=>{
-        e.preventDefault();
-        const email = document.getElementById("login-email").value;
-        const pass  = document.getElementById("login-password").value;
-        const errEl = document.getElementById("login-error");
-        const btn   = document.getElementById("login-btn");
-        btn.disabled = true; errEl.textContent = "";
-        signInWithEmailAndPassword(auth, email, pass).catch(err=> errEl.textContent = err.message.replace("Firebase: ","")).finally(()=>btn.disabled=false);
-      });
-      document.getElementById("sign-out-btn").addEventListener("click", ()=>{ if (unsubscribeClasses) unsubscribeClasses(); if (unsubscribeAllStudents) unsubscribeAllStudents(); if (unsubscribeContacts) unsubscribeContacts(); signOut(auth); });
-
-      // Class/Student/Contact actions
-      document.getElementById("email-class-btn").addEventListener("click", handleEmailClass);
-      document.querySelectorAll(".close-modal-btn").forEach(btn => btn.addEventListener("click", ()=> closeModal(btn.dataset.modal)));
-      document.getElementById("add-class-form").addEventListener("submit", handleAddClass);
-      document.getElementById("edit-class-form").addEventListener("submit", handleUpdateClass);
-      document.getElementById("add-new-student-form").addEventListener("submit", handleAddNewStudent);
-      document.getElementById("edit-student-form").addEventListener("submit", handleUpdateStudent);
-      document.getElementById("add-existing-student-form").addEventListener("submit", handleAddExistingStudent);
-      document.getElementById("add-contact-form").addEventListener("submit", handleAddContact);
-      document.getElementById("edit-contact-form").addEventListener("submit", handleUpdateContact);
-
-      document.getElementById("col-1-add-btn").addEventListener("click", ()=> openModal(currentView==="class" ? "add-class-modal" : "add-new-student-modal"));
-      document.getElementById("add-new-student-btn").addEventListener("click", ()=> openModal("add-new-student-modal"));
-      document.getElementById("add-existing-student-btn").addEventListener("click", ()=>{
-        const name = allClassCache.find(c=>c.id===currentClassId)?.name || "";
-        document.querySelector("#add-existing-student-subtitle span").textContent = name;
-        renderStudentDropdown();
-        openModal("add-existing-student-modal");
-      });
-      document.getElementById("add-contact-btn").addEventListener("click", ()=>{
-        const name = allStudentsCache.find(s=>s.id===currentStudentId)?.name || "";
-        document.querySelector("#add-contact-subtitle span").textContent = name;
-        openModal("add-contact-modal");
-      });
-
-      // Email form
-      document.getElementById("email-form").addEventListener("submit", handleSendEmail);
-
-      // Stripe UI bindings
-      wireStripeOrgTabs();
-      document.getElementById("stripe-search-btn").addEventListener("click", stripeSearchCustomers);
-      document.getElementById("history-org").addEventListener("change", (e)=> refreshStripeHistory(e.target.value));
-      document.getElementById("create-invoice-btn").addEventListener("click", createInvoiceFromPanel);
-
-      console.log("App setup complete.");
-    });
-
-    // ====== View toggles (change headings/buttons & render) ======
-    function renderViewByClass(){
-      currentView = "class";
-      document.getElementById("col-1-title").textContent = "Classes";
-      document.getElementById("col-1-add-btn").textContent = "Add Class";
-      document.getElementById("col-2-title").textContent = "Students";
-      document.getElementById("col-2-btn-group").classList.remove("hidden");
-      document.getElementById("email-class-btn").classList.remove("hidden");
-      document.getElementById("nav-col-1-title").textContent = "Classes";
-      document.getElementById("nav-col-2-title").textContent = "Students";
-      currentClassId = null; currentStudentId = null;
-      resetCol2(); resetCol3();
-      renderCol1ClassList();
-    }
-    function renderViewByStudent(){
-      currentView = "student";
-      document.getElementById("col-1-title").textContent = "All Students";
-      document.getElementById("col-1-add-btn").textContent = "Add Student";
-      document.getElementById("col-2-title").textContent = "Enrolled In";
-      document.getElementById("col-2-btn-group").classList.add("hidden");
-      document.getElementById("email-class-btn").classList.add("hidden");
-      document.getElementById("nav-col-1-title").textContent = "Students";
-      document.getElementById("nav-col-2-title").textContent = "Classes";
-      currentClassId = null; currentStudentId = null;
-      resetCol2(); resetCol3();
-      renderCol1StudentList();
-    }
-  
-
-// === Stripe panel JS (inserted) ===
-if (!window.__stripePanelInjected) {
-  window.__stripePanelInjected = true;
-
-  // DOM refs
-  let elStripeOrg, elStripeMapped, elStripeClear, elStripeStatus;
-  let elSearchQ, elSearchBtn, elSearchResults, elSearchList, elMapBtn;
-  let elInvAmount, elInvDesc, elCreateInvBtn, elInvStatus, elHistWrap, elHistRefresh;
-
-  const getStudentById = (id) => (Array.isArray(allStudentsCache) ? allStudentsCache.find(s => s.id === id) : null);
-  const getMappedCustomerId = (studentId, orgId) => { const s = getStudentById(studentId); return s?.stripe?.customers?.[orgId] || null; };
-
-  function updateStripePanelForStudent() {
-    // If panel not present, skip
-    if (!elStripeOrg) return;
-    const controls = [elSearchQ, elSearchBtn, elMapBtn, elInvAmount, elInvDesc, elCreateInvBtn, elHistRefresh].filter(Boolean);
-    const hasStudent = Boolean(window.currentStudentId);
-    controls.forEach(el => { el.disabled = !hasStudent; el.classList.toggle('opacity-50', !hasStudent); });
-    if (!hasStudent) {
-      if (elStripeMapped) elStripeMapped.textContent = '—';
-      if (elStripeClear) elStripeClear.classList.add('hidden');
-      if (elInvStatus) elInvStatus.textContent = '';
-      if (elStripeStatus) elStripeStatus.textContent = '';
-      if (elHistWrap) elHistWrap.innerHTML = `<p class="text-gray-500">No student selected.</p>`;
-      return;
-    }
-    const orgId = elStripeOrg.value;
-    const mapped = getMappedCustomerId(window.currentStudentId, orgId);
-    if (elStripeMapped) elStripeMapped.textContent = mapped ? mapped : 'Not mapped';
-    if (elStripeClear) elStripeClear.classList.toggle('hidden', !mapped);
-    if (elCreateInvBtn) elCreateInvBtn.disabled = !mapped;
-  }
-
-  async function serverGet(pathWithQuery) {
-    const idToken = await auth.currentUser.getIdToken();
-    const res = await fetch(`${HARDCODED_CONFIG.serverUrl}${pathWithQuery}`, { headers: { 'Authorization': `Bearer ${idToken}` } });
-    if (!res.ok) throw new Error((await res.json()).error || res.statusText);
-    return res.json();
-  }
-  async function serverPost(path, body) {
-    const idToken = await auth.currentUser.getIdToken();
-    const res = await fetch(`${HARDCODED_CONFIG.serverUrl}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${idToken}` },
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) throw new Error((await res.json()).error || res.statusText);
-    return res.json();
-  }
-
-  async function stripeSearch() {
-    if (!elStripeOrg || !elSearchQ) return;
-    const q = elSearchQ.value.trim();
-    const orgId = elStripeOrg.value;
-    if (!q) return;
-    if (elStripeStatus) elStripeStatus.textContent = 'Searching...';
-    try {
-      const data = await serverGet(`/stripe/search-customers?orgId=${encodeURIComponent(orgId)}&q=${encodeURIComponent(q)}`);
-      const items = data.data || [];
-      if (elSearchList) elSearchList.innerHTML = '';
-      if (elSearchResults) elSearchResults.classList.remove('hidden');
-      if (!items.length) {
-        if (elSearchList) elSearchList.innerHTML = `<p class="text-sm text-gray-500">No results.</p>`;
-        if (elMapBtn) elMapBtn.disabled = True;
-        return;
-      }
-      items.forEach(c => {
-        const row = document.createElement('label');
-        row.className = 'flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer border border-gray-100';
-        row.innerHTML = `
-          <input type="radio" name="stripe-customer" value="${c.id}">
-          <div class="min-w-0">
-            <div class="font-medium text-gray-800 truncate">${c.name || '(No name)'} </div>
-            <div class="text-xs text-gray-600 truncate">${c.email || 'no-email'}</div>
-            <div class="text-[11px] text-gray-500">ID: ${c.id}</div>
+        const identifier = user.displayName || user.email || 'No Email';
+        el.innerHTML = `
+          <div class="flex-1 min-w-0">
+            <span class="font-medium text-gray-800 block truncate">${identifier}</span>
+            ${user.displayName ? `<span class="text-xs text-gray-500 block truncate">${user.email || 'No Email'}</span>` : '' }
+            <span class="text-xs text-gray-500 block truncate">(UID: ${user.uid})</span>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            ${adminStatus}
+            ${actionButton}
+            <button class="edit-name-btn text-blue-600 hover:text-blue-800 text-sm font-medium" data-uid="${user.uid}" data-current-name="${user.displayName || ''}">Edit Name</button>
+            ${user.uid!==userId ? `<button class="delete-user-btn text-red-500 hover:text-red-700 text-sm font-medium" data-uid="${user.uid}" data-email="${user.email || ''}">Delete</button>` : '' }
           </div>`;
-        elSearchList.appendChild(row);
+        el.querySelector('.make-admin-btn')?.addEventListener('click', (e)=>{ e.stopPropagation(); handleMakeAdmin(user.uid, user.email || 'this user'); });
+        el.querySelector('.edit-name-btn')?.addEventListener('click', (e)=>{ e.stopPropagation(); handleUpdateUserName(user.uid, user.displayName || ''); });
+        el.querySelector('.delete-user-btn')?.addEventListener('click', (e)=>{ e.stopPropagation(); handleDeleteUser(user.uid, user.email || 'this user'); });
+        listEl.appendChild(el);
       });
-      if (elMapBtn) elMapBtn.disabled = false;
-    } catch (e) {
-      console.error(e);
-      if (typeof toast === 'function') toast(`Search failed: ${e.message}`, 'error');
-    } finally {
-      if (elStripeStatus) elStripeStatus.textContent = '';
-    }
-  }
+    };
 
-  async function stripeMapSelected() {
-    const checked = document.querySelector('input[name="stripe-customer"]:checked');
-    if (!checked) return;
-    const customerId = checked.value;
-    const orgId = elStripeOrg?.value;
-    if (!window.currentStudentId) { if (typeof toast === 'function') toast('Select a student first.', 'error'); return; }
-    if (elStripeStatus) elStripeStatus.textContent = 'Mapping...';
-    if (elMapBtn) elMapBtn.disabled = true;
-    try {
-      await serverPost('/stripe/map-customer', { orgId, studentId: window.currentStudentId, customerId });
-      if (typeof toast === 'function') toast('Mapped to student!', 'success');
-      if (elStripeMapped) elStripeMapped.textContent = customerId;
-      if (elStripeClear) elStripeClear.classList.remove('hidden');
-      if (elCreateInvBtn) elCreateInvBtn.disabled = false;
-      if (elSearchResults) elSearchResults.classList.add('hidden');
-      if (elSearchList) elSearchList.innerHTML = '';
-      if (elSearchQ) elSearchQ.value = '';
-    } catch (e) {
-      console.error(e);
-      if (typeof toast === 'function') toast(`Map failed: ${e.message}`, 'error');
-    } finally {
-      if (elStripeStatus) elStripeStatus.textContent = '';
-      if (elMapBtn) elMapBtn.disabled = false;
-    }
-  }
+    const handleCreateUser = async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('new-user-name').value;
+      const email= document.getElementById('new-user-email').value;
+      const password = document.getElementById('new-user-password').value;
+      const statusEl = document.getElementById('add-user-status');
+      const btn = document.getElementById('add-user-btn');
+      btn.disabled = true; statusEl.textContent='Creating...'; statusEl.classList.remove('text-red-600','text-green-600');
+      if (!currentUser) { statusEl.textContent='Not authenticated.'; statusEl.classList.add('text-red-600'); btn.disabled=false; return; }
+      if (!name || !email || !password || password.length<6) { statusEl.textContent='Name, email, and password (min 6) required.'; statusEl.classList.add('text-red-600'); btn.disabled=false; return; }
+      try {
+        const idToken = await getIdToken(currentUser);
+        const response = await fetch(`${HARDCODED_CONFIG.serverUrl}/create-user`, {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${idToken}` },
+          body: JSON.stringify({ name, email, password })
+        });
+        if (!response.ok) {
+          let msg = `Server ${response.status}`; try { const r = await response.json(); if (r?.error) msg=r.error; } catch {}
+          throw new Error(msg);
+        }
+        const result = await response.json();
+        toast('User created!','success');
+        statusEl.textContent = `Created ${result.email}.`; statusEl.classList.add('text-green-600');
+        e.target.reset();
+        await fetchUsers();
+      } catch(err) {
+        console.error(err);
+        statusEl.textContent = `Error: ${err.message}`; statusEl.classList.add('text-red-600'); toast('Failed create user.','error');
+      } finally { btn.disabled=false; }
+    };
 
-  async function stripeCreateInvoice() {
-    const amount = Number(elInvAmount?.value || 0);
-    const description = (elInvDesc?.value || '').trim();
-    const orgId = elStripeOrg?.value;
-    if (!window.currentStudentId) { if (typeof toast === 'function') toast('Select a student first.', 'error'); return; }
-    if (!amount or amount <= 0 or not description):
-        pass
-    if (!amount || amount <= 0 || !description) { if (typeof toast === 'function') toast('Amount and description required.', 'error'); return; }
-    if (elInvStatus) elInvStatus.textContent = 'Creating...';
-    if (elCreateInvBtn) elCreateInvBtn.disabled = true;
-    try {
-      const res = await serverPost('/stripe/create-invoice', { orgId, studentId: window.currentStudentId, amount, description });
-      if (typeof toast === 'function') toast('Invoice created & sent!', 'success');
-      if (elInvStatus) elInvStatus.innerHTML = `Created <strong>${res.invoiceId}</strong> – status: ${res.status} ${res.hostedInvoiceUrl ? `– <a class="text-blue-600 underline" href="${res.hostedInvoiceUrl}" target="_blank">View</a>` : ''}`;
-      await stripeLoadHistory();
-      if (elInvAmount) elInvAmount.value = '';
-      if (elInvDesc) elInvDesc.value = '';
-    } catch (e) {
-      console.error(e);
-      if (elInvStatus) elInvStatus.textContent = `Error: ${e.message}`;
-      if (typeof toast === 'function') toast('Failed to create invoice.', 'error');
-    } finally {
-      if (elCreateInvBtn) elCreateInvBtn.disabled = false;
-    }
-  }
+    const handleDeleteUser = async (uidToDelete, emailToDelete) => {
+      if (!confirm(`Delete user: ${emailToDelete}? Permanent.`)) return;
+      const statusEl = document.getElementById('add-user-status');
+      statusEl.textContent = `Deleting ${emailToDelete}...`; statusEl.classList.remove('text-red-600','text-green-600');
+      if (!currentUser) { statusEl.textContent='Not authenticated.'; statusEl.classList.add('text-red-600'); return; }
+      try {
+        const idToken = await getIdToken(currentUser);
+        const resp = await fetch(`${HARDCODED_CONFIG.serverUrl}/delete-user`, {
+          method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${idToken}` },
+          body: JSON.stringify({ uid: uidToDelete })
+        });
+        if (!resp.ok) {
+          let msg = `Server ${resp.status}`; try { const r=await resp.json(); if (r?.error) msg=r.error; } catch {}
+          throw new Error(msg);
+        }
+        toast(`User ${emailToDelete} deleted.`,'success');
+        statusEl.textContent = `Deleted ${emailToDelete}.`; statusEl.classList.add('text-green-600');
+        await fetchUsers();
+      } catch(err){ console.error(err); statusEl.textContent=`Error: ${err.message}`; statusEl.classList.add('text-red-600'); toast('Failed delete user.','error'); }
+    };
 
-  async function stripeLoadHistory() {
-    if (!elHistWrap) return;
-    const orgId = elStripeOrg?.value;
-    const mapped = getMappedCustomerId(window.currentStudentId, orgId);
-    if (!window.currentStudentId || !mapped) { elHistWrap.innerHTML = `<p class="text-gray-500">No mapped customer for this org.</p>`; return; }
-    elHistWrap.innerHTML = `<p class="text-xs text-gray-500">Loading…</p>`;
-    try {
-      const inv = await serverGet(`/stripe/list-invoices?orgId=${encodeURIComponent(orgId)}&customerId=${encodeURIComponent(mapped)}`);
-      const data = inv.data || [];
-      if (!data.length) { elHistWrap.innerHTML = `<p class="text-gray-500">No invoices.</p>`; return; }
-      elHistWrap.innerHTML = `
-        <div class="overflow-x-auto">
-          <table class="min-w-full text-sm">
-            <thead class="text-gray-600">
-              <tr>
-                <th class="text-left py-2 pr-4">Number</th>
-                <th class="text-left py-2 pr-4">Status</th>
-                <th class="text-left py-2 pr-4">Total</th>
-                <th class="text-left py-2 pr-4">When</th>
-                <th class="text-left py-2">Link</th>
-              </tr>
-            </thead>
-            <tbody id="stripe-history-body"></tbody>
-          </table>
-        </div>`;
-      const body = document.getElementById('stripe-history-body');
-      body.innerHTML = '';
-      data.forEach(i => {
-        const tr = document.createElement('tr');
-        const when = new Date(i.created).toLocaleString();
-        tr.innerHTML = `
-          <td class="py-1 pr-4">${i.number || i.id}</td>
-          <td class="py-1 pr-4">${i.status}</td>
-          <td class="py-1 pr-4">$${(i.total/100).toFixed(2)}</td>
-          <td class="py-1 pr-4">${when}</td>
-          <td class="py-1">${i.hostedInvoiceUrl ? `<a class="text-blue-600 underline" href="${i.hostedInvoiceUrl}" target="_blank">View</a>` : '—'}</td>`;
-        body.appendChild(tr);
-      });
-    } catch (e) {
-      console.error(e);
-      elHistWrap.innerHTML = `<p class="text-red-600 text-sm">History error: ${e.message}</p>`;
-    }
-  }
+    const handleMakeAdmin = async (uidToMakeAdmin, email) => {
+      if (!confirm(`Grant admin to ${email}?`)) return;
+      const statusEl = document.getElementById('add-user-status');
+      statusEl.textContent = `Making ${email} admin...`; statusEl.classList.remove('text-red-600','text-green-600');
+      if (!currentUser) { statusEl.textContent='Not authenticated.'; statusEl.classList.add('text-red-600'); return; }
+      try {
+        const idToken = await getIdToken(currentUser);
+        const resp = await fetch(`${HARDCODED_CONFIG.serverUrl}/set-admin`, {
+          method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${idToken}` },
+          body: JSON.stringify({ uidToMakeAdmin })
+        });
+        if (!resp.ok) {
+          let msg = `Server ${resp.status}`; try { const r=await resp.json(); if (r?.error) msg=r.error; } catch {}
+          throw new Error(msg);
+        }
+        toast(`${email} is now admin. Needs re-login.`,'success');
+        statusEl.textContent='Admin granted.'; statusEl.classList.add('text-green-600');
+        await fetchUsers();
+        if (uidToMakeAdmin===userId) {
+          isAdmin = true; document.getElementById('manage-users-btn').classList.remove('hidden');
+          document.getElementById('user-admin-status').classList.remove('hidden');
+          await getIdToken(currentUser, true);
+        }
+      } catch(err){ console.error(err); statusEl.textContent=`Error: ${err.message}`; statusEl.classList.add('text-red-600'); toast('Failed set admin.','error'); }
+    };
 
-  // Hook into DOM once it's ready
-  document.addEventListener('DOMContentLoaded', () => {
-    // Grab refs if panel exists
-    elStripeOrg = document.getElementById('stripe-org');
-    elStripeMapped = document.getElementById('stripe-mapped-display');
-    elStripeClear = document.getElementById('stripe-clear-mapping');
-    elStripeStatus = document.getElementById('stripe-status');
+    const handleUpdateUserName = async (uid, currentName) => {
+      const newName = prompt(`Enter the new name for this user (UID: ${uid}):`, currentName);
+      if (newName===null || newName.trim()==='') return;
+      const trimmed = newName.trim(); if (trimmed===currentName) { toast('Name is the same.','success'); return; }
+      const statusEl = document.getElementById('add-user-status'); statusEl.textContent='Updating name...'; statusEl.classList.remove('text-red-600','text-green-600');
+      if (!currentUser) { statusEl.textContent='Not authenticated.'; statusEl.classList.add('text-red-600'); return; }
+      try {
+        const idToken = await getIdToken(currentUser);
+        const resp = await fetch(`${HARDCODED_CONFIG.serverUrl}/update-user-name`, {
+          method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${idToken}` },
+          body: JSON.stringify({ uid, newName: trimmed })
+        });
+        if (!resp.ok) {
+          let msg = `Server ${resp.status}`; try { const r=await resp.json(); if (r?.error) msg=r.error; } catch {}
+          throw new Error(msg);
+        }
+        toast('User name updated!','success');
+        statusEl.textContent='Name updated.'; statusEl.classList.add('text-green-600');
+        const result = await resp.json?.(); // server may or may not return updatedSelf; safe guard
+        if (result?.updatedSelf) {
+          currentUser = auth.currentUser;
+          if (currentUser) {
+            document.getElementById('user-email-display').textContent = currentUser.displayName || currentUser.email;
+            await getIdToken(currentUser, true);
+          }
+        }
+        await fetchUsers();
+      } catch(err){ console.error(err); statusEl.textContent=`Error: ${err.message || 'Failed update name.'}`; statusEl.classList.add('text-red-600'); toast('Failed update name.','error'); }
+    };
 
-    elSearchQ = document.getElementById('stripe-search-q');
-    elSearchBtn = document.getElementById('stripe-search-btn');
-    elSearchResults = document.getElementById('stripe-search-results');
-    elSearchList = document.getElementById('stripe-search-list');
-    elMapBtn = document.getElementById('stripe-map-selected');
+    // Stripe invoice helpers (client → server)
+    const openInvoiceModal = (parentId, parentName) => {
+      document.getElementById('invoice-parent-id').value = parentId;
+      document.querySelector('#invoice-subtitle span').textContent = parentName;
+      document.getElementById('invoice-amount').value = '';
+      document.getElementById('invoice-description').value = '';
+      document.getElementById('invoice-status').textContent = '';
+      document.getElementById('create-invoice-btn').disabled = false;
+      openModal('invoice-modal');
+    };
 
-    elInvAmount = document.getElementById('invoice-amount');
-    elInvDesc = document.getElementById('invoice-description');
-    elCreateInvBtn = document.getElementById('create-invoice-btn');
-    elInvStatus = document.getElementById('invoice-status');
+    const handleCreateInvoice = async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('create-invoice-btn');
+      const statusEl = document.getElementById('invoice-status');
+      btn.disabled = true; statusEl.textContent='Creating invoice...'; statusEl.classList.remove('text-red-600','text-green-600');
 
-    elHistWrap = document.getElementById('stripe-history');
-    elHistRefresh = document.getElementById('refresh-history-btn');
+      const parentId = document.getElementById('invoice-parent-id').value;
+      const amount   = document.getElementById('invoice-amount').value;
+      const description = document.getElementById('invoice-description').value;
+      const studentName = allStudentsCache.find(s=>s.id===currentStudentId)?.name || null;
 
-    if (elStripeOrg) {
-      elStripeOrg.addEventListener('change', () => { updateStripePanelForStudent(); if (window.currentStudentId) stripeLoadHistory(); });
-    }
-    if (elSearchBtn) elSearchBtn.addEventListener('click', stripeSearch);
-    if (elMapBtn) elMapBtn.addEventListener('click', stripeMapSelected);
-    if (elCreateInvBtn) elCreateInvBtn.addEventListener('click', stripeCreateInvoice);
-    if (elHistRefresh) elHistRefresh.addEventListener('click', stripeLoadHistory);
-    if (elStripeClear) elStripeClear.addEventListener('click', () => {
-      if (elStripeStatus) elStripeStatus.textContent = 'Clear locally (refresh to refetch mapping).';
-    });
+      if (!parentId || !amount || !description) { statusEl.textContent='Missing required fields.'; statusEl.classList.add('text-red-600'); btn.disabled=false; return; }
+      if (!currentUser) { statusEl.textContent='Not authenticated.'; statusEl.classList.add('text-red-600'); btn.disabled=false; return; }
 
-    // Patch selectStudent if present to also refresh panel
-    if (typeof window.selectStudent === 'function' && !window.__selectStudentPatched) {
-      window.__selectStudentPatched = true;
-      const _orig = window.selectStudent;
-      window.selectStudent = function(studentId, studentName) {
-        _orig(studentId, studentName);
-        updateStripePanelForStudent();
-        stripeLoadHistory();
+      try {
+        const idToken = await getIdToken(currentUser);
+        const serverUrl = HARDCODED_CONFIG.serverUrl;
+
+        const resp = await fetch(`${serverUrl}/create-invoice`, {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${idToken}` },
+          body: JSON.stringify({
+            parentId,
+            studentName,
+            amount,
+            description
+          })
+        });
+        if (!resp.ok) {
+          let msg = `Server ${resp.status}`; try { const r=await resp.json(); if (r?.error) msg=r.error; } catch {}
+          throw new Error(msg);
+        }
+        const result = await resp.json();
+        toast('Invoice created successfully!','success');
+        statusEl.textContent = `Invoice ${result.invoiceId} created (${result.status}).`;
+        statusEl.classList.add('text-green-600');
+        if (result.hostedInvoiceUrl) {
+          statusEl.innerHTML += ` <a href="${result.hostedInvoiceUrl}" target="_blank" class="text-blue-600 hover:underline">View Invoice</a>`;
+        }
+        setTimeout(()=> closeModal('invoice-modal'), 3000);
+      } catch(err) {
+        console.error("Create Invoice Error:", err);
+        statusEl.textContent = `Error: ${err.message}`; statusEl.classList.add('text-red-600');
+        toast('Failed to create invoice.','error');
       }
-    }
+    };
 
-    // Try initial state
-    updateStripePanelForStudent();
-  });
-}
+    // Mobile nav helpers
+    const showCol = (id) => {
+      document.getElementById('col-1-section').classList.add('hidden');
+      document.getElementById('col-2-section').classList.add('hidden');
+      document.getElementById('col-3-section').classList.add('hidden');
+      document.getElementById(id).classList.remove('hidden');
+    };
+    const setActiveNav = (id) => {
+      document.getElementById('nav-col-1').classList.replace('text-blue-600','text-gray-500');
+      document.getElementById('nav-col-2').classList.replace('text-blue-600','text-gray-500');
+      document.getElementById('nav-contacts').classList.replace('text-blue-600','text-gray-500');
+      document.getElementById(id).classList.replace('text-gray-500','text-blue-600');
+    };
 
-</script>
+    // Auth handlers
+    const handleLogin = (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const errorEl = document.getElementById('login-error');
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true; errorEl.textContent='';
+      signInWithEmailAndPassword(auth, email, password)
+        .catch((err)=>{ console.error("Login failed:", err); errorEl.textContent = (err.message||'').replace('Firebase: ',''); })
+        .finally(()=>{ btn.disabled=false; });
+    };
+
+    const handleSignOut = () => {
+      if (unsubscribeClasses) unsubscribeClasses();
+      if (unsubscribeAllStudents) unsubscribeAllStudents();
+      if (unsubscribeContacts) unsubscribeContacts();
+      signOut(auth).catch((err)=>{ console.error("Sign out failed:", err); toast('Sign out failed.','error'); });
+    };
+
+    // App start
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        if (!HARDCODED_CONFIG.firebase.apiKey || !HARDCODED_CONFIG.firebase.appId || !HARDCODED_CONFIG.serverUrl || !HARDCODED_CONFIG.organizationId || !HARDCODED_CONFIG.firebase.projectId || !HARDCODED_CONFIG.firebase.authDomain) {
+          document.body.innerHTML = `<div class="p-8 text-center text-red-600"><h1 class="text-2xl font-bold">Config Error</h1><p class="mt-4">Please fill in all values in <strong>HARDCODED_CONFIG</strong> in index.html.</p></div>`;
+          return;
+        }
+
+        const app = initializeApp(HARDCODED_CONFIG.firebase);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        await setPersistence(auth, browserLocalPersistence);
+
+        onAuthStateChanged(auth, async (user) => {
+          currentUser = user;
+          if (user) {
+            userId = user.uid;
+            document.getElementById('user-email-display').textContent = user.displayName || user.email;
+            try {
+              const idTokenResult = await getIdTokenResult(user, true);
+              isAdmin = idTokenResult.claims.admin === true;
+              document.getElementById('manage-users-btn').classList.toggle('hidden', !isAdmin);
+              document.getElementById('user-admin-status').classList.toggle('hidden', !isAdmin);
+            } catch (claimError) {
+              console.error("Token claims error:", claimError);
+              isAdmin = false;
+              document.getElementById('manage-users-btn').classList.add('hidden');
+              document.getElementById('user-admin-status').classList.add('hidden');
+              toast('Could not verify admin status.','error');
+            }
+            document.getElementById('app-shell').style.display='flex';
+            document.getElementById('auth-screen').style.display='none';
+            listenForClasses(); listenForAllStudents(); renderViewByClass();
+          } else {
+            userId = null; isAdmin=false; currentUser=null;
+            document.getElementById('app-shell').style.display='none';
+            document.getElementById('auth-screen').style.display='flex';
+            if (unsubscribeClasses) unsubscribeClasses();
+            if (unsubscribeAllStudents) unsubscribeAllStudents();
+            if (unsubscribeContacts) unsubscribeContacts();
+            allClassCache=[]; allStudentsCache=[]; contactCache.clear();
+            document.getElementById('manage-users-btn').classList.add('hidden');
+            document.getElementById('user-admin-status').classList.add('hidden');
+          }
+        });
+      } catch (error) {
+        console.error("Firebase Init Failed:", error);
+        document.body.innerHTML = `<div class="p-8 text-center text-red-600"><h1 class="text-2xl font-bold">Firebase Init Failed</h1><p class="mt-4">Check <strong>HARDCODED_CONFIG.firebase</strong> values.</p><p class="mt-2 text-sm text-gray-500">${error.message}</p></div>`;
+        return;
+      }
+
+      // Event listeners
+      document.getElementById('login-form').addEventListener('submit', handleLogin);
+      document.getElementById('sign-out-btn').addEventListener('click', handleSignOut);
+      document.getElementById('manage-users-btn').addEventListener('click', openUserManagementModal);
+
+      const addUserForm = document.getElementById('add-user-form');
+      if (addUserForm) addUserForm.addEventListener('submit', handleCreateUser);
+
+      document.getElementById('view-by-class').addEventListener('click', renderViewByClass);
+      document.getElementById('view-by-student').addEventListener('click', renderViewByStudent);
+      document.getElementById('email-class-btn').addEventListener('click', handleEmailClass);
+
+      document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.modal)));
+      document.getElementById('add-class-form').addEventListener('submit', handleAddClass);
+      document.getElementById('add-new-student-form').addEventListener('submit', handleAddNewStudent);
+      document.getElementById('add-existing-student-form').addEventListener('submit', handleAddExistingStudent);
+      document.getElementById('add-contact-form').addEventListener('submit', handleAddContact);
+      document.getElementById('email-form').addEventListener('submit', handleSendEmail);
+
+      document.getElementById('edit-class-form').addEventListener('submit', handleUpdateClass);
+      document.getElementById('edit-student-form').addEventListener('submit', handleUpdateStudent);
+      document.getElementById('edit-contact-form').addEventListener('submit', handleUpdateContact);
+
+      document.getElementById('create-invoice-form').addEventListener('submit', handleCreateInvoice);
+
+      document.getElementById('col-1-add-btn').addEventListener('click', ()=> openModal(currentView==='class' ? 'add-class-modal' : 'add-new-student-modal'));
+      document.getElementById('add-new-student-btn').addEventListener('click', ()=> openModal('add-new-student-modal'));
+      document.getElementById('add-existing-student-btn').addEventListener('click', ()=>{
+        document.querySelector('#add-existing-student-subtitle span').textContent = allClassCache.find(c=>c.id===currentClassId)?.name || '';
+        renderStudentDropdown(); openModal('add-existing-student-modal');
+      });
+      document.getElementById('add-contact-btn').addEventListener('click', ()=>{
+        document.querySelector('#add-contact-subtitle span').textContent = allStudentsCache.find(s=>s.id===currentStudentId)?.name || '';
+        openModal('add-contact-modal');
+      });
+
+      document.getElementById('nav-col-1').addEventListener('click', ()=>{ showCol('col-1-section'); setActiveNav('nav-col-1'); });
+      document.getElementById('nav-col-2').addEventListener('click', ()=>{ showCol('col-2-section'); setActiveNav('nav-col-2'); });
+      document.getElementById('nav-contacts').addEventListener('click', ()=>{ showCol('col-3-section'); setActiveNav('nav-contacts'); });
+
+      // Expose for console utils if needed
+      window.auth = auth;
+      window.handleMakeAdmin = handleMakeAdmin;
+    });
+  </script>
 </body>
 </html>
