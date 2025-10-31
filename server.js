@@ -17,11 +17,38 @@ import Stripe from "stripe";
 import bodyParser from "body-parser";
 
 // -------- Firebase Admin init (single block) --------
+// --- replace your getServiceAccountFromEnv with this ---
 function getServiceAccountFromEnv() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "";
+  let raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "";
   if (!raw) return null;
-  const parsed = JSON.parse(raw);
-  if (parsed.private_key) parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+
+  raw = raw.trim();
+
+  // If the value looks like base64 (and not JSON starting with "{"),
+  // decode to UTF-8 JSON text first.
+  const looksBase64 = /^[A-Za-z0-9+/=]+$/.test(raw) && !raw.startsWith("{");
+  if (looksBase64) {
+    try {
+      raw = Buffer.from(raw, "base64").toString("utf8");
+    } catch (e) {
+      console.error("Failed to base64-decode FIREBASE_SERVICE_ACCOUNT_JSON:", e);
+      return null;
+    }
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    console.error("FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON:", e.message);
+    return null;
+  }
+
+  // Restore newlines if they’re escaped
+  if (parsed.private_key) {
+    parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+  }
+
   return parsed;
 }
 
