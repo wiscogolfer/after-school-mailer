@@ -1,18 +1,22 @@
 // server.js (ESM)
 
-// ===== existing imports (keep) =====
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import { Resend } from "resend";
+
+// Firebase Admin
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-// >>> NEW: Stripe + Firestore
+// Stripe
 import Stripe from "stripe";
-import { getFirestore, doc, getDoc, setDoc, updateDoc } from "firebase-admin/firestore";
 
-// ===== Firebase Admin init (keep your fixed version) =====
+// Raw body ONLY for Stripe webhook
+import bodyParser from "body-parser";
+
+// ---------- Firebase Admin init ----------
 function getServiceAccountFromEnv() {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "";
   if (!raw) return null;
@@ -20,6 +24,7 @@ function getServiceAccountFromEnv() {
   if (parsed.private_key) parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
   return parsed;
 }
+
 const svc = getServiceAccountFromEnv();
 if (!getApps().length) {
   if (!svc?.project_id) {
@@ -31,11 +36,81 @@ if (!getApps().length) {
 }
 const db = getFirestore();
 
-// ===== Express app (keep) =====
+// ---------- Express app ----------
 const app = express();
+
+// ⚠️ Put the Stripe webhook BEFORE express.json() so the raw body is available
+app.post(
+  "/stripe/webhook/:orgId",
+  bodyParser.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      const orgId = req.params.orgId;
+      const STRIPE_WEBHOOK_SECRETS = {
+        "State-48-Dance": process.env.STRIPE_WEBHOOK_SECRET_ORG_A,
+        "State-48-Theatre": process.env.STRIPE_WEBHOOK_SECRET_ORG_B,
+      };
+      const whSecret = STRIPE_WEBHOOK_SECRETS[orgId];
+      if (!whSecret) return res.status(400).send("Missing webhook secret for org");
+
+      const STRIPE_KEYS_BY_ORG = {
+        "State-48-Dance": process.env.STRIPE_KEY_ORG_A,
+        "State-48-Theatre": process.env.STRIPE_KEY_ORG_B,
+      };
+      const key = STRIPE_KEYS_BY_ORG[orgId];
+      if (!key) return res.status(400).send("Missing Stripe key for org");
+      const stripe = new Stripe(key, { apiVersion: "2024-06-20" });
+
+      const sig = req.headers["stripe-signature"];
+      let event;
+      try {
+        event = stripe.webhooks.constructEvent(req.body, sig, whSecret);
+      } catch (e) {
+        console.error("Webhook signature verify failed:", e.message);
+        return res.status(400).send(`Webhook Error: ${e.message}`);
+      }
+
+      // Minimal persistence for invoices
+      if (event.type.startsWith("invoice.")) {
+        const invoice = event.data.object;
+        const customerId = invoice.customer;
+
+        // reverse-index doc at organizations/{orgId}/stripeCustomers/{customerId}
+        const idxRef = db.doc(`organizations/${orgId}/stripeCustomers/${customerId}`);
+        const idxSnap = await idxRef.get();
+        const studentId = idxSnap.exists ? idxSnap.data().studentId : null;
+
+        if (studentId) {
+          const invRef = db.doc(
+            `organizations/${orgId}/students/${studentId}/billing/invoices/${invoice.id}`
+          );
+          await invRef.set(
+            {
+              lastEventAt: Date.now(),
+              status: invoice.status,
+              total: invoice.total,
+              currency: invoice.currency,
+              hostedInvoiceUrl: invoice.hosted_invoice_url || null,
+              number: invoice.number || null,
+            },
+            { merge: true }
+          );
+        }
+      }
+
+      return res.json({ received: true });
+    } catch (e) {
+      console.error("Webhook handling error:", e);
+      // Acknowledge to avoid endless retries; log for investigation
+      return res.json({ received: true });
+    }
+  }
+);
+
+// Now JSON body parser for all *other* routes
 app.use(express.json({ limit: "2mb" }));
 
-// ===== CORS (keep but ensure your origins are here) =====
+// CORS
 const allowedOrigins = new Set([
   "https://classesapp.state48arts.org",
   "http://localhost:5173",
@@ -53,10 +128,10 @@ app.use(
   })
 );
 
-// ===== Health (keep) =====
+// Health
 app.get("/", (_req, res) => res.json({ ok: true }));
 
-// ===== Resend mailer (keep your working route) =====
+// Resend mailer
 const resend = new Resend(process.env.RESEND_API_KEY);
 app.post("/send-email", async (req, res) => {
   try {
@@ -80,7 +155,7 @@ app.post("/send-email", async (req, res) => {
   }
 });
 
-// ===== Auth helpers (keep) =====
+// Auth helpers
 async function verifyBearer(req) {
   const h = req.get("Authorization") || "";
   const t = h.startsWith("Bearer ") ? h.slice(7) : null;
@@ -93,21 +168,10 @@ async function requireAdmin(req) {
   return decoded;
 }
 
-// ===== Admin endpoints (keep yours) =====
-// ... list-users, create-user, delete-user, set-admin, update-user-name ...
-
-// ------------------------------------------------------------------------------------
-// >>> NEW: Stripe multi-org setup
-// Env vars: STRIPE_KEY_ORG_A, STRIPE_KEY_ORG_B (you can name them), STRIPE_WEBHOOK_SECRET_ORG_A, STRIPE_WEBHOOK_SECRET_ORG_B
-// Also define what orgId strings you use on the frontend. Example below matches your HTML config org "State-48-Dance".
+// ---------- Stripe multi-org helpers ----------
 const STRIPE_KEYS_BY_ORG = {
   "State-48-Dance": process.env.STRIPE_KEY_ORG_A,
   "State-48-Theatre": process.env.STRIPE_KEY_ORG_B,
-};
-
-const STRIPE_WEBHOOK_SECRETS = {
-  "State-48-Dance": process.env.STRIPE_WEBHOOK_SECRET_ORG_A,
-  "State-48-Theatre": process.env.STRIPE_WEBHOOK_SECRET_ORG_B,
 };
 
 function getStripe(orgId) {
@@ -116,24 +180,22 @@ function getStripe(orgId) {
   return new Stripe(key, { apiVersion: "2024-06-20" });
 }
 
-// Helpers to locate Firestore student doc
-function studentDocRef(orgId, studentId) {
-  return doc(db, `organizations/${orgId}/students/${studentId}`);
+// Firestore refs (Admin SDK style)
+function studentRef(orgId, studentId) {
+  return db.doc(`organizations/${orgId}/students/${studentId}`);
 }
 function customerIndexRef(orgId, customerId) {
-  return doc(db, `organizations/${orgId}/stripeCustomers/${customerId}`);
+  return db.doc(`organizations/${orgId}/stripeCustomers/${customerId}`);
 }
 
 // --- Search customers by email/name ---
 app.get("/stripe/search-customers", async (req, res) => {
   try {
-    await verifyBearer(req); // any signed-in user can search
+    await verifyBearer(req);
     const { orgId, q } = req.query;
     if (!orgId || !q) return res.status(400).json({ error: "orgId and q are required" });
     const stripe = getStripe(orgId);
-    // Stripe search syntax: https://docs.stripe.com/search#supported-fields
-    // We’ll search email or name loosely
-    const query = `email:'${q}' OR name:'${q}'`;
+    const query = `email:'${q}' OR name:'${q}'`; // Stripe search syntax
     const results = await stripe.customers.search({ query, limit: 10 });
     res.json({
       data: results.data.map((c) => ({
@@ -150,24 +212,21 @@ app.get("/stripe/search-customers", async (req, res) => {
 // --- Map a student to a Stripe customer (and create reverse index) ---
 app.post("/stripe/map-customer", async (req, res) => {
   try {
-    await verifyBearer(req); // any signed in user
+    await verifyBearer(req);
     const { orgId, studentId, customerId } = req.body || {};
     if (!orgId || !studentId || !customerId)
       return res.status(400).json({ error: "orgId, studentId, customerId required" });
 
-    const sRef = studentDocRef(orgId, studentId);
-    const sSnap = await getDoc(sRef);
-    if (!sSnap.exists()) return res.status(404).json({ error: "Student not found" });
+    const sRef = studentRef(orgId, studentId);
+    const sSnap = await sRef.get();
+    if (!sSnap.exists) return res.status(404).json({ error: "Student not found" });
 
-    // store mapping on student
-    await setDoc(
-      sRef,
+    await sRef.set(
       { stripe: { customers: { [orgId]: customerId } } },
       { merge: true }
     );
 
-    // reverse index for webhooks
-    await setDoc(customerIndexRef(orgId, customerId), { studentId }, { merge: true });
+    await customerIndexRef(orgId, customerId).set({ studentId }, { merge: true });
 
     res.json({ ok: true });
   } catch (err) {
@@ -185,17 +244,14 @@ app.post("/stripe/create-invoice", async (req, res) => {
 
     const stripe = getStripe(orgId);
 
-    // Find customer mapping on student
-    const sSnap = await getDoc(studentDocRef(orgId, studentId));
-    if (!sSnap.exists()) return res.status(404).json({ error: "Student not found" });
+    // Get student mapping
+    const sSnap = await studentRef(orgId, studentId).get();
+    if (!sSnap.exists) return res.status(404).json({ error: "Student not found" });
     const student = sSnap.data();
-    const customerId =
-      student?.stripe?.customers?.[orgId] ||
-      null;
-
+    const customerId = student?.stripe?.customers?.[orgId] || null;
     if (!customerId) return res.status(400).json({ error: "Student not mapped to a Stripe customer for this org" });
 
-    // Create an Invoice Item (amount in cents)
+    // Create invoice item (amount in cents)
     await stripe.invoiceItems.create({
       customer: customerId,
       currency: "usd",
@@ -211,13 +267,13 @@ app.post("/stripe/create-invoice", async (req, res) => {
       description,
     });
     const finalized = await stripe.invoices.finalizeInvoice(invoice.id, {});
-
-    // Send via Stripe (emails the customer)
     const sent = await stripe.invoices.sendInvoice(finalized.id);
 
-    // Optional: write a lightweight history record
-    await setDoc(
-      doc(db, `organizations/${orgId}/students/${studentId}/billing/invoices/${sent.id}`),
+    // Persist history
+    const invRef = db.doc(
+      `organizations/${orgId}/students/${studentId}/billing/invoices/${sent.id}`
+    );
+    await invRef.set(
       {
         createdAt: Date.now(),
         amount: sent.total,
@@ -242,7 +298,7 @@ app.post("/stripe/create-invoice", async (req, res) => {
   }
 });
 
-// --- List invoices for a customer ---
+// --- List invoices ---
 app.get("/stripe/list-invoices", async (req, res) => {
   try {
     await verifyBearer(req);
@@ -267,7 +323,7 @@ app.get("/stripe/list-invoices", async (req, res) => {
   }
 });
 
-// --- List subscriptions for a customer ---
+// --- List subscriptions ---
 app.get("/stripe/list-subscriptions", async (req, res) => {
   try {
     await verifyBearer(req);
@@ -275,7 +331,11 @@ app.get("/stripe/list-subscriptions", async (req, res) => {
     if (!orgId || !customerId)
       return res.status(400).json({ error: "orgId and customerId required" });
     const stripe = getStripe(orgId);
-    const list = await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 20 });
+    const list = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "all",
+      limit: 20,
+    });
     res.json({
       data: list.data.map((s) => ({
         id: s.id,
@@ -296,55 +356,6 @@ app.get("/stripe/list-subscriptions", async (req, res) => {
   }
 });
 
-// --- Webhook per org (optional, recommended) ---
-// Set "Use raw body" ONLY for this route or mount a raw body parser.
-import bodyParser from "body-parser";
-app.post("/stripe/webhook/:orgId", bodyParser.raw({ type: "application/json" }), async (req, res) => {
-  const orgId = req.params.orgId;
-  const whSecret = STRIPE_WEBHOOK_SECRETS[orgId];
-  if (!whSecret) return res.status(400).send("Missing webhook secret for org");
-
-  const stripe = getStripe(orgId);
-  let event;
-  try {
-    const sig = req.headers["stripe-signature"];
-    event = stripe.webhooks.constructEvent(req.body, sig, whSecret);
-  } catch (e) {
-    console.error("Webhook signature verify failed:", e.message);
-    return res.status(400).send(`Webhook Error: ${e.message}`);
-  }
-
-  try {
-    // Persist minimal history
-    if (event.type.startsWith("invoice.")) {
-      const invoice = event.data.object;
-      const customerId = invoice.customer;
-      const idx = await getDoc(customerIndexRef(orgId, customerId));
-      const studentId = idx.exists() ? idx.data().studentId : null;
-      if (studentId) {
-        await setDoc(
-          doc(db, `organizations/${orgId}/students/${studentId}/billing/invoices/${invoice.id}`),
-          {
-            lastEventAt: Date.now(),
-            status: invoice.status,
-            total: invoice.total,
-            currency: invoice.currency,
-            hostedInvoiceUrl: invoice.hosted_invoice_url || null,
-            number: invoice.number || null,
-          },
-          { merge: true }
-        );
-      }
-    }
-    // you can add subscription.* handling similarly
-  } catch (e) {
-    console.error("Webhook handling error:", e);
-    // still return 200 so Stripe won't retry forever if it's a data edge case
-  }
-
-  res.json({ received: true });
-});
-
-// ===== Listen (keep) =====
+// ---------- Start server ----------
 const port = process.env.PORT || 8080;
 app.listen(port, () => console.log("Listening on", port));
