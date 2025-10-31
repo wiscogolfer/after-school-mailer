@@ -1,156 +1,54 @@
 // server.js (ESM)
-
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import { Resend } from "resend";
+import bodyParser from "body-parser";
 
-// Firebase Admin (single import)
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 
-// Stripe
 import Stripe from "stripe";
 
-// Raw body ONLY for Stripe webhook
-import bodyParser from "body-parser";
-
-// -------- Firebase Admin init (single block) --------
-// Auto-detects base64 or raw JSON in FIREBASE_SERVICE_ACCOUNT_JSON
-function getServiceAccountFromEnv() {
-  let raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "";
+// ------------------------------
+// Firebase Admin init
+// ------------------------------
+function parseServiceAccount(raw) {
   if (!raw) return null;
-
-  raw = raw.trim();
-
-  // If value looks like base64 (and not JSON starting with "{"), decode it.
-  const looksBase64 = /^[A-Za-z0-9+/=]+$/.test(raw) && !raw.startsWith("{");
-  if (looksBase64) {
-    try {
-      raw = Buffer.from(raw, "base64").toString("utf8");
-    } catch (e) {
-      console.error("Failed to base64-decode FIREBASE_SERVICE_ACCOUNT_JSON:", e);
-      return null;
-    }
-  }
-
-  let parsed;
   try {
-    parsed = JSON.parse(raw);
-  } catch (e) {
-    console.error("FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON:", e.message);
+    // Accept either raw JSON or base64-encoded JSON
+    const maybeJson = raw.trim().startsWith("{")
+      ? raw
+      : Buffer.from(raw, "base64").toString("utf8");
+    const parsed = JSON.parse(maybeJson);
+    if (parsed.private_key) {
+      parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+    }
+    return parsed;
+  } catch (err) {
+    console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:", err.message);
     return null;
   }
-
-  // Restore newlines if they’re escaped
-  if (parsed.private_key) {
-    parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
-  }
-
-  return parsed;
 }
 
-const svc = getServiceAccountFromEnv();
-
-let db; // <- declare once
-
+const svc = parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "");
 if (!getApps().length) {
-  if (!svc?.project_id) {
-    console.error('Firebase init failed: Service account object must contain a string "project_id" property.');
+  if (!svc?.project_id || typeof svc.project_id !== "string") {
+    console.error(
+      'Firebase init failed: Service account object must contain a string "project_id" property.'
+    );
   } else {
-    initializeApp({
-      credential: cert(svc),
-      projectId: svc.project_id,
-    });
+    initializeApp({ credential: cert(svc), projectId: svc.project_id });
     console.log("Firebase Admin initialized:", svc.project_id);
   }
 }
+const db = getFirestore();
 
-// Only continue if Firebase initialized
-if (getApps().length) {
-  db = getFirestore();
-} else {
-  console.error("❌ Firebase Admin failed — shutting down server");
-  process.exit(1);
-}
-
-// ---------- Express app ----------
+// ------------------------------
+// Express app + CORS
+// ------------------------------
 const app = express();
-
-// ⚠️ Put the Stripe webhook BEFORE express.json() so the raw body is available
-app.post(
-  "/stripe/webhook/:orgId",
-  bodyParser.raw({ type: "application/json" }),
-  async (req, res) => {
-    try {
-      const orgId = req.params.orgId;
-
-      const STRIPE_WEBHOOK_SECRETS = {
-        "State-48-Dance": process.env.STRIPE_WEBHOOK_SECRET_ORG_A,
-        "State-48-Theatre": process.env.STRIPE_WEBHOOK_SECRET_ORG_B,
-      };
-      const whSecret = STRIPE_WEBHOOK_SECRETS[orgId];
-      if (!whSecret) return res.status(400).send("Missing webhook secret for org");
-
-      const STRIPE_KEYS_BY_ORG = {
-        "State-48-Dance": process.env.STRIPE_KEY_ORG_A,
-        "State-48-Theatre": process.env.STRIPE_KEY_ORG_B,
-      };
-      const key = STRIPE_KEYS_BY_ORG[orgId];
-      if (!key) return res.status(400).send("Missing Stripe key for org");
-      const stripe = new Stripe(key, { apiVersion: "2024-06-20" });
-
-      const sig = req.headers["stripe-signature"];
-      let event;
-      try {
-        event = stripe.webhooks.constructEvent(req.body, sig, whSecret);
-      } catch (e) {
-        console.error("Webhook signature verify failed:", e.message);
-        return res.status(400).send(`Webhook Error: ${e.message}`);
-      }
-
-      // Minimal persistence for invoices
-      if (event.type.startsWith("invoice.")) {
-        const invoice = event.data.object;
-        const customerId = invoice.customer;
-
-        // reverse-index doc at organizations/{orgId}/stripeCustomers/{customerId}
-        const idxRef = db.doc(`organizations/${orgId}/stripeCustomers/${customerId}`);
-        const idxSnap = await idxRef.get();
-        const studentId = idxSnap.exists ? idxSnap.data().studentId : null;
-
-        if (studentId) {
-          const invRef = db.doc(
-            `organizations/${orgId}/students/${studentId}/billing/invoices/${invoice.id}`
-          );
-          await invRef.set(
-            {
-              lastEventAt: Date.now(),
-              status: invoice.status,
-              total: invoice.total,
-              currency: invoice.currency,
-              hostedInvoiceUrl: invoice.hosted_invoice_url || null,
-              number: invoice.number || null,
-            },
-            { merge: true }
-          );
-        }
-      }
-
-      return res.json({ received: true });
-    } catch (e) {
-      console.error("Webhook handling error:", e);
-      // Acknowledge to avoid endless retries; log for investigation
-      return res.json({ received: true });
-    }
-  }
-);
-
-// Now JSON body parser for all *other* routes
-app.use(express.json({ limit: "2mb" }));
-
-// CORS
 const allowedOrigins = new Set([
   "https://classesapp.state48arts.org",
   "http://localhost:5173",
@@ -158,10 +56,11 @@ const allowedOrigins = new Set([
   "http://localhost:3000",
   "http://127.0.0.1:3000",
 ]);
+
 app.use(
   cors({
     origin(origin, cb) {
-      if (!origin) return cb(null, true);
+      if (!origin) return cb(null, true); // allow same-origin / curl
       if (allowedOrigins.has(origin)) return cb(null, true);
       return cb(new Error("Not allowed by CORS"));
     },
@@ -169,10 +68,110 @@ app.use(
 );
 
 // Health
-app.get("/", (_req, res) => res.json({ ok: true }));
+app.get("/", (_req, res) => res.json({ ok: true, service: "after-school-mailer" }));
 
+// ------------------------------
+// (Optional) Stripe webhook (raw body; define BEFORE express.json)
+// ------------------------------
+const STRIPE_KEYS_BY_ORG = {
+  "State-48-Dance": process.env.STRIPE_KEY_ORG_A,
+  "State-48-Theatre": process.env.STRIPE_KEY_ORG_B,
+};
+
+const STRIPE_WEBHOOK_SECRETS = {
+  "State-48-Dance": process.env.STRIPE_WEBHOOK_SECRET_ORG_A,
+  "State-48-Theatre": process.env.STRIPE_WEBHOOK_SECRET_ORG_B,
+};
+
+function getStripe(orgId) {
+  const key = STRIPE_KEYS_BY_ORG[orgId];
+  if (!orgId || !key) throw new Error("Unknown org or missing Stripe key");
+  return new Stripe(key, { apiVersion: "2024-06-20" });
+}
+
+app.post(
+  "/stripe/webhook/:orgId",
+  bodyParser.raw({ type: "application/json" }),
+  async (req, res) => {
+    const orgId = req.params.orgId;
+    const whSecret = STRIPE_WEBHOOK_SECRETS[orgId];
+    if (!whSecret) return res.status(400).send("Missing webhook secret for org");
+    let event;
+    try {
+      const stripe = getStripe(orgId);
+      const sig = req.headers["stripe-signature"];
+      event = stripe.webhooks.constructEvent(req.body, sig, whSecret);
+    } catch (e) {
+      console.error("Webhook signature verify failed:", e.message);
+      return res.status(400).send(`Webhook Error: ${e.message}`);
+    }
+
+    try {
+      if (event.type.startsWith("invoice.")) {
+        const invoice = event.data.object;
+        const customerId = invoice.customer;
+        // Reverse index: organizations/{orgId}/stripeCustomers/{customerId} => { studentId }
+        const idxRef = db
+          .collection("organizations")
+          .doc(orgId)
+          .collection("stripeCustomers")
+          .doc(customerId);
+
+        const idxSnap = await idxRef.get();
+        const studentId = idxSnap.exists ? idxSnap.data().studentId : null;
+
+        if (studentId) {
+          await db
+            .collection("organizations")
+            .doc(orgId)
+            .collection("students")
+            .doc(studentId)
+            .collection("billing")
+            .doc("invoices")
+            .collection("items")
+            .doc(invoice.id)
+            .set(
+              {
+                lastEventAt: Date.now(),
+                status: invoice.status,
+                total: invoice.total,
+                currency: invoice.currency,
+                hostedInvoiceUrl: invoice.hosted_invoice_url || null,
+                number: invoice.number || null,
+              },
+              { merge: true }
+            );
+        }
+      }
+    } catch (err) {
+      console.error("Webhook handling error:", err);
+      // Still 200 so Stripe won't retry forever on odd data
+    }
+
+    res.json({ received: true });
+  }
+);
+
+// ------------------------------
+// JSON parser for the rest
+// ------------------------------
+app.use(express.json({ limit: "2mb" }));
+
+// ------------------------------
+// Auth helpers
+// ------------------------------
+async function verifyBearer(req) {
+  const h = req.get("Authorization") || "";
+  const t = h.startsWith("Bearer ") ? h.slice(7) : null;
+  if (!t) throw new Error("Missing bearer token");
+  return await getAuth().verifyIdToken(t);
+}
+
+// ------------------------------
 // Resend mailer
+// ------------------------------
 const resend = new Resend(process.env.RESEND_API_KEY);
+
 app.post("/send-email", async (req, res) => {
   try {
     const { to, bcc, subject, text, replyTo } = req.body || {};
@@ -180,12 +179,21 @@ app.post("/send-email", async (req, res) => {
       return res.status(400).json({ error: "Missing to/bcc, subject, or text" });
     }
     const fromAddress = process.env.FROM_EMAIL || "contact@state48theatre.com";
-    const toList = to ? [to] : [process.env.DEFAULT_TO || fromAddress];
-    const payload = { from: fromAddress, to: toList, subject, text };
+    const toList = to ? [to] : [fromAddress];
+
+    const payload = {
+      from: fromAddress,
+      to: toList,
+      subject,
+      text,
+    };
     if (Array.isArray(bcc) && bcc.length) payload.bcc = bcc;
     if (replyTo?.email) {
-      payload.reply_to = replyTo.name ? `${replyTo.name} <${replyTo.email}>` : replyTo.email;
+      payload.reply_to = replyTo.name
+        ? `${replyTo.name} <${replyTo.email}>`
+        : replyTo.email;
     }
+
     const result = await resend.emails.send(payload);
     if (result?.error) return res.status(500).json({ error: String(result.error) });
     res.json({ ok: true, id: result?.id || null });
@@ -195,47 +203,31 @@ app.post("/send-email", async (req, res) => {
   }
 });
 
-// Auth helpers
-async function verifyBearer(req) {
-  const h = req.get("Authorization") || "";
-  const t = h.startsWith("Bearer ") ? h.slice(7) : null;
-  if (!t) throw new Error("Missing bearer token");
-  return await getAuth().verifyIdToken(t);
+// ------------------------------
+// Firestore helpers (Admin SDK)
+// ------------------------------
+function studentDoc(orgId, studentId) {
+  return db.collection("organizations").doc(orgId).collection("students").doc(studentId);
 }
-async function requireAdmin(req) {
-  const decoded = await verifyBearer(req);
-  if (!decoded.admin) throw new Error("Admin privileges required");
-  return decoded;
-}
-
-// ---------- Stripe multi-org helpers ----------
-const STRIPE_KEYS_BY_ORG = {
-  "State-48-Dance": process.env.STRIPE_KEY_ORG_A,
-  "State-48-Theatre": process.env.STRIPE_KEY_ORG_B,
-};
-
-function getStripe(orgId) {
-  const key = STRIPE_KEYS_BY_ORG[orgId];
-  if (!orgId || !key) throw new Error("Unknown org or missing Stripe key");
-  return new Stripe(key, { apiVersion: "2024-06-20" });
+function customerIndexDoc(orgId, customerId) {
+  return db
+    .collection("organizations")
+    .doc(orgId)
+    .collection("stripeCustomers")
+    .doc(customerId);
 }
 
-// Firestore refs (Admin SDK style)
-function studentRef(orgId, studentId) {
-  return db.doc(`organizations/${orgId}/students/${studentId}`);
-}
-function customerIndexRef(orgId, customerId) {
-  return db.doc(`organizations/${orgId}/stripeCustomers/${customerId}`);
-}
-
-// --- Search customers by email/name ---
+// ------------------------------
+// Stripe: search customers
+// ------------------------------
 app.get("/stripe/search-customers", async (req, res) => {
   try {
-    await verifyBearer(req);
+    await verifyBearer(req); // any signed-in user can search
     const { orgId, q } = req.query;
     if (!orgId || !q) return res.status(400).json({ error: "orgId and q are required" });
+
     const stripe = getStripe(orgId);
-    const query = `email:'${q}' OR name:'${q}'`; // Stripe search syntax
+    const query = `email:'${q}' OR name:'${q}'`;
     const results = await stripe.customers.search({ query, limit: 10 });
     res.json({
       data: results.data.map((c) => ({
@@ -249,7 +241,9 @@ app.get("/stripe/search-customers", async (req, res) => {
   }
 });
 
-// --- Map a student to a Stripe customer (and create reverse index) ---
+// ------------------------------
+// Stripe: map a student to a customer
+// ------------------------------
 app.post("/stripe/map-customer", async (req, res) => {
   try {
     await verifyBearer(req);
@@ -257,51 +251,28 @@ app.post("/stripe/map-customer", async (req, res) => {
     if (!orgId || !studentId || !customerId)
       return res.status(400).json({ error: "orgId, studentId, customerId required" });
 
-    // Helpful logs for debugging in Render
-    console.log("[map-customer] orgId:", orgId, "studentId:", studentId, "customerId:", customerId);
-
-    const sRef = studentRef(orgId, studentId);
+    const sRef = studentDoc(orgId, studentId);
     const sSnap = await sRef.get();
-    if (!sSnap.exists) {
-      // Optional cross-org hint (comment out if you don’t want this)
-      const orgsTried = [orgId];
-      let found = null;
-      for (const altOrg of Object.keys(STRIPE_KEYS_BY_ORG)) {
-        if (altOrg === orgId) continue;
-        const altSnap = await studentRef(altOrg, studentId).get();
-        if (altSnap.exists) {
-          found = altOrg;
-          break;
-        }
-        orgsTried.push(altOrg);
-      }
-      if (found) {
-        return res.status(404).json({
-          error: `Student exists under a different org ("${found}"), not "${orgId}". Use that orgId.`,
-          details: { orgsTried }
-        });
-      }
-      return res.status(404).json({
-        error: `Student not found at organizations/${orgId}/students/${studentId}`,
-        details: { orgsTried }
-      });
-    }
+    if (!sSnap.exists) return res.status(404).json({ error: "Student not found" });
 
+    // merge mapping into nested field: stripe.customers.<orgId> = customerId
     await sRef.set(
       { stripe: { customers: { [orgId]: customerId } } },
       { merge: true }
     );
 
-    await customerIndexRef(orgId, customerId).set({ studentId }, { merge: true });
+    // reverse index for webhooks
+    await customerIndexDoc(orgId, customerId).set({ studentId }, { merge: true });
 
     res.json({ ok: true });
   } catch (err) {
-    console.error("[map-customer] error:", err);
     res.status(400).json({ error: err.message });
   }
 });
 
-// --- Create & send an invoice ---
+// ------------------------------
+// Stripe: create & send invoice
+// ------------------------------
 app.post("/stripe/create-invoice", async (req, res) => {
   try {
     await verifyBearer(req);
@@ -311,47 +282,58 @@ app.post("/stripe/create-invoice", async (req, res) => {
 
     const stripe = getStripe(orgId);
 
-    // Get student mapping
-    const sSnap = await studentRef(orgId, studentId).get();
+    // find mapped customer on student
+    const sSnap = await studentDoc(orgId, studentId).get();
     if (!sSnap.exists) return res.status(404).json({ error: "Student not found" });
-    const student = sSnap.data();
-    const customerId = student?.stripe?.customers?.[orgId] || null;
-    if (!customerId) return res.status(400).json({ error: "Student not mapped to a Stripe customer for this org" });
+    const sData = sSnap.data() || {};
+    const customerId = sData?.stripe?.customers?.[orgId] || null;
+    if (!customerId)
+      return res
+        .status(400)
+        .json({ error: "Student not mapped to a Stripe customer for this org" });
 
-    // Create invoice item (amount in cents)
+    // amount is dollars in UI; convert to cents
+    const cents = Math.round(Number(amount) * 100);
+
     await stripe.invoiceItems.create({
       customer: customerId,
       currency: "usd",
-      amount: Math.round(Number(amount) * 100),
+      amount: cents,
       description,
     });
 
-    // Create & finalize invoice
     const invoice = await stripe.invoices.create({
       customer: customerId,
       collection_method: "send_invoice",
       days_until_due: 7,
       description,
     });
+
     const finalized = await stripe.invoices.finalizeInvoice(invoice.id, {});
     const sent = await stripe.invoices.sendInvoice(finalized.id);
 
-    // Persist history
-    const invRef = db.doc(
-      `organizations/${orgId}/students/${studentId}/billing/invoices/${sent.id}`
-    );
-    await invRef.set(
-      {
-        createdAt: Date.now(),
-        amount: sent.total,
-        currency: sent.currency,
-        status: sent.status,
-        hostedInvoiceUrl: sent.hosted_invoice_url || null,
-        number: sent.number || null,
-        description,
-      },
-      { merge: true }
-    );
+    // store a simple history doc
+    await db
+      .collection("organizations")
+      .doc(orgId)
+      .collection("students")
+      .doc(studentId)
+      .collection("billing")
+      .doc("invoices")
+      .collection("items")
+      .doc(sent.id)
+      .set(
+        {
+          createdAt: Date.now(),
+          amount: sent.total,
+          currency: sent.currency,
+          status: sent.status,
+          hostedInvoiceUrl: sent.hosted_invoice_url || null,
+          number: sent.number || null,
+          description,
+        },
+        { merge: true }
+      );
 
     res.json({
       ok: true,
@@ -365,13 +347,16 @@ app.post("/stripe/create-invoice", async (req, res) => {
   }
 });
 
-// --- List invoices ---
+// ------------------------------
+// Stripe: list invoices
+// ------------------------------
 app.get("/stripe/list-invoices", async (req, res) => {
   try {
     await verifyBearer(req);
     const { orgId, customerId } = req.query || {};
     if (!orgId || !customerId)
       return res.status(400).json({ error: "orgId and customerId required" });
+
     const stripe = getStripe(orgId);
     const list = await stripe.invoices.list({ customer: customerId, limit: 20 });
     res.json({
@@ -390,13 +375,16 @@ app.get("/stripe/list-invoices", async (req, res) => {
   }
 });
 
-// --- List subscriptions ---
+// ------------------------------
+// Stripe: list subscriptions
+// ------------------------------
 app.get("/stripe/list-subscriptions", async (req, res) => {
   try {
     await verifyBearer(req);
     const { orgId, customerId } = req.query || {};
     if (!orgId || !customerId)
       return res.status(400).json({ error: "orgId and customerId required" });
+
     const stripe = getStripe(orgId);
     const list = await stripe.subscriptions.list({
       customer: customerId,
@@ -423,6 +411,8 @@ app.get("/stripe/list-subscriptions", async (req, res) => {
   }
 });
 
-// ---------- Start server ----------
+// ------------------------------
+// Start server
+// ------------------------------
 const port = process.env.PORT || 8080;
 app.listen(port, () => console.log("Listening on", port));
