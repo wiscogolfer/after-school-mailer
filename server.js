@@ -17,15 +17,14 @@ import Stripe from "stripe";
 import bodyParser from "body-parser";
 
 // -------- Firebase Admin init (single block) --------
-// --- replace your getServiceAccountFromEnv with this ---
+// Auto-detects base64 or raw JSON in FIREBASE_SERVICE_ACCOUNT_JSON
 function getServiceAccountFromEnv() {
   let raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "";
   if (!raw) return null;
 
   raw = raw.trim();
 
-  // If the value looks like base64 (and not JSON starting with "{"),
-  // decode to UTF-8 JSON text first.
+  // If value looks like base64 (and not JSON starting with "{"), decode it.
   const looksBase64 = /^[A-Za-z0-9+/=]+$/.test(raw) && !raw.startsWith("{");
   if (looksBase64) {
     try {
@@ -86,6 +85,7 @@ app.post(
   async (req, res) => {
     try {
       const orgId = req.params.orgId;
+
       const STRIPE_WEBHOOK_SECRETS = {
         "State-48-Dance": process.env.STRIPE_WEBHOOK_SECRET_ORG_A,
         "State-48-Theatre": process.env.STRIPE_WEBHOOK_SECRET_ORG_B,
@@ -257,9 +257,35 @@ app.post("/stripe/map-customer", async (req, res) => {
     if (!orgId || !studentId || !customerId)
       return res.status(400).json({ error: "orgId, studentId, customerId required" });
 
+    // Helpful logs for debugging in Render
+    console.log("[map-customer] orgId:", orgId, "studentId:", studentId, "customerId:", customerId);
+
     const sRef = studentRef(orgId, studentId);
     const sSnap = await sRef.get();
-    if (!sSnap.exists) return res.status(404).json({ error: "Student not found" });
+    if (!sSnap.exists) {
+      // Optional cross-org hint (comment out if you don’t want this)
+      const orgsTried = [orgId];
+      let found = null;
+      for (const altOrg of Object.keys(STRIPE_KEYS_BY_ORG)) {
+        if (altOrg === orgId) continue;
+        const altSnap = await studentRef(altOrg, studentId).get();
+        if (altSnap.exists) {
+          found = altOrg;
+          break;
+        }
+        orgsTried.push(altOrg);
+      }
+      if (found) {
+        return res.status(404).json({
+          error: `Student exists under a different org ("${found}"), not "${orgId}". Use that orgId.`,
+          details: { orgsTried }
+        });
+      }
+      return res.status(404).json({
+        error: `Student not found at organizations/${orgId}/students/${studentId}`,
+        details: { orgsTried }
+      });
+    }
 
     await sRef.set(
       { stripe: { customers: { [orgId]: customerId } } },
@@ -270,6 +296,7 @@ app.post("/stripe/map-customer", async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
+    console.error("[map-customer] error:", err);
     res.status(400).json({ error: err.message });
   }
 });
