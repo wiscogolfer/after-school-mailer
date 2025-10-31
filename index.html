@@ -357,7 +357,7 @@
   </div>
 
   <!-- Edit Contact Modal -->
-  <div id="edit-contact-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w/full max-w-md shadow-lg rounded-md bg-white">
+  <div id="edit-contact-modal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
     <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-medium leading-6 text-gray-900">Edit Contact</h3>
@@ -441,7 +441,7 @@
           </div>
           <div>
             <label for="invoice-description" class="block text-sm font-medium text-gray-700">Description</label>
-            <input type="text" id="invoice-description" placeholder="e.g., October Class Fee" class="mt-1 block w/full border border-gray-300 rounded-md shadow-sm p-2" required>
+            <input type="text" id="invoice-description" placeholder="e.g., October Class Fee" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
           </div>
         </div>
         <p id="invoice-status" class="text-xs mt-4 h-4"></p>
@@ -623,7 +623,7 @@
       }, (err)=>{ console.error(err); toast('Failed to load contacts.','error'); renderContactList([]); });
     };
 
-    // --- Render helpers (Col1/Col2/Contacts) – unchanged from your version ---
+    // --- Render helpers (Col1/Col2/Contacts) ---
     const renderCol1ClassList = () => {
       const listEl = document.getElementById('col-1-list'); listEl.innerHTML = '';
       if (!allClassCache.length) { listEl.innerHTML='<p class="text-gray-500 text-center">No classes found. Add one!</p>'; return; }
@@ -637,7 +637,7 @@
             <span class="font-medium text-gray-800">${c.name}</span>
             <div class="flex items-center space-x-2">
               <button class="edit-class-btn icon-btn edit" data-id="${c.id}" title="Edit Class"><i class="fas fa-pencil-alt fa-xs"></i></button>
-              <button class="delete-class-btn icon-btn" data-id="${c.id}" title="Delete Class"><i class="fas fa-times fa-sm"></i></button>
+              <button class="delete-class-btn icon-btn" data-id="${c.id}" data-name="${c.name}" title="Delete Class"><i class="fas fa-times fa-sm"></i></button>
             </div>
           </div>
           <p class="text-sm text-gray-600">${c.teacher || ''}</p>`;
@@ -789,7 +789,7 @@
       showCol('col-3-section'); setActiveNav('nav-contacts');
     };
 
-    // ===== EMAIL ===== (existing)
+    // ===== EMAIL =====
     const openEmailModal = ({ to, bcc }) => {
       const toEl = document.getElementById('email-to');
       const bccEl = document.getElementById('email-bcc');
@@ -899,8 +899,158 @@
       }
     });
 
-    // ===== CRUD handlers (classes/students/contacts) — unchanged structure =====
-    // ... (shortened for brevity: add/update/delete class/student/contact, same as your current version) ...
+    // ===== CRUD handlers (classes/students/contacts) =====
+    async function handleAddClass(e){ e.preventDefault(); const btn=e.submitter; btn.disabled=true;
+      try { const name=document.getElementById('class-name').value; const teacher=document.getElementById('teacher-name').value;
+        await addDoc(getClassesCol(), { name, teacher, students:[] }); closeModal('add-class-modal'); e.target.reset(); toast('Class added!','success');
+      } catch(err){ console.error(err); toast(err.message,'error'); } finally { btn.disabled=false; }
+    }
+
+    async function openEditClassModal(id){
+      try {
+        const snap = await getDoc(doc(getClassesCol(), id));
+        if (!snap.exists()) return toast('Class not found','error');
+        const data = snap.data();
+        document.getElementById('edit-class-id').value = id;
+        document.getElementById('edit-class-name').value = data.name || '';
+        document.getElementById('edit-teacher-name').value = data.teacher || '';
+        openModal('edit-class-modal');
+      } catch(err){ console.error(err); toast(err.message,'error'); }
+    }
+
+    async function handleUpdateClass(e){ e.preventDefault(); const btn=e.submitter; btn.disabled=true;
+      try { const id=document.getElementById('edit-class-id').value; const name=document.getElementById('edit-class-name').value; const teacher=document.getElementById('edit-teacher-name').value;
+        await updateDoc(doc(getClassesCol(), id), { name, teacher }); closeModal('edit-class-modal'); toast('Class updated!','success');
+      } catch(err){ console.error(err); toast(err.message,'error'); } finally { btn.disabled=false; }
+    }
+
+    async function handleDeleteClass(id, name){
+      if (!confirm(`Delete class "${name}"? Students remain in the system but will be unenrolled from this class.`)) return;
+      try {
+        const cSnap = await getDoc(doc(getClassesCol(), id));
+        const students = cSnap.exists() ? (cSnap.data().students || []) : [];
+        const batch = writeBatch(db);
+        students.forEach(sid=>{
+          batch.update(doc(getStudentsCol(), sid), { classes: arrayRemove(id) });
+        });
+        batch.delete(doc(getClassesCol(), id));
+        await batch.commit();
+        toast('Class deleted.','success');
+        if (currentClassId === id) { currentClassId = null; document.getElementById('col-2-list').innerHTML=''; }
+      } catch (err){ console.error(err); toast(err.message,'error'); }
+    }
+
+    async function handleAddNewStudent(e){ e.preventDefault(); const btn=e.submitter; btn.disabled=true;
+      try { const name=document.getElementById('new-student-name').value; const sRef=await addDoc(getStudentsCol(), { name, parents:[], classes:[] });
+        if (currentView==='class' && currentClassId){
+          const batch=writeBatch(db);
+          batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(sRef.id) });
+          batch.update(sRef, { classes: arrayUnion(currentClassId) });
+          await batch.commit();
+        }
+        closeModal('add-new-student-modal'); e.target.reset(); toast('Student added!','success');
+      } catch(err){ console.error(err); toast(err.message,'error'); } finally { btn.disabled=false; }
+    }
+
+    async function openEditStudentModal(id){
+      try {
+        const snap = await getDoc(doc(getStudentsCol(), id));
+        if (!snap.exists()) return toast('Student not found','error');
+        const data = snap.data();
+        document.getElementById('edit-student-id').value = id;
+        document.getElementById('edit-student-name').value = data.name || '';
+        openModal('edit-student-modal');
+      } catch(err){ console.error(err); toast(err.message,'error'); }
+    }
+
+    async function handleUpdateStudent(e){ e.preventDefault(); const btn=e.submitter; btn.disabled=true;
+      try { const id=document.getElementById('edit-student-id').value; const name=document.getElementById('edit-student-name').value;
+        await updateDoc(doc(getStudentsCol(), id), { name }); closeModal('edit-student-modal'); toast('Student updated!','success');
+      } catch(err){ console.error(err); toast(err.message,'error'); } finally { btn.disabled=false; }
+    }
+
+    async function handleAddExistingStudent(e){ e.preventDefault(); const btn=e.submitter; btn.disabled=true;
+      try { const sid=document.getElementById('existing-student-select').value;
+        const batch=writeBatch(db);
+        batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(sid) });
+        batch.update(doc(getStudentsCol(), sid), { classes: arrayUnion(currentClassId) });
+        await batch.commit(); closeModal('add-existing-student-modal'); e.target.reset(); toast('Student added to class!','success');
+      } catch(err){ console.error(err); toast(err.message,'error'); } finally { btn.disabled=false; }
+    }
+
+    async function handleRemoveStudent(sid,name){
+      if (!currentClassId || !confirm(`Remove ${name} from this class?`)) return;
+      try { const batch=writeBatch(db);
+        batch.update(doc(getClassesCol(), currentClassId), { students: arrayRemove(sid) });
+        batch.update(doc(getStudentsCol(), sid), { classes: arrayRemove(currentClassId) });
+        await batch.commit(); toast('Student removed.','success'); if (currentStudentId===sid) resetBillingCard();
+      } catch(err){ console.error(err); toast(err.message,'error'); }
+    }
+
+    async function handleDeleteStudent(sid,name){
+      if (!confirm(`PERMANENTLY DELETE ${name}? This cannot be undone.`)) return;
+      try {
+        const batch=writeBatch(db);
+        const sRef=doc(getStudentsCol(), sid);
+        const sSnap=await getDoc(sRef);
+        if (sSnap.exists()){
+          const data=sSnap.data();
+          // remove from classes
+          (data.classes||[]).forEach(cid=>batch.update(doc(getClassesCol(), cid), { students: arrayRemove(sid) }));
+          // delete contacts
+          (data.parents||[]).forEach(pid=>batch.delete(doc(getParentsCol(), pid)));
+        }
+        batch.delete(sRef);
+        await batch.commit();
+        toast('Student deleted.','success');
+        if (currentStudentId===sid){ currentStudentId = null; resetBillingCard(); document.getElementById('contact-list').innerHTML=''; }
+      } catch(err){ console.error(err); toast(err.message,'error'); }
+    }
+
+    // CONTACTS: add / edit / delete
+    async function handleAddContact(e){ e.preventDefault(); const btn=e.submitter; btn.disabled=true;
+      try {
+        if (!currentStudentId) throw new Error('Select a student first.');
+        const name = document.getElementById('contact-name').value.trim();
+        const email= document.getElementById('contact-email').value.trim();
+        const phone= document.getElementById('contact-phone').value.trim();
+        const cRef = await addDoc(getParentsCol(), { name, email, phone });
+        await updateDoc(doc(getStudentsCol(), currentStudentId), { parents: arrayUnion(cRef.id) });
+        closeModal('add-contact-modal'); e.target.reset(); toast('Contact added!','success');
+      } catch(err){ console.error(err); toast(err.message,'error'); } finally { btn.disabled=false; }
+    }
+
+    async function openEditContactModal(id){
+      try {
+        const snap = await getDoc(doc(getParentsCol(), id));
+        if (!snap.exists()) return toast('Contact not found','error');
+        const data = snap.data();
+        document.getElementById('edit-contact-id').value = id;
+        document.getElementById('edit-contact-name').value = data.name || '';
+        document.getElementById('edit-contact-email').value = data.email || '';
+        document.getElementById('edit-contact-phone').value = data.phone || '';
+        openModal('edit-contact-modal');
+      } catch(err){ console.error(err); toast(err.message,'error'); }
+    }
+
+    async function handleUpdateContact(e){ e.preventDefault(); const btn=e.submitter; btn.disabled=true;
+      try {
+        const id = document.getElementById('edit-contact-id').value;
+        const name = document.getElementById('edit-contact-name').value.trim();
+        const email= document.getElementById('edit-contact-email').value.trim();
+        const phone= document.getElementById('edit-contact-phone').value.trim();
+        await updateDoc(doc(getParentsCol(), id), { name, email, phone });
+        closeModal('edit-contact-modal'); toast('Contact updated!','success');
+      } catch(err){ console.error(err); toast(err.message,'error'); } finally { btn.disabled=false; }
+    }
+
+    async function handleDeleteContact(id,name){
+      if (!currentStudentId || !confirm(`Delete contact ${name}?`)) return;
+      try { const batch=writeBatch(db);
+        batch.update(doc(getStudentsCol(), currentStudentId), { parents: arrayRemove(id) });
+        batch.delete(doc(getParentsCol(), id)); await batch.commit(); toast('Contact deleted.','success');
+      } catch(err){ console.error(err); toast(err.message,'error'); }
+    }
 
     // ====== STRIPE BILLING (NEW) ======
     const billingCard = document.getElementById('billing-card');
@@ -927,7 +1077,6 @@
       billingCard?.classList.add('hidden');
     }
 
-    // Reflect mapping from student data (expects student.stripe.customers[orgId] = customerId)
     function renderStripeMappingFromStudent(studentData){
       const cid = studentData?.stripe?.customers?.[organizationId] || null;
       if (currentStudentId) billingCard.classList.remove('hidden');
@@ -940,7 +1089,6 @@
       }
     }
 
-    // Secure fetch with Firebase token
     async function secureFetch(path, opts={}){
       const token = await getIdToken(auth.currentUser, true);
       const headers = Object.assign({'Content-Type':'application/json','Authorization':`Bearer ${token}`}, opts.headers||{});
@@ -953,7 +1101,6 @@
       return res.json();
     }
 
-    // Search customers
     stripeSearchBtn.addEventListener('click', async ()=>{
       const q = stripeSearchInput.value.trim();
       stripeResults.innerHTML=''; stripeSearchStatus.textContent='';
@@ -1004,7 +1151,6 @@
       }
     }
 
-    // Invoices & Subscriptions
     document.getElementById('view-invoices-btn').addEventListener('click', async ()=>{
       const customerId = mappedCustomerEl.textContent && mappedCustomerEl.textContent!=='None' ? mappedCustomerEl.textContent : null;
       if (!customerId) return toast('Map a Stripe customer first.','error');
@@ -1066,7 +1212,7 @@
       }
     });
 
-    // ===== INVOICE MODAL (using your server /stripe/create-invoice if needed) =====
+    // ===== INVOICE MODAL =====
     function openInvoiceModal(studentId, studentName){
       if (!mappedCustomerEl.textContent || mappedCustomerEl.textContent==='None') {
         return toast('Map a Stripe customer first.','error');
@@ -1085,7 +1231,7 @@
       const statusEl = document.getElementById('invoice-status');
       statusEl.textContent='Creating...';
       try {
-        const j = await secureFetch('/stripe/create-invoice', {
+        await secureFetch('/stripe/create-invoice', {
           method:'POST',
           body: JSON.stringify({ orgId: organizationId, studentId: currentStudentId, amount, description })
         });
@@ -1114,7 +1260,7 @@
       document.getElementById('nav-col-2').addEventListener('click', ()=>{ showCol('col-2-section'); setActiveNav('nav-col-2'); });
       document.getElementById('nav-contacts').addEventListener('click', ()=>{ showCol('col-3-section'); setActiveNav('nav-contacts'); });
 
-      // Add buttons (hook existing handlers you already have)
+      // Add buttons
       document.getElementById('col-1-add-btn').addEventListener('click', ()=> openModal('add-class-modal'));
       document.getElementById('add-new-student-btn').addEventListener('click', ()=>{
         if (!currentClassId && currentView==='class') return toast('Select a class first.','error');
@@ -1138,7 +1284,7 @@
         btn.addEventListener('click', ()=> closeModal(btn.dataset.modal));
       });
 
-      // Forms: (you already had these in your version; keeping them wired)
+      // Forms
       document.getElementById('add-class-form').addEventListener('submit', handleAddClass);
       document.getElementById('edit-class-form').addEventListener('submit', handleUpdateClass);
       document.getElementById('add-new-student-form').addEventListener('submit', handleAddNewStudent);
@@ -1189,64 +1335,6 @@
       document.getElementById('add-contact-btn').disabled = true;
       document.getElementById('col-2-list').innerHTML='';
       document.getElementById('contact-list').innerHTML='';
-    }
-
-    // Class & student CRUD handlers (same as your working ones)
-    async function handleAddClass(e){ e.preventDefault(); const btn=e.submitter; btn.disabled=true;
-      try { const name=document.getElementById('class-name').value; const teacher=document.getElementById('teacher-name').value;
-        await addDoc(getClassesCol(), { name, teacher, students:[] }); closeModal('add-class-modal'); e.target.reset(); toast('Class added!','success');
-      } catch(err){ console.error(err); toast(err.message,'error'); } finally { btn.disabled=false; }
-    }
-    async function handleUpdateClass(e){ e.preventDefault(); const btn=e.submitter; btn.disabled=true;
-      try { const id=document.getElementById('edit-class-id').value; const name=document.getElementById('edit-class-name').value; const teacher=document.getElementById('edit-teacher-name').value;
-        await updateDoc(doc(getClassesCol(), id), { name, teacher }); closeModal('edit-class-modal'); toast('Class updated!','success');
-      } catch(err){ console.error(err); toast(err.message,'error'); } finally { btn.disabled=false; }
-    }
-    async function handleAddNewStudent(e){ e.preventDefault(); const btn=e.submitter; btn.disabled=true;
-      try { const name=document.getElementById('new-student-name').value; const sRef=await addDoc(getStudentsCol(), { name, parents:[], classes:[] });
-        if (currentView==='class' && currentClassId){
-          const batch=writeBatch(db);
-          batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(sRef.id) });
-          batch.update(sRef, { classes: arrayUnion(currentClassId) });
-          await batch.commit();
-        }
-        closeModal('add-new-student-modal'); e.target.reset(); toast('Student added!','success');
-      } catch(err){ console.error(err); toast(err.message,'error'); } finally { btn.disabled=false; }
-    }
-    async function handleUpdateStudent(e){ e.preventDefault(); const btn=e.submitter; btn.disabled=true;
-      try { const id=document.getElementById('edit-student-id').value; const name=document.getElementById('edit-student-name').value;
-        await updateDoc(doc(getStudentsCol(), id), { name }); closeModal('edit-student-modal'); toast('Student updated!','success');
-      } catch(err){ console.error(err); toast(err.message,'error'); } finally { btn.disabled=false; }
-    }
-    async function handleAddExistingStudent(e){ e.preventDefault(); const btn=e.submitter; btn.disabled=true;
-      try { const sid=document.getElementById('existing-student-select').value;
-        const batch=writeBatch(db);
-        batch.update(doc(getClassesCol(), currentClassId), { students: arrayUnion(sid) });
-        batch.update(doc(getStudentsCol(), sid), { classes: arrayUnion(currentClassId) });
-        await batch.commit(); closeModal('add-existing-student-modal'); e.target.reset(); toast('Student added to class!','success');
-      } catch(err){ console.error(err); toast(err.message,'error'); } finally { btn.disabled=false; }
-    }
-    async function handleRemoveStudent(sid,name){
-      if (!currentClassId || !confirm(`Remove ${name} from this class?`)) return;
-      try { const batch=writeBatch(db);
-        batch.update(doc(getClassesCol(), currentClassId), { students: arrayRemove(sid) });
-        batch.update(doc(getStudentsCol(), sid), { classes: arrayRemove(currentClassId) });
-        await batch.commit(); toast('Student removed.','success'); if (currentStudentId===sid) resetBillingCard();
-      } catch(err){ console.error(err); toast(err.message,'error'); }
-    }
-    async function handleDeleteStudent(sid,name){
-      if (!confirm(`PERMANENTLY DELETE ${name}? This cannot be undone.`)) return;
-      try { const batch=writeBatch(db); const sRef=doc(getStudentsCol(), sid); const sSnap=await getDoc(sRef);
-        if (sSnap.exists()){ const data=snap.data(); (data.parents||[]).forEach(pid=>batch.delete(doc(getParentsCol(), pid))); (data.classes||[]).forEach(cid=>batch.update(doc(getClassesCol(), cid), { students: arrayRemove(sid) })); }
-        batch.delete(sRef); await batch.commit(); toast('Student deleted.','success'); if (currentStudentId===sid){ resetBillingCard(); }
-      } catch(err){ console.error(err); toast(err.message,'error'); }
-    }
-    async function handleDeleteContact(id,name){
-      if (!currentStudentId || !confirm(`Delete contact ${name}?`)) return;
-      try { const batch=writeBatch(db);
-        batch.update(doc(getStudentsCol(), currentStudentId), { parents: arrayRemove(id) });
-        batch.delete(doc(getParentsCol(), id)); await batch.commit(); toast('Contact deleted.','success');
-      } catch(err){ console.error(err); toast(err.message,'error'); }
     }
 
   </script>
