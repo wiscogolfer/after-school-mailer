@@ -5,10 +5,10 @@ import cors from "cors";
 import "dotenv/config";
 import { Resend } from "resend";
 
-// Firebase Admin
+// Firebase Admin (single import)
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore } from "firebase-admin/firestore";
 
 // Stripe
 import Stripe from "stripe";
@@ -16,10 +16,7 @@ import Stripe from "stripe";
 // Raw body ONLY for Stripe webhook
 import bodyParser from "body-parser";
 
-// ---------- Firebase Admin init ----------
-import { initializeApp, cert, getApps } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-
+// -------- Firebase Admin init (single block) --------
 function getServiceAccountFromEnv() {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || "";
   if (!raw) return null;
@@ -30,7 +27,7 @@ function getServiceAccountFromEnv() {
 
 const svc = getServiceAccountFromEnv();
 
-let db; // <<< important
+let db; // <- declare once
 
 if (!getApps().length) {
   if (!svc?.project_id) {
@@ -38,13 +35,13 @@ if (!getApps().length) {
   } else {
     initializeApp({
       credential: cert(svc),
-      projectId: svc.project_id
+      projectId: svc.project_id,
     });
     console.log("Firebase Admin initialized:", svc.project_id);
   }
 }
 
-// Only allow server to run if Firebase initialized
+// Only continue if Firebase initialized
 if (getApps().length) {
   db = getFirestore();
 } else {
